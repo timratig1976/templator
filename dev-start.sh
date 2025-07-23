@@ -28,7 +28,7 @@ sleep 2
 
 # Start frontend server
 echo "🎨 Starting frontend server on port 3000..."
-cd ../frontend && npm run dev &
+cd frontend && npm run dev &
 FRONTEND_PID=$!
 
 # Wait for both processes

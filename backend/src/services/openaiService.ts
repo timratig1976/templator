@@ -60,8 +60,16 @@ export class OpenAIService {
    * Convert design image to HTML/Tailwind CSS code
    */
   async convertDesignToHTML(imageBase64: string, fileName: string): Promise<DesignAnalysis> {
+    const startTime = Date.now();
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
-      logger.info(`Starting design-to-HTML conversion for: ${fileName}`);
+      logger.info(`🚀 [${requestId}] Starting OpenAI design-to-HTML conversion`, {
+        fileName,
+        imageSize: Math.round(imageBase64.length / 1024),
+        requestId,
+        timestamp: new Date().toISOString()
+      });
 
       const prompt = `
 Analyze this design image and convert it to clean, semantic HTML with Tailwind CSS. Follow these requirements:
@@ -114,6 +122,15 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
 - Use semantic HTML elements
 `;
 
+      logger.info(`📤 [${requestId}] Sending OpenAI API request`, {
+        model: "gpt-4o",
+        maxTokens: 4000,
+        temperature: 0.1,
+        promptLength: prompt.length,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -138,31 +155,72 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
         temperature: 0.1,
       });
 
+      const apiDuration = Date.now() - startTime;
+      logger.info(`📥 [${requestId}] Received OpenAI API response`, {
+        usage: response.usage,
+        finishReason: response.choices[0]?.finish_reason,
+        responseLength: response.choices[0]?.message?.content?.length || 0,
+        apiDuration: `${apiDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
       const content = response.choices[0]?.message?.content;
       if (!content) {
         throw createError('No response from OpenAI', 500, 'INTERNAL_ERROR');
       }
 
       // Extract JSON from response (handle potential markdown formatting)
+      logger.info(`🔍 [${requestId}] Parsing OpenAI response`, {
+        contentLength: content.length,
+        hasJsonBlock: content.includes('```json'),
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
       const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
+        logger.error(`❌ [${requestId}] Invalid response format from OpenAI`, {
+          contentPreview: content.substring(0, 200),
+          requestId,
+          timestamp: new Date().toISOString()
+        });
         throw createError('Invalid response format from AI', 500, 'INTERNAL_ERROR');
       }
 
-      const analysisData = JSON.parse(jsonMatch[0].replace(/```json\n?|\n?```/g, ''));
+      const jsonString = jsonMatch[0].replace(/```json\n?|\n?```/g, '');
+      logger.info(`📋 [${requestId}] Extracted JSON from response`, {
+        jsonLength: jsonString.length,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
+      const analysisData = JSON.parse(jsonString);
       
-      logger.info(`Successfully converted design to HTML. Sections: ${analysisData.sections?.length || 0}`);
+      const totalDuration = Date.now() - startTime;
+      logger.info(`✅ [${requestId}] Successfully converted design to HTML`, {
+        sectionsCount: analysisData.sections?.length || 0,
+        componentsCount: analysisData.components?.length || 0,
+        htmlLength: analysisData.html?.length || 0,
+        totalDuration: `${totalDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
       
       return analysisData as DesignAnalysis;
 
     } catch (error) {
-      logger.error('Error converting design to HTML:', {
+      const totalDuration = Date.now() - startTime;
+      logger.error(`❌ [${requestId}] Error converting design to HTML`, {
         error: error,
         message: (error as Error)?.message,
         stack: (error as Error)?.stack,
         code: (error as any)?.code,
         status: (error as any)?.status,
-        response: (error as any)?.response?.data
+        response: (error as any)?.response?.data,
+        totalDuration: `${totalDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
       });
       
       if (error instanceof SyntaxError) {
@@ -196,7 +254,18 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
    * Refine generated HTML with additional AI processing
    */
   async refineHTML(html: string, requirements?: string): Promise<string> {
+    const startTime = Date.now();
+    const requestId = `refine_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     try {
+      logger.info(`🔧 [${requestId}] Starting HTML refinement`, {
+        htmlLength: html.length,
+        hasRequirements: !!requirements,
+        requirementsLength: requirements?.length || 0,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
       const prompt = `
 Refine this HTML/Tailwind code to improve:
 1. Code quality and structure
@@ -213,6 +282,15 @@ ${html}
 Return only the improved HTML code.
 `;
 
+      logger.info(`📤 [${requestId}] Sending HTML refinement request to OpenAI`, {
+        model: "gpt-4",
+        maxTokens: 3000,
+        temperature: 0.1,
+        promptLength: prompt.length,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
       const response = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
@@ -220,9 +298,29 @@ Return only the improved HTML code.
         temperature: 0.1,
       });
 
-      return response.choices[0]?.message?.content || html;
+      const apiDuration = Date.now() - startTime;
+      const refinedHTML = response.choices[0]?.message?.content || html;
+      
+      logger.info(`✅ [${requestId}] HTML refinement completed`, {
+        usage: response.usage,
+        finishReason: response.choices[0]?.finish_reason,
+        originalLength: html.length,
+        refinedLength: refinedHTML.length,
+        apiDuration: `${apiDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
+      return refinedHTML;
     } catch (error) {
-      logger.error('Error refining HTML:', error);
+      const totalDuration = Date.now() - startTime;
+      logger.error(`❌ [${requestId}] Error refining HTML`, {
+        error: error,
+        message: (error as Error)?.message,
+        totalDuration: `${totalDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
       return html; // Return original if refinement fails
     }
   }

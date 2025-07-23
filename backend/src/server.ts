@@ -46,6 +46,26 @@ app.use(morgan('combined', {
   stream: { write: (message) => logger.info(message.trim()) }
 }));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Windsurf Templator API',
+    version: '0.1.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      api: '/api',
+      designUpload: '/api/design/upload',
+      designRefine: '/api/design/refine',
+      moduleGenerate: '/api/module',
+      preview: '/api/preview'
+    },
+    frontend: 'http://localhost:3000',
+    documentation: 'Access the frontend at http://localhost:3000 to use the application'
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
