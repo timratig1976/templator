@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../config/api';
-import { Upload, Code, Package, ArrowRight, Sparkles, Zap, Target } from 'lucide-react';
+import { Upload, Eye, Package, ArrowRight, Activity, Download, AlertCircle, Copy, Code, Sparkles, Zap, Target, Terminal } from 'lucide-react';
 import DesignUpload from '@/components/DesignUpload';
 import HTMLPreview from '@/components/HTMLPreview';
+import AILogViewer from '@/components/AILogViewer';
+import HubSpotModuleEditor from '@/components/HubSpotModuleEditor';
+import { aiLogger } from '@/services/aiLogger';
+import logStreamService from '@/services/logStreamService';
 
 interface DesignAnalysisResult {
   fileName: string;
@@ -42,12 +46,36 @@ interface Component {
   defaultValue: string;
 }
 
-type WorkflowStep = 'upload' | 'preview' | 'module';
+type WorkflowStep = 'upload' | 'preview' | 'editor' | 'module';
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
-  const [designResult, setDesignResult] = useState<DesignAnalysisResult | null>(null);
+  const [designResult, setDesignResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAILogs, setShowAILogs] = useState(false);
+  const [downloadInfo, setDownloadInfo] = useState<{url: string, fileName: string} | null>(null);
+  const [isLogStreamConnected, setIsLogStreamConnected] = useState(false);
+
+  useEffect(() => {
+    // Initialize logging system
+    aiLogger.info('system', '🚀 Templator application started', {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent
+    });
+
+    // Check log stream connection status
+    const checkConnection = () => {
+      setIsLogStreamConnected(logStreamService.isStreamConnected());
+    };
+
+    // Check connection status every 5 seconds
+    const connectionInterval = setInterval(checkConnection, 5000);
+    checkConnection(); // Initial check
+
+    return () => {
+      clearInterval(connectionInterval);
+    };
+  }, []);
 
   const handleUploadSuccess = (result: DesignAnalysisResult) => {
     setDesignResult(result);
@@ -62,37 +90,176 @@ export default function Home() {
   const handleCreateModule = async () => {
     if (!designResult) return;
 
+    const requestId = `module_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    aiLogger.info('processing', 'Starting HubSpot module creation', {
+      fileName: designResult.fileName,
+      sectionsCount: designResult.analysis.sections?.length || 0,
+      componentsCount: designResult.analysis.components?.length || 0
+    }, requestId);
+
     try {
-      // Call the existing module creation endpoint
+      // Convert sections and components to fields_config format
+      const fieldsConfig = designResult.analysis.sections.flatMap(section => 
+        section.editableFields.map(field => ({
+          id: field.id,
+          label: field.name,
+          type: field.type === 'rich_text' ? 'richtext' : field.type,
+          required: field.required
+        }))
+      );
+
+      aiLogger.info('network', 'Sending module creation request to backend', {
+        endpoint: API_ENDPOINTS.MODULE_GENERATE,
+        fieldsCount: fieldsConfig.length,
+        htmlLength: designResult.analysis.html.length
+      }, requestId);
+
+      // Call the existing module creation endpoint with correct data structure
       const response = await fetch(API_ENDPOINTS.MODULE_GENERATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          html: designResult.analysis.html,
-          sections: designResult.analysis.sections,
-          components: designResult.analysis.components
+          html_normalized: designResult.analysis.html,
+          fields_config: fieldsConfig
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create HubSpot module');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        aiLogger.error('network', 'Module creation request failed', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        }, requestId);
+        throw new Error(errorData.message || 'Failed to create HubSpot module');
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${designResult.fileName.replace(/\.[^/.]+$/, '')}-hubspot-module.zip`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const result = await response.json();
+      aiLogger.success('processing', 'HubSpot module created successfully', {
+        moduleSlug: result.module_slug,
+        downloadUrl: result.module_zip_url
+      }, requestId);
+
+      // Download the module with enhanced user feedback
+      if (result.module_zip_url) {
+        // Construct full download URL
+        const downloadUrl = result.module_zip_url.startsWith('http') 
+          ? result.module_zip_url 
+          : `${API_ENDPOINTS.DESIGN_UPLOAD.replace('/api/design/upload', '')}${result.module_zip_url}`;
+        
+        const fileName = `${designResult.fileName.replace(/\.[^/.]+$/, '')}-hubspot-module.zip`;
+        
+        aiLogger.info('network', 'Downloading module ZIP file', {
+          downloadUrl,
+          moduleSlug: result.module_slug,
+          fileName
+        }, requestId);
+
+        try {
+          const downloadResponse = await fetch(downloadUrl);
+          if (downloadResponse.ok) {
+            const blob = await downloadResponse.blob();
+            
+            // Verify it's a ZIP file
+            if (blob.type !== 'application/zip' && blob.type !== 'application/x-zip-compressed') {
+              aiLogger.warning('system', 'Downloaded file may not be a ZIP', {
+                contentType: blob.type,
+                size: blob.size
+              }, requestId);
+            }
+            
+            // Enhanced download with better browser compatibility
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName;
+            a.target = '_blank'; // Ensure it opens in new context
+            
+            // Add to DOM, click, and clean up
+            document.body.appendChild(a);
+            
+            // Try multiple download approaches for better compatibility
+            try {
+              a.click();
+            } catch (clickError) {
+              // Fallback: try programmatic click
+              const event = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+              });
+              a.dispatchEvent(event);
+            }
+            
+            // Clean up after a short delay
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            }, 100);
+            
+            // Store download info for alternative access
+            setDownloadInfo({
+              url: downloadUrl,
+              fileName
+            });
+            
+            // Show user-friendly success message with download location info
+            aiLogger.success('system', 'Module downloaded successfully', {
+              fileName,
+              fileSize: `${(blob.size / 1024).toFixed(1)} KB`,
+              contentType: blob.type,
+              downloadLocation: 'Check your Downloads folder or browser download manager',
+              instructions: 'The ZIP file should appear in your default download location',
+              alternativeAccess: 'If you cannot find the file, use the direct download link below'
+            }, requestId);
+            
+            // Also show a browser notification if possible
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('HubSpot Module Downloaded', {
+                body: `${fileName} has been downloaded to your Downloads folder`,
+                icon: '/favicon.ico'
+              });
+            }
+            
+          } else {
+            const errorText = await downloadResponse.text().catch(() => 'Unknown error');
+            aiLogger.error('network', 'Failed to download module', {
+              status: downloadResponse.status,
+              statusText: downloadResponse.statusText,
+              error: errorText,
+              downloadUrl,
+              troubleshooting: 'Check network connection and try again'
+            }, requestId);
+            throw new Error(`Download failed: ${downloadResponse.status} ${downloadResponse.statusText}`);
+          }
+        } catch (downloadError) {
+          aiLogger.error('system', 'Download process failed', {
+            error: downloadError instanceof Error ? downloadError.message : 'Unknown error',
+            downloadUrl,
+            fileName,
+            troubleshooting: 'Try refreshing the page and generating the module again'
+          }, requestId);
+          throw downloadError;
+        }
+      } else {
+        aiLogger.error('system', 'No download URL provided in response', {
+          response: result,
+          troubleshooting: 'Module generation may have failed - try regenerating'
+        }, requestId);
+        throw new Error('No download URL provided - please try generating the module again');
+      }
 
       setCurrentStep('module');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to create module');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create module';
+      aiLogger.error('system', 'Module creation process failed', {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined
+      }, requestId);
+      setError(errorMessage);
     }
   };
 
@@ -100,30 +267,14 @@ export default function Home() {
     setCurrentStep('upload');
     setDesignResult(null);
     setError(null);
+    setDownloadInfo(null);
   };
 
   const steps = [
-    {
-      id: 'upload',
-      title: 'Upload Design',
-      description: 'Upload your design file (PNG, JPG, etc.)',
-      icon: Upload,
-      color: 'text-blue-600'
-    },
-    {
-      id: 'preview',
-      title: 'Generate HTML',
-      description: 'AI converts design to HTML/Tailwind',
-      icon: Code,
-      color: 'text-green-600'
-    },
-    {
-      id: 'module',
-      title: 'Create Module',
-      description: 'Export HubSpot module files',
-      icon: Package,
-      color: 'text-purple-600'
-    }
+    { id: 'upload', title: 'Upload Design', description: 'Upload your design image', icon: Upload },
+    { id: 'preview', title: 'Preview & Refine', description: 'Review generated HTML', icon: Eye },
+    { id: 'editor', title: 'Edit Module', description: 'Customize HubSpot module parts', icon: Code },
+    { id: 'module', title: 'Download Module', description: 'Get your HubSpot module', icon: Package }
   ];
 
   return (
@@ -239,25 +390,189 @@ export default function Home() {
             </div>
           )}
 
-          {currentStep === 'module' && (
-            <div className="text-center space-y-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <Package className="w-8 h-8 text-green-600" />
+          {currentStep === 'editor' && designResult && (
+            <div className="space-y-8">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Customize Your HubSpot Module
+                </h2>
+                <p className="text-gray-600">
+                  Edit each part of your module before downloading the final ZIP file.
+                </p>
               </div>
-              <div>
+              <HubSpotModuleEditor designResult={designResult} />
+            </div>
+          )}
+
+          {currentStep === 'module' && (
+            <div className="max-w-2xl mx-auto space-y-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Package className="w-8 h-8 text-green-600" />
+                </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   HubSpot Module Created Successfully!
                 </h2>
-                <p className="text-gray-600 mb-6">
-                  Your module has been downloaded and is ready to upload to HubSpot.
+                <p className="text-gray-600">
+                  Your module has been generated and should be downloading automatically.
                 </p>
+              </div>
+
+              {/* Download Status and Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center">
+                  <Download className="w-5 h-5 mr-2" />
+                  Download Instructions
+                </h3>
+                <div className="space-y-3 text-sm text-blue-800">
+                  <p>
+                    <strong>📁 Where to find your file:</strong> Check your browser's Downloads folder or download manager. 
+                    The file is typically saved to your default download location.
+                  </p>
+                  <p>
+                    <strong>🔍 File name:</strong> Look for a file ending with "-hubspot-module.zip"
+                  </p>
+                  <p>
+                    <strong>💡 Can't find it?</strong> Check your browser's download history (Ctrl+J / Cmd+Shift+J) or use the direct download link below.
+                  </p>
+                </div>
+              </div>
+
+              {/* Alternative Download Method */}
+              {downloadInfo && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h3 className="font-semibold text-yellow-900 mb-3 flex items-center">
+                    <AlertCircle className="w-5 h-5 mr-2" />
+                    Alternative Download
+                  </h3>
+                  <p className="text-yellow-800 text-sm mb-4">
+                    If the automatic download didn't work or you can't find the file, use this direct download link:
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <a
+                      href={downloadInfo.url}
+                      download={downloadInfo.fileName}
+                      className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+                      onClick={() => {
+                        aiLogger.info('system', 'User clicked direct download link', {
+                          fileName: downloadInfo.fileName,
+                          url: downloadInfo.url
+                        });
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download {downloadInfo.fileName}
+                    </a>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(downloadInfo.url);
+                        aiLogger.info('system', 'Download URL copied to clipboard');
+                      }}
+                      className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Link
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Next Steps */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 mb-3">📋 Next Steps</h3>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                  <li>Locate and extract the downloaded ZIP file</li>
+                  <li>Log into your HubSpot account</li>
+                  <li>Navigate to Marketing → Files and Templates → Design Manager</li>
+                  <li>Upload the extracted module files to your HubSpot account</li>
+                  <li>Use the module in your HubSpot pages and templates</li>
+                </ol>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
                   onClick={resetWorkflow}
                   className="btn-primary"
                 >
                   Create Another Module
                 </button>
+                <button
+                  onClick={() => setCurrentStep('preview')}
+                  className="btn-secondary"
+                >
+                  Back to Preview
+                </button>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* AI Process Logs Section */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <Terminal className="w-5 h-5 text-gray-600" />
+              <h2 className="text-xl font-semibold text-gray-900">AI Process Logs</h2>
+              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
+                isLogStreamConnected 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${
+                  isLogStreamConnected ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+                <span>{isLogStreamConnected ? 'Live Stream Connected' : 'Stream Disconnected'}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowAILogs(!showAILogs)}
+              className={`
+                px-4 py-2 rounded-lg font-medium transition-colors
+                ${showAILogs 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }
+              `}  
+            >
+              {showAILogs ? 'Hide Logs' : 'Show Logs'}
+            </button>
+          </div>
+          
+          {showAILogs && (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">🔍 Real-time AI Process Monitoring</h3>
+                <p className="text-sm text-blue-800 mb-3">
+                  This log viewer shows real-time information about OpenAI API calls, upload progress, 
+                  and processing stages. Use it to identify issues and monitor performance.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                    <span>Info & Progress</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full" />
+                    <span>Success</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                    <span>Warnings</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                    <span>Errors</span>
+                  </div>
+                </div>
+              </div>
+              
+              <AILogViewer 
+                className="max-w-full"
+                maxHeight="500px"
+                showFilters={true}
+                autoScroll={true}
+              />
             </div>
           )}
         </div>

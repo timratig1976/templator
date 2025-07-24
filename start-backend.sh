@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Development startup script for Templator
-# This script starts both frontend and backend with auto-restart
+# Backend server startup script
+# This script starts only the backend server
 
-set -e  # Exit on any error
+set -e
 
 # Colors for better output
 RED='\033[0;31m'
@@ -12,7 +12,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
 print_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
@@ -60,40 +59,28 @@ wait_for_server() {
     return 1
 }
 
-# Function to kill background processes on exit
+# Cleanup function
 cleanup() {
-    print_warning "Shutting down development servers..."
+    print_warning "Shutting down backend server..."
     if [ ! -z "$BACKEND_PID" ]; then
         kill $BACKEND_PID 2>/dev/null || true
     fi
-    if [ ! -z "$FRONTEND_PID" ]; then
-        kill $FRONTEND_PID 2>/dev/null || true
-    fi
-    # Kill any remaining processes on our ports
-    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
     lsof -ti:3009 | xargs kill -9 2>/dev/null || true
-    print_success "Cleanup completed"
+    print_success "Backend server stopped"
     exit 0
 }
 
-# Set up trap to cleanup on script exit
 trap cleanup SIGINT SIGTERM EXIT
 
-print_info "🚀 Starting Templator Development Environment..."
-print_info "Frontend: http://localhost:3000"
-print_info "Backend: http://localhost:3009"
+print_info "🚀 Starting Templator Backend Server..."
+print_info "Backend API: http://localhost:3009"
+print_info "Health Check: http://localhost:3009/health"
 echo ""
 
-# Check if ports are available
+# Check if port is available
 if ! check_port 3009; then
     print_error "Port 3009 is already in use. Please stop the process using this port."
     lsof -i :3009
-    exit 1
-fi
-
-if ! check_port 3000; then
-    print_error "Port 3000 is already in use. Please stop the process using this port."
-    lsof -i :3000
     exit 1
 fi
 
@@ -103,46 +90,24 @@ if [ ! -d "backend/node_modules" ]; then
     cd backend && npm install && cd ..
 fi
 
-if [ ! -d "frontend/node_modules" ]; then
-    print_warning "Frontend dependencies not found. Installing..."
-    cd frontend && npm install && cd ..
-fi
-
 # Start backend server
 print_info "📡 Starting backend server on port 3009..."
 cd backend
-npm run dev > ../backend.log 2>&1 &
+npm run dev &
 BACKEND_PID=$!
 cd ..
 
 # Wait for backend to be ready
 if ! wait_for_server "http://localhost:3009/health" "Backend server"; then
-    print_error "Backend server failed to start. Check backend.log for details."
-    tail -20 backend.log
+    print_error "Backend server failed to start."
     exit 1
 fi
 
-# Start frontend server
-print_info "🎨 Starting frontend server on port 3000..."
-cd frontend
-npm run dev > ../frontend.log 2>&1 &
-FRONTEND_PID=$!
-cd ..
-
-# Wait for frontend to be ready
-if ! wait_for_server "http://localhost:3000" "Frontend server"; then
-    print_error "Frontend server failed to start. Check frontend.log for details."
-    tail -20 frontend.log
-    exit 1
-fi
-
-print_success "🎉 Development servers started successfully!"
-print_info "📱 Frontend: http://localhost:3000"
+print_success "🎉 Backend server started successfully!"
 print_info "🔧 Backend API: http://localhost:3009"
-print_info "📊 Backend Health: http://localhost:3009/health"
-print_info "📝 Logs: backend.log and frontend.log"
+print_info "📊 Health Check: http://localhost:3009/health"
 echo ""
-print_warning "Press Ctrl+C to stop both servers"
+print_warning "Press Ctrl+C to stop the server"
 
-# Wait for both processes
+# Wait for the process
 wait

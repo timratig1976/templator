@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, Image, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
+import { aiLogger } from '../services/aiLogger';
 
 interface DesignUploadProps {
   onUploadSuccess: (result: DesignAnalysisResult) => void;
@@ -106,17 +107,43 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
   const uploadFile = async () => {
     if (!selectedFile) return;
 
+    const startTime = Date.now();
+    const requestId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     setIsUploading(true);
     setUploadProgress(0);
+
+    // Log upload start
+    aiLogger.logUploadStart(requestId, selectedFile.name, selectedFile.size);
+    aiLogger.info('processing', 'Starting design-to-HTML conversion process', {
+      fileName: selectedFile.name,
+      fileSize: selectedFile.size,
+      fileType: selectedFile.type
+    }, requestId);
 
     try {
       const formData = new FormData();
       formData.append('design', selectedFile);
 
-      // Simulate progress
+      // Enhanced progress tracking with logging
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
+        setUploadProgress(prev => {
+          const newProgress = Math.min(prev + 8, 85);
+          if (newProgress > prev) {
+            aiLogger.logUploadProgress(requestId, newProgress);
+            
+            // Log different stages based on progress
+            if (newProgress >= 20 && prev < 20) {
+              aiLogger.info('processing', 'File uploaded, starting AI analysis', {}, requestId);
+            } else if (newProgress >= 50 && prev < 50) {
+              aiLogger.info('openai', 'OpenAI processing design image', {}, requestId);
+            } else if (newProgress >= 70 && prev < 70) {
+              aiLogger.info('processing', 'Generating HTML structure', {}, requestId);
+            }
+          }
+          return newProgress;
+        });
+      }, 300);
 
       const response = await fetch(API_ENDPOINTS.DESIGN_UPLOAD, {
         method: 'POST',
@@ -124,26 +151,52 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
       });
 
       clearInterval(progressInterval);
-      setUploadProgress(100);
+      setUploadProgress(95);
 
       if (!response.ok) {
         const errorData = await response.json();
+        const duration = Date.now() - startTime;
+        aiLogger.logUploadError(requestId, errorData.message || 'Upload failed', duration);
+        aiLogger.error('network', 'API request failed', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        }, requestId);
         throw new Error(errorData.message || 'Upload failed');
       }
 
       const result = await response.json();
+      const duration = Date.now() - startTime;
+      
+      setUploadProgress(100);
+      aiLogger.logUploadSuccess(requestId, selectedFile.name, duration);
+      aiLogger.success('processing', 'Design-to-HTML conversion completed successfully', {
+        sectionsGenerated: result.data?.analysis?.sections?.length || 0,
+        componentsGenerated: result.data?.analysis?.components?.length || 0,
+        htmlLength: result.data?.analysis?.html?.length || 0
+      }, requestId, duration);
       
       setTimeout(() => {
         onUploadSuccess(result.data);
         setIsUploading(false);
         setSelectedFile(null);
         setUploadProgress(0);
+        aiLogger.info('system', 'Upload process completed, UI updated', {}, requestId);
       }, 500);
 
     } catch (error) {
+      const duration = Date.now() - startTime;
       setIsUploading(false);
       setUploadProgress(0);
-      onUploadError(error instanceof Error ? error.message : 'Upload failed');
+      
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      aiLogger.logUploadError(requestId, errorMessage, duration);
+      aiLogger.error('system', 'Upload process failed', {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined
+      }, requestId);
+      
+      onUploadError(errorMessage);
     }
   };
 

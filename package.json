@@ -12,12 +12,18 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
+    "dev:enhanced": "./dev-start.sh",
+    "start:backend": "./start-backend.sh",
+    "start:frontend": "./start-frontend.sh",
+    "start:production": "./start-production.sh",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && npm run build",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
-    "type-check": "npm run type-check --workspaces"
+    "type-check": "npm run type-check --workspaces",
+    "clean": "rm -rf backend/dist frontend/.next backend.log frontend.log backend-prod.log frontend-prod.log",
+    "install:all": "npm install && npm install --workspaces"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

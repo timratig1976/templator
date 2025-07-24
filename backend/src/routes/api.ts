@@ -8,6 +8,7 @@ import { createError } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import designRoutes from './design';
+import logsRoutes from './logs';
 
 const router = Router();
 const logger = createLogger();
@@ -26,6 +27,9 @@ router.use((req, res, next) => {
 
 // Design-to-HTML routes
 router.use('/design', designRoutes);
+
+// AI Logs routes
+router.use('/logs', logsRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {
