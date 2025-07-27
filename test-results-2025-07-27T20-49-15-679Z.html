@@ -1,0 +1,388 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templator E2E Test Results</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 2.5em; }
+        .header .subtitle { opacity: 0.9; margin-top: 10px; }
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; padding: 30px; }
+        .stat-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #007bff; }
+        .stat-card.passed { border-left-color: #28a745; }
+        .stat-card.failed { border-left-color: #dc3545; }
+        .stat-card.duration { border-left-color: #ffc107; }
+        .stat-number { font-size: 2em; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { color: #6c757d; font-size: 0.9em; }
+        .suite { margin: 20px; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
+        .suite-header { background: #e9ecef; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .suite-stats { font-size: 0.9em; color: #6c757d; }
+        .test-list { padding: 0; margin: 0; list-style: none; }
+        .test-item { padding: 15px; border-bottom: 1px solid #f1f3f4; display: flex; justify-content: space-between; align-items: center; }
+        .test-item:last-child { border-bottom: none; }
+        .test-status { padding: 4px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+        .status-pass { background: #d4edda; color: #155724; }
+        .status-fail { background: #f8d7da; color: #721c24; }
+        .status-skip { background: #fff3cd; color: #856404; }
+        .test-details { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
+        .progress-bar { width: 100%; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; margin: 20px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #28a745, #20c997); transition: width 0.3s ease; }
+        .logs { background: #f8f9fa; padding: 10px; margin-top: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8em; }
+        .timestamp { color: #6c757d; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Templator E2E Test Results</h1>
+            <div class="subtitle">Comprehensive End-to-End Testing Suite</div>
+            <div class="timestamp">Generated: 7/27/2025, 10:49:16 PM</div>
+        </div>
+        
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-number">12</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat-card passed">
+                <div class="stat-number">4</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-card failed">
+                <div class="stat-number">8</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-card duration">
+                <div class="stat-number">0.6s</div>
+                <div class="stat-label">Total Duration</div>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: 33.33333333333333%"></div>
+        </div>
+        
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Input Processing Pipeline</span>
+                    <span class="suite-stats">
+                        1/1 passed (100.0%)
+                        | 0.3s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>HTML Input Processing</div>
+                                <div class="test-details">
+                                    Duration: 264ms | 10:49:15 PM
+                                    
+                                </div>
+                                <div class="logs">Starting test: HTML Input Processing<br>Test completed successfully</div>
+                            </div>
+                            <span class="test-status status-pass">PASS</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Input Processing Pipeline</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Complex Layout Splitting</div>
+                                <div class="test-details">
+                                    Duration: 41ms | 10:49:16 PM
+                                    <br>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeDefined[2m()[22m
+
+Received: [31mundefined[39m
+                                </div>
+                                <div class="logs">Starting test: Complex Layout Splitting<br>Test failed: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeDefined[2m()[22m
+
+Received: [31mundefined[39m</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Input Processing Pipeline</span>
+                    <span class="suite-stats">
+                        1/1 passed (100.0%)
+                        | 0.1s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Field Mapping Accuracy</div>
+                                <div class="test-details">
+                                    Duration: 56ms | 10:49:16 PM
+                                    
+                                </div>
+                                <div class="logs">Starting test: Field Mapping Accuracy<br>Test completed successfully</div>
+                            </div>
+                            <span class="test-status status-pass">PASS</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>AI Processing Pipeline</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Module Generation from Sections</div>
+                                <div class="test-details">
+                                    Duration: 18ms | 10:49:16 PM
+                                    <br>Error: expected 200 "OK", got 400 "Bad Request"
+                                </div>
+                                <div class="logs">Starting test: Module Generation from Sections<br>Test failed: expected 200 "OK", got 400 "Bad Request"</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>AI Processing Pipeline</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Sequential Processing Quality</div>
+                                <div class="test-details">
+                                    Duration: 5ms | 10:49:16 PM
+                                    <br>Error: expected 200 "OK", got 400 "Bad Request"
+                                </div>
+                                <div class="logs">Starting test: Sequential Processing Quality<br>Test failed: expected 200 "OK", got 400 "Bad Request"</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Validation Pipeline</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Module Validation - Valid Module</div>
+                                <div class="test-details">
+                                    Duration: 10ms | 10:49:16 PM
+                                    <br>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m"[7mpass[27med"[39m
+Received: [31m"[7mfail[27med"[39m
+                                </div>
+                                <div class="logs">Starting test: Module Validation - Valid Module<br>Test failed: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m"[7mpass[27med"[39m
+Received: [31m"[7mfail[27med"[39m</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Validation Pipeline</span>
+                    <span class="suite-stats">
+                        1/1 passed (100.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Module Validation - Invalid Module</div>
+                                <div class="test-details">
+                                    Duration: 5ms | 10:49:16 PM
+                                    
+                                </div>
+                                <div class="logs">Starting test: Module Validation - Invalid Module<br>Test completed successfully</div>
+                            </div>
+                            <span class="test-status status-pass">PASS</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Validation Pipeline</span>
+                    <span class="suite-stats">
+                        1/1 passed (100.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Batch Validation</div>
+                                <div class="test-details">
+                                    Duration: 10ms | 10:49:16 PM
+                                    
+                                </div>
+                                <div class="logs">Starting test: Batch Validation<br>Test completed successfully</div>
+                            </div>
+                            <span class="test-status status-pass">PASS</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Export and Packaging</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Module Export Generation</div>
+                                <div class="test-details">
+                                    Duration: 8ms | 10:49:16 PM
+                                    <br>Error: expected 200 "OK", got 404 "Not Found"
+                                </div>
+                                <div class="logs">Starting test: Module Export Generation<br>Test failed: expected 200 "OK", got 404 "Not Found"</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Export and Packaging</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Batch Export Processing</div>
+                                <div class="test-details">
+                                    Duration: 10ms | 10:49:16 PM
+                                    <br>Error: expected 200 "OK", got 404 "Not Found"
+                                </div>
+                                <div class="logs">Starting test: Batch Export Processing<br>Test failed: expected 200 "OK", got 404 "Not Found"</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Integration and Performance</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.0s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>Schema Compatibility Check</div>
+                                <div class="test-details">
+                                    Duration: 16ms | 10:49:16 PM
+                                    <br>Error: expected 200 "OK", got 404 "Not Found"
+                                </div>
+                                <div class="logs">Starting test: Schema Compatibility Check<br>Test failed: expected 200 "OK", got 404 "Not Found"</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+            <div class="suite">
+                <div class="suite-header">
+                    <span>Integration and Performance</span>
+                    <span class="suite-stats">
+                        0/1 passed (0.0%)
+                        | 0.2s
+                    </span>
+                </div>
+                <ul class="test-list">
+                    
+                        <li class="test-item">
+                            <div>
+                                <div>End-to-End Processing Performance</div>
+                                <div class="test-details">
+                                    Duration: 156ms | 10:49:16 PM
+                                    <br>Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m200[39m
+Received: [31m400[39m
+                                </div>
+                                <div class="logs">Starting test: End-to-End Processing Performance<br>Test failed: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+Expected: [32m200[39m
+Received: [31m400[39m</div>
+                            </div>
+                            <span class="test-status status-fail">FAIL</span>
+                        </li>
+                    
+                </ul>
+            </div>
+        
+    </div>
+</body>
+</html>

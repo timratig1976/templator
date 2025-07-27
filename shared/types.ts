@@ -44,7 +44,7 @@ export interface PreviewRequest {
 
 export interface ErrorResponse {
   error: string;
-  code: 'INPUT_INVALID' | 'FIELD_MAPPING_EMPTY' | 'EXPORT_FAILED' | 'PREVIEW_RENDER_ERROR' | 'INTERNAL_ERROR';
+  code: 'INPUT_INVALID' | 'FIELD_MAPPING_EMPTY' | 'EXPORT_FAILED' | 'PREVIEW_RENDER_ERROR' | 'INTERNAL_ERROR' | 'INVALID_SIZE' | 'BATCH_NOT_FOUND';
   details?: string;
   suggestion?: string;
 }

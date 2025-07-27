@@ -3,14 +3,16 @@
  * Processes layout sections one by one for improved quality and manageable complexity
  */
 
-import { logger } from '../utils/logger';
-import { createError } from '../utils/errorHandler';
+import { createLogger } from '../utils/logger';
+import { createError } from '../middleware/errorHandler';
 import { LayoutSection, SplittingResult } from './LayoutSectionSplittingService';
+import openaiService from './openaiService';
 // Simplified imports for initial testing
 // import { HubSpotValidationService } from './HubSpotValidationService';
 // import { IterativeRefinementService } from './IterativeRefinementService';
 // import { AutoErrorCorrectionService } from './AutoErrorCorrectionService';
-// import OpenAIService from './openaiService';
+
+const logger = createLogger();
 
 export interface ProcessedSection {
   section: LayoutSection;
@@ -169,11 +171,11 @@ class SequentialSectionProcessingService {
     } catch (error) {
       logger.error('Sequential processing failed', { error });
       throw createError(
-        'Failed to process sections sequentially',
+        `Error processing sections: ${(error as Error).message}`,
         500,
-        'SEQUENTIAL_PROCESSING_ERROR',
-        error instanceof Error ? error.message : 'Unknown error',
-        'Check the sections and processing options'
+        'INTERNAL_ERROR',
+        (error as Error).stack,
+        'Check section data and retry processing'
       );
     }
   }
@@ -252,7 +254,7 @@ class SequentialSectionProcessingService {
         estimatedFields: section.estimatedFields
       });
 
-      // Simplified processing for testing - generate basic module data
+      // Generate module data from section
       const moduleData = await this.generateModuleFromSection(section);
       
       // Simplified validation - just return a basic validation result
@@ -315,17 +317,27 @@ class SequentialSectionProcessingService {
   private async generateModuleFromSection(section: LayoutSection): Promise<any> {
     const prompt = this.buildSectionPrompt(section);
     
-    const response = await openaiService.generateModule({
-      html: section.html,
-      moduleType: section.type,
-      customPrompt: prompt
-    });
+    const response = await openaiService.generateHubSpotModule(prompt);
+
+    // Parse the response if it's a JSON string
+    let parsedResponse;
+    try {
+      parsedResponse = typeof response === 'string' ? JSON.parse(response) : response;
+    } catch (error) {
+      // If parsing fails, create a basic module structure
+      parsedResponse = {
+        fields: [],
+        meta: { label: `${section.type} Module`, description: `Generated from ${section.type} section` },
+        html: section.html,
+        css: ''
+      };
+    }
 
     return {
-      fields: response.fields || [],
-      meta: response.meta || {},
-      html: response.html || section.html,
-      css: response.css || ''
+      fields: parsedResponse.fields || [],
+      meta: parsedResponse.meta || { label: `${section.type} Module`, description: `Generated from ${section.type} section` },
+      html: parsedResponse.html || section.html,
+      css: parsedResponse.css || ''
     };
   }
 
@@ -389,7 +401,7 @@ Ensure the module is production-ready and follows HubSpot best practices.
       throw createError(
         'No successfully processed sections to combine',
         400,
-        'NO_SECTIONS_TO_COMBINE',
+        'INPUT_INVALID',
         'All sections failed processing',
         'Check the processing results and retry failed sections'
       );

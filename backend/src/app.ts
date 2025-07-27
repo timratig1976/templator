@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { errorHandler } from './middleware/errorHandler';
 import apiRoutes from './routes/api';
 import layoutSplittingRoutes from './routes/layoutSplittingRoutes';
+import validationRoutes from './routes/validation';
 
 export function createApp(): express.Application {
   const app = express();
@@ -49,6 +50,7 @@ export function createApp(): express.Application {
   // API routes
   app.use('/api', apiRoutes);
   app.use('/api/layout', layoutSplittingRoutes);
+  app.use('/api/validation', validationRoutes);
 
   // 404 handler
   app.use('*', (req, res) => {

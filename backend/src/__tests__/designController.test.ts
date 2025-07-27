@@ -8,15 +8,32 @@ import { jest } from '@jest/globals';
 const mockConvertDesignToHTML = jest.fn() as jest.MockedFunction<any>;
 const mockRefineHTML = jest.fn() as jest.MockedFunction<any>;
 
-jest.mock('../services/openaiService', () => ({
-  default: {
-    convertDesignToHTML: mockConvertDesignToHTML,
-    refineHTML: mockRefineHTML,
-  },
+// Mock the entire module
+jest.mock('../services/openaiService', () => {
+  return {
+    __esModule: true,
+    default: {
+      convertDesignToHTML: jest.fn(),
+      refineHTML: jest.fn(),
+    },
+  };
+});
+
+// Mock the logger to avoid console spam
+jest.mock('../utils/logger', () => ({
+  createLogger: () => ({
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  }),
 }));
 
 import openaiService from '../services/openaiService';
 import { createApp } from '../app';
+
+// Get the mocked service
+const mockedOpenAIService = openaiService as jest.Mocked<typeof openaiService>;
 
 // Use the same app setup as production
 const app = createApp();
@@ -57,6 +74,10 @@ const mockDesignAnalysis = {
 describe('Design Controller API Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Setup default mock responses
+    mockedOpenAIService.convertDesignToHTML.mockResolvedValue(mockDesignAnalysis);
+    mockedOpenAIService.refineHTML.mockResolvedValue('<div class="refined bg-white p-8"><h1 class="text-4xl font-bold text-gray-900">Welcome</h1><p class="text-gray-600 mt-4">This is refined HTML.</p></div>');
   });
 
   describe('GET /api/design/supported-types', () => {
@@ -148,7 +169,7 @@ describe('Design Controller API Tests', () => {
     });
 
     it('should handle OpenAI service errors', async () => {
-      mockConvertDesignToHTML.mockRejectedValue(
+      mockedOpenAIService.convertDesignToHTML.mockRejectedValue(
         new Error('OpenAI API error')
       );
 
@@ -158,7 +179,7 @@ describe('Design Controller API Tests', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('Failed to convert design to HTML');
+      expect(response.body.error).toContain('OpenAI API error');
     });
 
     it('should reject PDF files with appropriate message', async () => {
@@ -227,7 +248,7 @@ describe('Design Controller API Tests', () => {
     });
 
     it('should handle OpenAI service errors during refinement', async () => {
-      mockRefineHTML.mockRejectedValue(
+      mockedOpenAIService.refineHTML.mockRejectedValue(
         new Error('OpenAI refinement error')
       );
 
@@ -237,7 +258,7 @@ describe('Design Controller API Tests', () => {
         .expect(500);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('Failed to refine HTML');
+      expect(response.body.error).toContain('OpenAI refinement error');
     });
   });
 });

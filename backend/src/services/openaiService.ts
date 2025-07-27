@@ -5,13 +5,13 @@ import { logToFrontend } from '../routes/logs';
 
 const logger = createLogger();
 
-// Validate API key exists
-if (!process.env.OPENAI_API_KEY) {
+// Validate API key exists (skip in test environment)
+if (!process.env.OPENAI_API_KEY && process.env.NODE_ENV !== 'test') {
   logger.error('OPENAI_API_KEY environment variable is not set');
   throw new Error('OpenAI API key is required but not provided');
 }
 
-const openai = new OpenAI({
+const openai = process.env.NODE_ENV === 'test' ? null : new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
@@ -130,6 +130,10 @@ export class OpenAIService {
     }
 
     try {
+      if (!openai) {
+        throw new Error('OpenAI client not available in test environment');
+      }
+
       const response = await openai.chat.completions.create(requestData);
       const duration = Date.now() - startTime;
       const responseContent = response.choices?.[0]?.message?.content || '';

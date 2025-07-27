@@ -5,13 +5,14 @@
 
 import express from 'express';
 import { z } from 'zod';
-import { validateRequest } from '../middleware/validation';
-import { logger } from '../utils/logger';
-import { createError } from '../utils/errorHandler';
+import { validateZodRequest } from '../middleware/zodValidation';
+import { createLogger } from '../utils/logger';
+import { createError } from '../middleware/errorHandler';
 import { layoutSectionSplittingService } from '../services/LayoutSectionSplittingService';
 import { sequentialSectionProcessingService } from '../services/SequentialSectionProcessingService';
 
 const router = express.Router();
+const logger = createLogger();
 
 // Request schemas
 const splitLayoutSchema = z.object({
@@ -84,7 +85,7 @@ const processSectionsSchema = z.object({
  * POST /api/layout/split
  * Split a large layout file into manageable sections
  */
-router.post('/split', validateRequest(splitLayoutSchema), async (req, res, next) => {
+router.post('/split', validateZodRequest(splitLayoutSchema), async (req, res, next) => {
   try {
     const { html, options = {} } = req.body;
 
@@ -117,7 +118,7 @@ router.post('/split', validateRequest(splitLayoutSchema), async (req, res, next)
  * POST /api/layout/process
  * Split layout and process all sections sequentially
  */
-router.post('/process', validateRequest(processLayoutSchema), async (req, res, next) => {
+router.post('/process', validateZodRequest(processLayoutSchema), async (req, res, next) => {
   try {
     const { html, splittingOptions = {}, processingOptions = {} } = req.body;
 
@@ -166,7 +167,7 @@ router.post('/process', validateRequest(processLayoutSchema), async (req, res, n
  * POST /api/layout/process-sections
  * Process pre-split sections sequentially
  */
-router.post('/process-sections', validateRequest(processSectionsSchema), async (req, res, next) => {
+router.post('/process-sections', validateZodRequest(processSectionsSchema), async (req, res, next) => {
   try {
     const { processingOptions = {}, ...splittingResult } = req.body;
 

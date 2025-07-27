@@ -31,7 +31,8 @@ export const errorHandler = (
   const statusCode = err.statusCode || 500;
   const errorCode = err.code || 'INTERNAL_ERROR';
   
-  const errorResponse: ErrorResponse = {
+  const errorResponse = {
+    success: false,
     error: err.message || 'Internal Server Error',
     code: errorCode,
     details: process.env.NODE_ENV === 'development' ? err.details : undefined,
