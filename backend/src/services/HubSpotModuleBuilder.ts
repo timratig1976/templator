@@ -2,7 +2,10 @@ import archiver from 'archiver';
 import { DetectedField, ModuleManifest } from '../../../shared/types';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
+import { logToFrontend } from '../routes/logs';
 import { v4 as uuidv4 } from 'uuid';
+import { HubSpotValidationService, ValidationResult, HubSpotModule } from './HubSpotValidationService';
+import { HubSpotPromptService, ModuleGenerationRequest, GeneratedModule } from './HubSpotPromptService';
 
 const logger = createLogger();
 
@@ -11,12 +14,123 @@ interface ModuleGenerationResult {
   download_url: string;
   manifest: ModuleManifest;
   zip_size: number;
+  validation_result?: ValidationResult;
+  ai_generated?: boolean;
 }
 
 export class HubSpotModuleBuilder {
   private moduleCache = new Map<string, Buffer>();
   private cacheExpiry = new Map<string, number>();
   private readonly CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  constructor() {
+    // Services are accessed via static getInstance methods
+  }
+
+  /**
+   * Generate HubSpot module using AI with comprehensive validation
+   */
+  async generateModuleWithAI(
+    request: ModuleGenerationRequest
+  ): Promise<ModuleGenerationResult> {
+    const startTime = Date.now();
+    const requestId = `ai_module_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      logger.info('Starting AI-powered HubSpot module generation', {
+        requestId,
+        moduleType: request.moduleType,
+        hasDesignDescription: !!request.designDescription,
+        timestamp: new Date().toISOString()
+      });
+
+      logToFrontend('info', 'processing', '🤖 Starting AI-powered module generation', {
+        moduleType: request.moduleType,
+        features: {
+          accessibility: request.accessibility,
+          performance: request.performance,
+          mobileFirst: request.mobileFirst
+        }
+      }, requestId);
+
+      // Generate module using AI
+      const promptService = HubSpotPromptService.getInstance();
+      const generatedModule = await promptService.generateModule(request);
+      
+      logToFrontend('info', 'processing', '🔍 Validating generated module', {
+        fieldsCount: generatedModule.fields.length,
+        templateLength: generatedModule.template.length
+      }, requestId);
+
+      // Validate the generated module
+      const validationService = HubSpotValidationService.getInstance();
+      const validationResult = await validationService.validateModule({
+        fields: generatedModule.fields,
+        meta: generatedModule.meta,
+        template: generatedModule.template
+      });
+
+      const moduleSlug = this.generateModuleSlug();
+      const manifest = this.createManifest(moduleSlug, []);
+
+      // Create ZIP buffer with validated module
+      const zipBuffer = await this.createZipArchive(moduleSlug, {
+        'module.html': generatedModule.template,
+        'fields.json': JSON.stringify(generatedModule.fields, null, 2),
+        'meta.json': JSON.stringify(generatedModule.meta, null, 2),
+        'module.css': '/* AI-generated module styles */\n/* Custom styles can be added here */',
+        'module.js': '// AI-generated module JavaScript\n// Custom JavaScript can be added here',
+        'README.md': this.generateReadme(generatedModule, validationResult, moduleSlug)
+      });
+
+      // Cache the ZIP file
+      this.cacheModule(moduleSlug, zipBuffer);
+
+      const duration = Date.now() - startTime;
+      logger.info('AI-powered HubSpot module generated successfully', {
+        requestId,
+        module_slug: moduleSlug,
+        fields_count: generatedModule.fields.length,
+        zip_size: zipBuffer.length,
+        validation_score: validationResult.score,
+        duration: `${duration}ms`
+      });
+
+      logToFrontend('success', 'processing', '✅ AI module generated successfully', {
+        moduleSlug,
+        fieldsCount: generatedModule.fields.length,
+        validationScore: validationResult.score,
+        criticalErrors: validationResult.errors.filter((e: any) => e.type === 'CRITICAL').length
+      }, requestId, duration);
+
+      return {
+        module_slug: moduleSlug,
+        download_url: `/api/download/${moduleSlug}`,
+        manifest,
+        zip_size: zipBuffer.length,
+        validation_result: validationResult,
+        ai_generated: true
+      };
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.error('AI module generation failed:', {
+        requestId,
+        error: (error as Error).message,
+        duration: `${duration}ms`
+      });
+      
+      logToFrontend('error', 'processing', '❌ AI module generation failed', {
+        error: (error as Error).message
+      }, requestId, duration);
+      
+      throw createError(
+        'Failed to generate AI-powered HubSpot module',
+        500,
+        'INTERNAL_ERROR',
+        error instanceof Error ? error.message : 'Unknown error occurred',
+        'Please try again or contact support'
+      );
+    }
+  }
 
   async generateModule(
     htmlContent: string,
@@ -219,14 +333,17 @@ ${moduleHtml}
   private generateMetaJson(moduleSlug: string): string {
     return JSON.stringify({
       label: `Windsurf Module - ${moduleSlug}`,
-      css_assets: [],
-      external_css: '',
-      js_assets: [],
-      external_js: '',
-      tags: ['windsurf', 'generated', 'responsive'],
-      host_template_types: ['PAGE', 'BLOG_POST', 'BLOG_LISTING'],
-      module_id: null,
+      description: `AI-generated HubSpot module created by Windsurf`,
+      icon: 'modules',
       is_available_for_new_content: true,
+      smart_type: 'NOT_SMART',
+      type: 'module',
+      content_types: ['SITE_PAGE', 'BLOG_POST', 'BLOG_LISTING'],
+      categories: ['content', 'windsurf'],
+      tags: ['windsurf', 'generated', 'responsive', 'ai'],
+      css_assets: [],
+      js_assets: [],
+      module_id: null
     }, null, 2);
   }
 
@@ -264,5 +381,74 @@ ${moduleHtml}
         this.cacheExpiry.delete(slug);
       }
     }
+  }
+
+  /**
+   * Generate README.md file for AI-generated modules
+   */
+  private generateReadme(generatedModule: GeneratedModule, validationResult: ValidationResult, moduleSlug: string): string {
+    const criticalErrors = validationResult.errors.filter((e: any) => e.type === 'CRITICAL').length;
+    const highErrors = validationResult.errors.filter((e: any) => e.type === 'HIGH').length;
+    const warnings = validationResult.warnings.length;
+    
+    return `# ${generatedModule.meta.label || moduleSlug}
+
+${generatedModule.description}
+
+## Module Information
+
+- **Module Slug**: ${moduleSlug}
+- **Generated**: ${new Date().toISOString()}
+- **AI Generated**: Yes
+- **Validation Score**: ${validationResult.score}/100
+
+## Quality Metrics
+
+- **Complexity Score**: ${validationResult.metrics.complexity_score}/100
+- **Accessibility Score**: ${validationResult.metrics.accessibility_score}/100
+- **Performance Score**: ${validationResult.metrics.performance_score}/100
+- **Maintainability Score**: ${validationResult.metrics.maintainability_score}/100
+
+## Validation Results
+
+- **Critical Errors**: ${criticalErrors}
+- **High Priority Errors**: ${highErrors}
+- **Warnings**: ${warnings}
+- **Valid**: ${validationResult.valid ? 'Yes' : 'No'}
+
+## Fields (${generatedModule.fields.length})
+
+${generatedModule.fields.map((field: any) => `- **${field.name}** (${field.type}): ${field.help_text || field.label || 'No description'}`).join('\n')}
+
+## Content Types
+
+This module can be used in:
+${generatedModule.meta.content_types ? generatedModule.meta.content_types.map((type: string) => `- ${type}`).join('\n') : '- Not specified'}
+
+## Installation
+
+1. Download the module ZIP file
+2. Extract to your HubSpot theme directory
+3. Upload via HubSpot CLI or Design Manager
+4. The module will be available in the module library
+
+## Usage
+
+This module was generated using AI and follows HubSpot best practices:
+
+- Semantic HTML structure
+- Responsive design
+- Accessibility compliance
+- Performance optimization
+- Modern HubL syntax
+
+## Support
+
+This module was generated by Windsurf AI. For support or customization, please refer to the HubSpot developer documentation.
+
+---
+
+*Generated by Windsurf AI Module Generator*
+`;
   }
 }

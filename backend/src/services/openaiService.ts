@@ -516,6 +516,72 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
   }
 
   /**
+   * Generate HubSpot module using structured prompts
+   */
+  async generateHubSpotModule(prompt: string): Promise<string> {
+    const startTime = Date.now();
+    const requestId = `hubspot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    try {
+      logger.info(`🏗️ [${requestId}] Starting HubSpot module generation`, {
+        promptLength: prompt.length,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log to frontend
+      logToFrontend('info', 'openai', '🏗️ Starting HubSpot module generation', {
+        promptLength: prompt.length
+      }, requestId);
+
+      const response = await this.callOpenAI(
+        [{ role: "user", content: prompt }],
+        "gpt-4o",
+        4000,
+        0.1
+      );
+
+      const apiDuration = Date.now() - startTime;
+      const moduleContent = response.choices[0]?.message?.content || '';
+      
+      logger.info(`✅ [${requestId}] HubSpot module generation completed`, {
+        usage: response.usage,
+        finishReason: response.choices[0]?.finish_reason,
+        responseLength: moduleContent.length,
+        apiDuration: `${apiDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log to frontend
+      logToFrontend('success', 'openai', '✅ HubSpot module generation completed', {
+        usage: response.usage,
+        finishReason: response.choices[0]?.finish_reason,
+        responseLength: moduleContent.length,
+        tokensUsed: response.usage?.total_tokens || 0
+      }, requestId, apiDuration);
+
+      return moduleContent;
+    } catch (error) {
+      const totalDuration = Date.now() - startTime;
+      logger.error(`❌ [${requestId}] Error generating HubSpot module`, {
+        error: error,
+        message: (error as Error)?.message,
+        totalDuration: `${totalDuration}ms`,
+        requestId,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log to frontend
+      logToFrontend('error', 'openai', '❌ Error generating HubSpot module', {
+        error: (error as Error)?.message
+      }, requestId, totalDuration);
+      
+      throw error;
+    }
+  }
+
+  /**
    * Refine generated HTML with additional AI processing
    */
   async refineHTML(html: string, requirements?: string): Promise<string> {

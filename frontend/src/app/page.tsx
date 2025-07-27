@@ -7,8 +7,10 @@ import DesignUpload from '@/components/DesignUpload';
 import HTMLPreview from '@/components/HTMLPreview';
 import AILogViewer from '@/components/AILogViewer';
 import HubSpotModuleEditor from '@/components/HubSpotModuleEditor';
+import LayoutSplittingManager from '@/components/LayoutSplittingManager';
 import { aiLogger } from '@/services/aiLogger';
 import logStreamService from '@/services/logStreamService';
+import layoutSplittingService from '@/services/layoutSplittingService';
 
 interface DesignAnalysisResult {
   fileName: string;
@@ -46,7 +48,7 @@ interface Component {
   defaultValue: string;
 }
 
-type WorkflowStep = 'upload' | 'preview' | 'editor' | 'module';
+type WorkflowStep = 'upload' | 'preview' | 'split' | 'editor' | 'module';
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
@@ -55,6 +57,8 @@ export default function Home() {
   const [showAILogs, setShowAILogs] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState<{url: string, fileName: string} | null>(null);
   const [isLogStreamConnected, setIsLogStreamConnected] = useState(false);
+  const [shouldUseSplitting, setShouldUseSplitting] = useState<boolean | null>(null);
+  const [splittingResult, setSplittingResult] = useState<any>(null);
 
   useEffect(() => {
     // Initialize logging system
@@ -77,10 +81,25 @@ export default function Home() {
     };
   }, []);
 
-  const handleUploadSuccess = (result: DesignAnalysisResult) => {
+  const handleUploadSuccess = async (result: DesignAnalysisResult) => {
     setDesignResult(result);
-    setCurrentStep('preview');
     setError(null);
+    
+    // Analyze if layout should be split based on size
+    try {
+      const fileSize = layoutSplittingService.estimateFileSize(result.analysis.html);
+      const analysis = await layoutSplittingService.analyzeLayout(fileSize);
+      setShouldUseSplitting(analysis.shouldSplit);
+      
+      if (analysis.shouldSplit) {
+        setCurrentStep('split');
+      } else {
+        setCurrentStep('preview');
+      }
+    } catch (err) {
+      console.warn('Failed to analyze layout for splitting:', err);
+      setCurrentStep('preview');
+    }
   };
 
   const handleUploadError = (errorMessage: string) => {
@@ -268,10 +287,13 @@ export default function Home() {
     setDesignResult(null);
     setError(null);
     setDownloadInfo(null);
+    setShouldUseSplitting(null);
+    setSplittingResult(null);
   };
 
   const steps = [
     { id: 'upload', title: 'Upload Design', description: 'Upload your design image', icon: Upload },
+    ...(shouldUseSplitting ? [{ id: 'split', title: 'Split Layout', description: 'Process large layout in sections', icon: ArrowRight }] : []),
     { id: 'preview', title: 'Preview & Refine', description: 'Review generated HTML', icon: Eye },
     { id: 'editor', title: 'Edit Module', description: 'Customize HubSpot module parts', icon: Code },
     { id: 'module', title: 'Download Module', description: 'Get your HubSpot module', icon: Package }
@@ -368,16 +390,70 @@ export default function Home() {
             </div>
           )}
 
+          {currentStep === 'split' && designResult && (
+            <div className="space-y-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Large Layout Detected
+                </h2>
+                <p className="text-gray-600">
+                  Your layout is large and complex. We'll split it into sections for better quality.
+                </p>
+              </div>
+              
+              <LayoutSplittingManager
+                html={designResult.analysis.html}
+                onComplete={(result) => {
+                  setSplittingResult(result);
+                  setCurrentStep('preview');
+                }}
+                onSectionComplete={(section) => {
+                  aiLogger.info('processing', 'Section processing completed', {
+                    sectionId: section.section.id,
+                    sectionType: section.section.type,
+                    qualityScore: section.validationResult.score,
+                    processingTime: section.processingTime
+                  });
+                }}
+              />
+              
+              <div className="text-center">
+                <button
+                  onClick={() => setCurrentStep('preview')}
+                  className="btn-secondary mr-4"
+                >
+                  Skip Splitting
+                </button>
+                <button
+                  onClick={resetWorkflow}
+                  className="btn-secondary"
+                >
+                  Upload New Design
+                </button>
+              </div>
+            </div>
+          )}
+
           {currentStep === 'preview' && designResult && (
             <div className="space-y-8">
               <HTMLPreview
-                html={designResult.analysis.html}
+                html={splittingResult?.combinedModule?.html || designResult.analysis.html}
                 sections={designResult.analysis.sections}
                 components={designResult.analysis.components}
                 description={designResult.analysis.description}
                 fileName={designResult.fileName}
                 onCreateModule={handleCreateModule}
               />
+              
+              {splittingResult && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-900 mb-2">✅ Layout Processing Complete</h3>
+                  <p className="text-sm text-green-800">
+                    Processed {splittingResult.processedSections}/{splittingResult.totalSections} sections 
+                    with {splittingResult.overallQualityScore}% average quality score.
+                  </p>
+                </div>
+              )}
               
               <div className="text-center">
                 <button

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler } from './middleware/errorHandler';
 import apiRoutes from './routes/api';
+import layoutSplittingRoutes from './routes/layoutSplittingRoutes';
 
 export function createApp(): express.Application {
   const app = express();
@@ -47,6 +48,7 @@ export function createApp(): express.Application {
 
   // API routes
   app.use('/api', apiRoutes);
+  app.use('/api/layout', layoutSplittingRoutes);
 
   // 404 handler
   app.use('*', (req, res) => {
