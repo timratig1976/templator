@@ -21,7 +21,7 @@ jest.mock('../utils/logger', () => ({
   }),
 }));
 
-import { uploadDesign, refineHTML } from '../controllers/designController';
+import { uploadDesign, refineHTML } from '../../controllers/designController';
 
 describe('Design Controller - Simplified Tests', () => {
   const mockDesignAnalysis = {

@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 jest.mock('openai');
 const MockedOpenAI = OpenAI as jest.MockedClass<typeof OpenAI>;
 
-import openaiService from '../services/openaiService';
+import openaiService from '../../services/openaiService';
 
 describe('OpenAI Service Tests', () => {
   let mockOpenAI: jest.Mocked<OpenAI>;

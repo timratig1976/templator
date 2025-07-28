@@ -7,7 +7,7 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
-import { createLogger } from '../utils/logger';
+import { createLogger } from '../../utils/logger';
 import fs from 'fs';
 import path from 'path';
 

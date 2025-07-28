@@ -5,8 +5,8 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import request from 'supertest';
-import { createApp } from '../app';
-import { createLogger } from '../utils/logger';
+import { createApp } from '../../app';
+import { createLogger } from '../../utils/logger';
 import fs from 'fs';
 import path from 'path';
 

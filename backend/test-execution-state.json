@@ -1,0 +1,152 @@
+{
+  "currentExecution": "test-1753718675789-spqktmk1p",
+  "status": "running",
+  "startTime": "2025-07-28T16:04:35.789Z",
+  "totalTests": 5,
+  "passedTests": 0,
+  "failedTests": 0,
+  "currentTest": 0,
+  "tests": [
+    {
+      "name": "API Authentication",
+      "file": "src/tests/auth.test.ts",
+      "status": "pending",
+      "duration": null,
+      "error": null,
+      "subtests": [
+        {
+          "name": "validates API keys correctly",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "rejects invalid credentials",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "handles rate limiting properly",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Template Loading",
+      "file": "src/tests/template-loader.test.ts",
+      "status": "pending",
+      "duration": null,
+      "error": null,
+      "subtests": [
+        {
+          "name": "loads templates from filesystem",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "caches templates for performance",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Variable Substitution",
+      "file": "src/tests/variables.test.ts",
+      "status": "pending",
+      "duration": null,
+      "error": null,
+      "subtests": [
+        {
+          "name": "handles simple string variables",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "processes nested object properties",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "supports array iteration",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "applies conditional logic",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Template Generation",
+      "file": "src/tests/generator.test.ts",
+      "status": "pending",
+      "duration": null,
+      "error": null,
+      "subtests": [
+        {
+          "name": "creates basic templates",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "generates complex nested structures",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "validates required fields",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "applies proper indentation",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Output Validation",
+      "file": "src/tests/validation.test.ts",
+      "status": "pending",
+      "duration": null,
+      "error": null,
+      "subtests": [
+        {
+          "name": "validates JSON output format",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "checks for required sections",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        },
+        {
+          "name": "verifies template integrity",
+          "status": "pending",
+          "duration": null,
+          "error": null
+        }
+      ]
+    }
+  ]
+}

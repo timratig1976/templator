@@ -29,8 +29,8 @@ jest.mock('../utils/logger', () => ({
   }),
 }));
 
-import openaiService from '../services/openaiService';
-import { createApp } from '../app';
+import openaiService from '../../services/openaiService';
+import { createApp } from '../../app';
 
 // Get the mocked service
 const mockedOpenAIService = openaiService as jest.Mocked<typeof openaiService>;

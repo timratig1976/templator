@@ -3,7 +3,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { jest } from '@jest/globals';
-import apiRoutes from '../routes/api';
+import apiRoutes from '../../routes/api';
 
 // Create app function for testing
 function createApp(): express.Application {
