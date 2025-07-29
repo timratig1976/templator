@@ -1,152 +1,266 @@
 {
-  "currentExecution": "test-1753718675789-spqktmk1p",
-  "status": "running",
-  "startTime": "2025-07-28T16:04:35.789Z",
-  "totalTests": 5,
-  "passedTests": 0,
-  "failedTests": 0,
-  "currentTest": 0,
+  "currentExecution": "test-1753738101968-pvmmdcz3f",
+  "status": "completed",
+  "startTime": "2025-07-28T21:28:21.968Z",
+  "totalTests": 25,
+  "passedTests": 20,
+  "failedTests": 3,
+  "currentTest": 25,
+  "currentTestName": "Running unit tests - Test 25/25",
+  "currentSubtest": "Testing unit functionality",
   "tests": [
     {
-      "name": "API Authentication",
-      "file": "src/tests/auth.test.ts",
-      "status": "pending",
-      "duration": null,
+      "id": "test-1",
+      "name": "Unit: API endpoint validation",
+      "description": "Testing API endpoint validation functionality",
+      "status": "passed",
+      "duration": 696,
+      "category": "unit",
       "error": null,
-      "subtests": [
-        {
-          "name": "validates API keys correctly",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "rejects invalid credentials",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "handles rate limiting properly",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        }
-      ]
+      "details": "✅ API endpoint validation completed successfully"
     },
     {
-      "name": "Template Loading",
-      "file": "src/tests/template-loader.test.ts",
-      "status": "pending",
-      "duration": null,
+      "id": "test-2",
+      "name": "Integration: External API integration",
+      "description": "Testing External API integration functionality",
+      "status": "passed",
+      "duration": 373,
+      "category": "integration",
       "error": null,
-      "subtests": [
-        {
-          "name": "loads templates from filesystem",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "caches templates for performance",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        }
-      ]
+      "details": "✅ External API integration completed successfully"
     },
     {
-      "name": "Variable Substitution",
-      "file": "src/tests/variables.test.ts",
-      "status": "pending",
-      "duration": null,
+      "id": "test-3",
+      "name": "E2e: Dashboard navigation",
+      "description": "Testing Dashboard navigation functionality",
+      "status": "passed",
+      "duration": 361,
+      "category": "e2e",
       "error": null,
-      "subtests": [
-        {
-          "name": "handles simple string variables",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "processes nested object properties",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "supports array iteration",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "applies conditional logic",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        }
-      ]
+      "details": "✅ Dashboard navigation completed successfully"
     },
     {
-      "name": "Template Generation",
-      "file": "src/tests/generator.test.ts",
-      "status": "pending",
-      "duration": null,
+      "id": "test-4",
+      "name": "Services: File upload handling",
+      "description": "Testing File upload handling functionality",
+      "status": "passed",
+      "duration": 745,
+      "category": "services",
       "error": null,
-      "subtests": [
-        {
-          "name": "creates basic templates",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "generates complex nested structures",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "validates required fields",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "applies proper indentation",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        }
-      ]
+      "details": "✅ File upload handling completed successfully"
     },
     {
-      "name": "Output Validation",
-      "file": "src/tests/validation.test.ts",
-      "status": "pending",
-      "duration": null,
+      "id": "test-5",
+      "name": "Performance: Database query optimization",
+      "description": "Testing Database query optimization functionality",
+      "status": "passed",
+      "duration": 437,
+      "category": "performance",
       "error": null,
-      "subtests": [
-        {
-          "name": "validates JSON output format",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "checks for required sections",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        },
-        {
-          "name": "verifies template integrity",
-          "status": "pending",
-          "duration": null,
-          "error": null
-        }
-      ]
+      "details": "✅ Database query optimization completed successfully"
+    },
+    {
+      "id": "test-6",
+      "name": "Unit: API endpoint validation",
+      "description": "Testing API endpoint validation functionality",
+      "status": "passed",
+      "duration": 984,
+      "category": "unit",
+      "error": null,
+      "details": "✅ API endpoint validation completed successfully"
+    },
+    {
+      "id": "test-7",
+      "name": "Integration: External API integration",
+      "description": "Testing External API integration functionality",
+      "status": "passed",
+      "duration": 478,
+      "category": "integration",
+      "error": null,
+      "details": "✅ External API integration completed successfully"
+    },
+    {
+      "id": "test-8",
+      "name": "E2e: Dashboard navigation",
+      "description": "Testing Dashboard navigation functionality",
+      "status": "passed",
+      "duration": 569,
+      "category": "e2e",
+      "error": null,
+      "details": "✅ Dashboard navigation completed successfully"
+    },
+    {
+      "id": "test-9",
+      "name": "Services: File upload handling",
+      "description": "Testing File upload handling functionality",
+      "status": "passed",
+      "duration": 990,
+      "category": "services",
+      "error": null,
+      "details": "✅ File upload handling completed successfully"
+    },
+    {
+      "id": "test-10",
+      "name": "Performance: Database query optimization",
+      "description": "Testing Database query optimization functionality",
+      "status": "passed",
+      "duration": 666,
+      "category": "performance",
+      "error": null,
+      "details": "✅ Database query optimization completed successfully"
+    },
+    {
+      "id": "test-11",
+      "name": "Unit: API endpoint validation",
+      "description": "Testing API endpoint validation functionality",
+      "status": "passed",
+      "duration": 349,
+      "category": "unit",
+      "error": null,
+      "details": "✅ API endpoint validation completed successfully"
+    },
+    {
+      "id": "test-12",
+      "name": "Integration: External API integration",
+      "description": "Testing External API integration functionality",
+      "status": "passed",
+      "duration": 414,
+      "category": "integration",
+      "error": null,
+      "details": "✅ External API integration completed successfully"
+    },
+    {
+      "id": "test-13",
+      "name": "E2e: Dashboard navigation",
+      "description": "Testing Dashboard navigation functionality",
+      "status": "passed",
+      "duration": 939,
+      "category": "e2e",
+      "error": null,
+      "details": "✅ Dashboard navigation completed successfully"
+    },
+    {
+      "id": "test-14",
+      "name": "Services: File upload handling",
+      "description": "Testing File upload handling functionality",
+      "status": "passed",
+      "duration": 366,
+      "category": "services",
+      "error": null,
+      "details": "✅ File upload handling completed successfully"
+    },
+    {
+      "id": "test-15",
+      "name": "Performance: Database query optimization",
+      "description": "Testing Database query optimization functionality",
+      "status": "passed",
+      "duration": 336,
+      "category": "performance",
+      "error": null,
+      "details": "✅ Database query optimization completed successfully"
+    },
+    {
+      "id": "test-16",
+      "name": "Unit: API endpoint validation",
+      "description": "Testing API endpoint validation functionality",
+      "status": "passed",
+      "duration": 480,
+      "category": "unit",
+      "error": null,
+      "details": "✅ API endpoint validation completed successfully"
+    },
+    {
+      "id": "test-17",
+      "name": "Integration: External API integration",
+      "description": "Testing External API integration functionality",
+      "status": "passed",
+      "duration": 462,
+      "category": "integration",
+      "error": null,
+      "details": "✅ External API integration completed successfully"
+    },
+    {
+      "id": "test-18",
+      "name": "E2e: Dashboard navigation",
+      "description": "Testing Dashboard navigation functionality",
+      "status": "passed",
+      "duration": 791,
+      "category": "e2e",
+      "error": null,
+      "details": "✅ Dashboard navigation completed successfully"
+    },
+    {
+      "id": "test-19",
+      "name": "Services: File upload handling",
+      "description": "Testing File upload handling functionality",
+      "status": "passed",
+      "duration": 789,
+      "category": "services",
+      "error": null,
+      "details": "✅ File upload handling completed successfully"
+    },
+    {
+      "id": "test-20",
+      "name": "Performance: Database query optimization",
+      "description": "Testing Database query optimization functionality",
+      "status": "passed",
+      "duration": 642,
+      "category": "performance",
+      "error": null,
+      "details": "✅ Database query optimization completed successfully"
+    },
+    {
+      "id": "test-21",
+      "name": "Unit: API endpoint validation",
+      "description": "Testing API endpoint validation functionality",
+      "status": "failed",
+      "duration": 688,
+      "category": "unit",
+      "error": "AssertionError: API endpoint validation validation failed - expected response but got null",
+      "details": "❌ API endpoint validation failed validation"
+    },
+    {
+      "id": "test-22",
+      "name": "Integration: External API integration",
+      "description": "Testing External API integration functionality",
+      "status": "failed",
+      "duration": 265,
+      "category": "integration",
+      "error": "AssertionError: External API integration validation failed - expected response but got null",
+      "details": "❌ External API integration failed validation"
+    },
+    {
+      "id": "test-23",
+      "name": "E2e: Dashboard navigation",
+      "description": "Testing Dashboard navigation functionality",
+      "status": "failed",
+      "duration": 214,
+      "category": "e2e",
+      "error": "AssertionError: Dashboard navigation validation failed - expected response but got null",
+      "details": "❌ Dashboard navigation failed validation"
+    },
+    {
+      "id": "test-24",
+      "name": "Services: File upload handling",
+      "description": "Testing File upload handling functionality",
+      "status": "skipped",
+      "duration": 760,
+      "category": "services",
+      "error": null,
+      "details": "⏭️ File upload handling skipped due to dependencies"
+    },
+    {
+      "id": "test-25",
+      "name": "Performance: Database query optimization",
+      "description": "Testing Database query optimization functionality",
+      "status": "skipped",
+      "duration": 471,
+      "category": "performance",
+      "error": null,
+      "details": "⏭️ Database query optimization skipped due to dependencies"
     }
-  ]
+  ],
+  "summary": "Tests completed: 20 passed, 3 failed, 2 skipped",
+  "skippedTests": 2,
+  "endTime": "2025-07-29T05:11:06.681Z"
 }

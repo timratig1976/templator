@@ -4,276 +4,46 @@ import { ComponentAssemblyEngine, AssembledModule } from './ComponentAssemblyEng
 import { ExpertReviewDashboard } from './ExpertReviewDashboard';
 import { HubSpotValidationService } from './HubSpotValidationService';
 import OpenAIService from './openaiService';
+import TestReportingService from './TestReportingService';
+
+// Import all types from the dedicated types module
+import {
+  TestSuiteConfiguration,
+  TestCategory,
+  TestCase,
+  TestStep,
+  ActionDetails,
+  ValidationRule,
+  ExpectedResult,
+  SuccessCriteria,
+  FailureCriteria,
+  TestAssertion,
+  CoverageRequirements,
+  PerformanceThresholds,
+  QualityGate,
+  TestExecution,
+  TestResult,
+  StepResult,
+  PerformanceMetrics,
+  CoverageReport,
+  FileCoverage,
+  UncoveredLine,
+  PerformanceReport,
+  BudgetViolation,
+  QualityReport,
+  QualityIssue,
+  QualityRecommendation,
+  BenchmarkResult,
+  PerformanceDelta,
+  TestExecutionOptions,
+  TestCategoryType,
+  TestPriority,
+  TestStatus,
+  ExecutionMode,
+  ExecutionStatus
+} from '../types/testSuite.types';
 
 const logger = createLogger();
-
-// Core test suite interfaces
-export interface TestSuiteConfiguration {
-  suite_id: string;
-  suite_name: string;
-  description: string;
-  test_categories: TestCategory[];
-  execution_mode: 'sequential' | 'parallel' | 'hybrid';
-  timeout_seconds: number;
-  retry_attempts: number;
-  coverage_requirements: CoverageRequirements;
-  performance_thresholds: PerformanceThresholds;
-  quality_gates: QualityGate[];
-}
-
-export interface TestCategory {
-  category_id: string;
-  category_name: string;
-  category_type: 'unit' | 'integration' | 'e2e' | 'performance' | 'accessibility' | 'security' | 'regression';
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  test_cases: TestCase[];
-  setup_requirements: string[];
-  teardown_requirements: string[];
-}
-
-export interface TestCase {
-  test_id: string;
-  test_name: string;
-  description: string;
-  test_type: string;
-  target_component?: string;
-  target_module?: string;
-  preconditions: string[];
-  test_steps: TestStep[];
-  expected_results: ExpectedResult[];
-  assertions: TestAssertion[];
-  tags: string[];
-  estimated_duration_ms: number;
-}
-
-export interface TestStep {
-  step_id: string;
-  step_description: string;
-  action_type: 'setup' | 'execute' | 'verify' | 'cleanup';
-  action_details: ActionDetails;
-  expected_outcome: string;
-  failure_handling: 'continue' | 'abort' | 'retry';
-}
-
-export interface ActionDetails {
-  action_name: string;
-  parameters: { [key: string]: any };
-  target_element?: string;
-  input_data?: any;
-  validation_rules?: ValidationRule[];
-}
-
-export interface ValidationRule {
-  rule_type: 'equals' | 'contains' | 'matches' | 'greater_than' | 'less_than' | 'exists' | 'not_exists';
-  expected_value: any;
-  tolerance?: number;
-  error_message: string;
-}
-
-export interface ExpectedResult {
-  result_type: 'output' | 'state_change' | 'performance_metric' | 'error_condition';
-  description: string;
-  success_criteria: SuccessCriteria;
-  failure_criteria: FailureCriteria;
-}
-
-export interface SuccessCriteria {
-  conditions: string[];
-  metrics?: { [key: string]: number };
-  output_format?: string;
-  state_requirements?: string[];
-}
-
-export interface FailureCriteria {
-  error_conditions: string[];
-  timeout_conditions: string[];
-  performance_violations: string[];
-  quality_violations: string[];
-}
-
-export interface TestAssertion {
-  assertion_id: string;
-  assertion_type: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'matches_pattern';
-  target_value: any;
-  expected_value: any;
-  tolerance?: number;
-  custom_validator?: string;
-}
-
-export interface CoverageRequirements {
-  code_coverage_threshold: number;
-  branch_coverage_threshold: number;
-  function_coverage_threshold: number;
-  line_coverage_threshold: number;
-  component_coverage_threshold: number;
-  integration_coverage_threshold: number;
-}
-
-export interface PerformanceThresholds {
-  max_execution_time_ms: number;
-  max_memory_usage_mb: number;
-  max_cpu_usage_percent: number;
-  max_network_requests: number;
-  max_response_time_ms: number;
-  min_throughput_rps: number;
-}
-
-export interface QualityGate {
-  gate_id: string;
-  gate_name: string;
-  gate_type: 'coverage' | 'performance' | 'security' | 'accessibility' | 'reliability';
-  threshold_value: number;
-  comparison_operator: 'greater_than' | 'less_than' | 'equals' | 'greater_equal' | 'less_equal';
-  blocking: boolean;
-  warning_threshold?: number;
-}
-
-export interface TestExecution {
-  execution_id: string;
-  suite_id: string;
-  started_at: Date;
-  completed_at?: Date;
-  status: 'running' | 'completed' | 'failed' | 'cancelled' | 'timeout';
-  total_tests: number;
-  passed_tests: number;
-  failed_tests: number;
-  skipped_tests: number;
-  execution_time_ms: number;
-  test_results: TestResult[];
-  coverage_report: CoverageReport;
-  performance_report: PerformanceReport;
-  quality_report: QualityReport;
-}
-
-export interface TestResult {
-  test_id: string;
-  test_name: string;
-  status: 'passed' | 'failed' | 'skipped' | 'error';
-  execution_time_ms: number;
-  error_message?: string;
-  stack_trace?: string;
-  assertions_passed: number;
-  assertions_failed: number;
-  step_results: StepResult[];
-  performance_metrics: PerformanceMetrics;
-}
-
-export interface StepResult {
-  step_id: string;
-  status: 'passed' | 'failed' | 'skipped';
-  execution_time_ms: number;
-  output: any;
-  error_details?: string;
-  screenshots?: string[];
-  logs?: string[];
-}
-
-export interface PerformanceMetrics {
-  response_time_ms: number;
-  memory_usage_mb: number;
-  cpu_usage_percent: number;
-  network_requests: number;
-  data_transferred_kb: number;
-  cache_hit_ratio: number;
-}
-
-export interface CoverageReport {
-  overall_coverage: number;
-  line_coverage: number;
-  branch_coverage: number;
-  function_coverage: number;
-  statement_coverage: number;
-  file_coverage: FileCoverage[];
-  uncovered_lines: UncoveredLine[];
-}
-
-export interface FileCoverage {
-  file_path: string;
-  lines_covered: number;
-  lines_total: number;
-  coverage_percentage: number;
-  branches_covered: number;
-  branches_total: number;
-  functions_covered: number;
-  functions_total: number;
-}
-
-export interface UncoveredLine {
-  file_path: string;
-  line_number: number;
-  line_content: string;
-  reason: string;
-}
-
-export interface PerformanceReport {
-  overall_score: number;
-  load_time_ms: number;
-  first_contentful_paint_ms: number;
-  largest_contentful_paint_ms: number;
-  cumulative_layout_shift: number;
-  first_input_delay_ms: number;
-  time_to_interactive_ms: number;
-  performance_budget_violations: BudgetViolation[];
-}
-
-export interface BudgetViolation {
-  metric_name: string;
-  actual_value: number;
-  budget_value: number;
-  violation_percentage: number;
-  severity: 'warning' | 'error';
-}
-
-export interface QualityReport {
-  overall_quality_score: number;
-  code_quality_score: number;
-  maintainability_score: number;
-  reliability_score: number;
-  security_score: number;
-  accessibility_score: number;
-  quality_issues: QualityIssue[];
-  recommendations: QualityRecommendation[];
-}
-
-export interface QualityIssue {
-  issue_id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-  category: string;
-  description: string;
-  file_path: string;
-  line_number?: number;
-  rule_violated: string;
-  suggested_fix: string;
-}
-
-export interface QualityRecommendation {
-  recommendation_id: string;
-  priority: 'high' | 'medium' | 'low';
-  title: string;
-  description: string;
-  implementation_effort: 'low' | 'medium' | 'high';
-  expected_impact: string;
-}
-
-export interface BenchmarkResult {
-  benchmark_id: string;
-  benchmark_name: string;
-  executed_at: Date;
-  baseline_metrics: PerformanceMetrics;
-  current_metrics: PerformanceMetrics;
-  performance_delta: PerformanceDelta;
-  regression_detected: boolean;
-  improvement_detected: boolean;
-  benchmark_status: 'passed' | 'failed' | 'warning';
-}
-
-export interface PerformanceDelta {
-  response_time_change_percent: number;
-  memory_usage_change_percent: number;
-  cpu_usage_change_percent: number;
-  throughput_change_percent: number;
-  overall_performance_change: number;
-}
 
 export class ComprehensiveTestSuite {
   private static instance: ComprehensiveTestSuite;
@@ -282,6 +52,7 @@ export class ComprehensiveTestSuite {
   private reviewDashboard: ExpertReviewDashboard;
   private validationService: HubSpotValidationService;
   private openaiService: typeof OpenAIService;
+  private reportingService: TestReportingService;
   private testSuites: Map<string, TestSuiteConfiguration> = new Map();
   private testExecutions: Map<string, TestExecution> = new Map();
   private benchmarkBaselines: Map<string, PerformanceMetrics> = new Map();
@@ -292,6 +63,7 @@ export class ComprehensiveTestSuite {
     this.reviewDashboard = ExpertReviewDashboard.getInstance();
     this.validationService = HubSpotValidationService.getInstance();
     this.openaiService = OpenAIService;
+    this.reportingService = TestReportingService.getInstance();
     this.initializeTestSuites();
   }
 
@@ -331,9 +103,9 @@ export class ComprehensiveTestSuite {
       skipped_tests: 0,
       execution_time_ms: 0,
       test_results: [],
-      coverage_report: this.initializeCoverageReport(),
-      performance_report: this.initializePerformanceReport(),
-      quality_report: this.initializeQualityReport()
+      coverage_report: this.reportingService.initializeCoverageReport(),
+      performance_report: this.reportingService.initializePerformanceReport(),
+      quality_report: this.reportingService.initializeQualityReport()
     };
 
     this.testExecutions.set(executionId, execution);
@@ -353,16 +125,16 @@ export class ComprehensiveTestSuite {
       }
 
       // Generate reports
-      execution.coverage_report = await this.generateCoverageReport(targetId, targetType);
-      execution.performance_report = await this.generatePerformanceReport(targetId, targetType);
-      execution.quality_report = await this.generateQualityReport(execution.test_results);
+      execution.coverage_report = await this.reportingService.generateCoverageReport(targetId, targetType);
+      execution.performance_report = await this.reportingService.generatePerformanceReport(targetId, targetType);
+      execution.quality_report = await this.reportingService.generateQualityReport(execution.test_results);
 
       // Check quality gates
-      const qualityGateResults = await this.checkQualityGates(suite.quality_gates, execution);
+      const gateResults = await this.reportingService.checkQualityGates(suite.quality_gates, execution);
       
       execution.completed_at = new Date();
       execution.execution_time_ms = execution.completed_at.getTime() - execution.started_at.getTime();
-      execution.status = qualityGateResults.allPassed ? 'completed' : 'failed';
+      execution.status = gateResults.allPassed ? 'completed' : 'failed';
 
       logger.info('Test suite execution completed', {
         executionId,
@@ -404,16 +176,16 @@ export class ComprehensiveTestSuite {
     const baseline = this.benchmarkBaselines.get(baselineKey);
 
     // Execute performance tests
-    const currentMetrics = await this.measurePerformanceMetrics(targetId, targetType, benchmarkType);
+    const currentMetrics = await this.reportingService.measurePerformanceMetrics(targetId, targetType, benchmarkType);
     
     let performanceDelta: PerformanceDelta;
     let regressionDetected = false;
     let improvementDetected = false;
 
     if (baseline) {
-      performanceDelta = this.calculatePerformanceDelta(baseline, currentMetrics);
-      regressionDetected = this.detectRegression(performanceDelta);
-      improvementDetected = this.detectImprovement(performanceDelta);
+      performanceDelta = this.reportingService.calculatePerformanceDelta(baseline, currentMetrics);
+      regressionDetected = this.reportingService.detectRegression(performanceDelta);
+      improvementDetected = this.reportingService.detectImprovement(performanceDelta);
     } else {
       // First run - establish baseline
       this.benchmarkBaselines.set(baselineKey, currentMetrics);
@@ -494,11 +266,11 @@ export class ComprehensiveTestSuite {
     logger.info('Validating test coverage', { targetId, targetType, executionId });
 
     const coverageReport = executionId 
-      ? this.testExecutions.get(executionId)?.coverage_report || this.initializeCoverageReport()
-      : await this.generateCoverageReport(targetId, targetType);
+      ? this.testExecutions.get(executionId)?.coverage_report || this.reportingService.initializeCoverageReport()
+      : await this.reportingService.generateCoverageReport(targetId, targetType);
 
-    const gaps = this.identifyCoverageGaps(coverageReport);
-    const recommendations = this.generateCoverageRecommendations(coverageReport, gaps);
+    const gaps = this.reportingService.identifyCoverageGaps(coverageReport);
+    const recommendations = this.reportingService.generateCoverageRecommendations(coverageReport, gaps);
 
     return { coverage: coverageReport, gaps, recommendations };
   }
@@ -930,48 +702,9 @@ export class ComprehensiveTestSuite {
     }
   }
 
-  private async generateCoverageReport(targetId: string, targetType: string): Promise<CoverageReport> {
-    return {
-      overall_coverage: 85.2,
-      line_coverage: 87.1,
-      branch_coverage: 82.5,
-      function_coverage: 91.3,
-      statement_coverage: 86.8,
-      file_coverage: [
-        {
-          file_path: `${targetId}/module.html`,
-          lines_covered: 45,
-          lines_total: 52,
-          coverage_percentage: 86.5,
-          branches_covered: 8,
-          branches_total: 10,
-          functions_covered: 3,
-          functions_total: 3
-        }
-      ],
-      uncovered_lines: [
-        {
-          file_path: `${targetId}/module.html`,
-          line_number: 23,
-          line_content: '// TODO: Add error handling',
-          reason: 'Unreachable code'
-        }
-      ]
-    };
-  }
 
-  private async generatePerformanceReport(targetId: string, targetType: string): Promise<PerformanceReport> {
-    return {
-      overall_score: 92,
-      load_time_ms: 1850,
-      first_contentful_paint_ms: 1200,
-      largest_contentful_paint_ms: 2100,
-      cumulative_layout_shift: 0.05,
-      first_input_delay_ms: 85,
-      time_to_interactive_ms: 2400,
-      performance_budget_violations: []
-    };
-  }
+
+
 
   private async generateQualityReport(testResults: TestResult[]): Promise<QualityReport> {
     const totalTests = testResults.length;
