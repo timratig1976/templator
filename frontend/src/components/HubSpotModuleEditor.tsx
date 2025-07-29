@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { aiLogger } from '../services/aiLogger';
 import { API_ENDPOINTS } from '../config/api';
+import { PipelineExecutionResult } from '../services/pipelineService';
 
 interface HubSpotModuleFile {
   name: string;
@@ -24,15 +25,7 @@ interface HubSpotModuleFile {
 }
 
 interface HubSpotModuleEditorProps {
-  designResult: {
-    fileName: string;
-    analysis: {
-      html: string;
-      sections: any[];
-      components: any[];
-      description: string;
-    };
-  };
+  designResult: PipelineExecutionResult;
 }
 
 const HubSpotModuleEditor: React.FC<HubSpotModuleEditorProps> = ({ designResult }) => {
@@ -48,13 +41,16 @@ const HubSpotModuleEditor: React.FC<HubSpotModuleEditorProps> = ({ designResult 
   const generateHubSpotModuleFiles = () => {
     const requestId = `hubspot_editor_${Date.now()}`;
     
+    const moduleName = designResult.packagedModule?.name || 'Generated Module';
+    const combinedHtml = designResult.sections?.map(s => s.html).join('\n') || '';
+    
     aiLogger.info('processing', 'Generating HubSpot module files for editor', {
-      fileName: designResult.fileName,
-      sectionsCount: designResult.analysis.sections?.length || 0
+      fileName: moduleName,
+      sectionsCount: designResult.sections?.length || 0
     }, requestId);
 
     // Generate fields.json for HubSpot
-    const fieldsConfig = designResult.analysis.sections.flatMap(section => 
+    const fieldsConfig = designResult.sections?.flatMap(section => 
       section.editableFields?.map((field: any) => ({
         id: field.id,
         label: field.name,
@@ -69,7 +65,7 @@ const HubSpotModuleEditor: React.FC<HubSpotModuleEditorProps> = ({ designResult 
         name: 'module.html',
         type: 'html',
         description: 'Main HTML template for the HubSpot module',
-        content: designResult.analysis.html
+        content: combinedHtml
       },
       {
         name: 'fields.json',
@@ -82,15 +78,15 @@ const HubSpotModuleEditor: React.FC<HubSpotModuleEditorProps> = ({ designResult 
         type: 'json',
         description: 'HubSpot module metadata and configuration',
         content: JSON.stringify({
-          label: designResult.fileName.replace(/\.[^/.]+$/, '') + ' Module',
+          label: moduleName.replace(/\.[^/.]+$/, '') + ' Module',
           css_assets: [],
           external_js: [],
           global: false,
-          help_text: designResult.analysis.description || 'Custom HubSpot module generated from design',
+          help_text: designResult.metadata?.processingSteps?.join(', ') || 'Custom HubSpot module generated from design',
           host_template_types: ['PAGE', 'BLOG_POST', 'BLOG_LISTING'],
           module_id: Date.now(),
           no_wrapper: false,
-          path: `/${designResult.fileName.replace(/\.[^/.]+$/, '')}-module`,
+          path: `/${moduleName.replace(/\.[^/.]+$/, '')}-module`,
           smart_type: 'NOT_SMART',
           tags: ['custom', 'generated'],
           wrap_field_tag: 'div'
@@ -101,7 +97,7 @@ const HubSpotModuleEditor: React.FC<HubSpotModuleEditorProps> = ({ designResult 
         type: 'css',
         description: 'Custom CSS styles for the module',
         content: `/* HubSpot Module CSS */
-/* Generated from: ${designResult.fileName} */
+/* Generated from: ${moduleName} */
 
 .custom-module {
   width: 100%;
@@ -110,12 +106,12 @@ const HubSpotModuleEditor: React.FC<HubSpotModuleEditorProps> = ({ designResult 
 }
 
 /* Section Styles */
-${designResult.analysis.sections.map((section: any) => `
+${designResult.sections?.map((section: any) => `
 .section-${section.id} {
   /* ${section.name} - ${section.type} */
   margin-bottom: 2rem;
 }
-`).join('\n')}
+`).join('\n') || ''}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -131,7 +127,7 @@ ${designResult.analysis.sections.map((section: any) => `
         type: 'js',
         description: 'JavaScript functionality for the module',
         content: `// HubSpot Module JavaScript
-// Generated from: ${designResult.fileName}
+// Generated from: ${moduleName}
 
 document.addEventListener('DOMContentLoaded', function() {
   // Initialize module functionality
@@ -187,13 +183,14 @@ document.addEventListener('DOMContentLoaded', function() {
     setIsDownloading(true);
 
     try {
+      const moduleName = designResult.packagedModule?.name || 'Generated Module';
       aiLogger.info('processing', 'Starting HubSpot module download', {
         filesCount: moduleFiles.length,
-        moduleName: designResult.fileName
+        moduleName: moduleName
       }, requestId);
 
       // Convert sections and components to fields_config format for backend
-      const fieldsConfig = designResult.analysis.sections.flatMap(section => 
+      const fieldsConfig = designResult.sections?.flatMap(section => 
         section.editableFields?.map((field: any) => ({
           id: field.id,
           label: field.name,
@@ -204,7 +201,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       // Get the current HTML content (in case user modified it)
       const htmlFile = moduleFiles.find(f => f.name === 'module.html');
-      const htmlContent = htmlFile?.content || designResult.analysis.html;
+      const combinedHtml = designResult.sections?.map(s => s.html).join('\n') || '';
+      const htmlContent = htmlFile?.content || combinedHtml;
 
       const response = await fetch(API_ENDPOINTS.MODULE_GENERATE, {
         method: 'POST',
@@ -239,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${designResult.fileName.replace(/\.[^/.]+$/, '')}-hubspot-module.zip`;
+          a.download = `${moduleName.replace(/\.[^/.]+$/, '')}-hubspot-module.zip`;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);

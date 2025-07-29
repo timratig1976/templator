@@ -1,0 +1,31 @@
+{
+  "currentExecution": "test-1753816997760-hoe8bn40k",
+  "status": "running",
+  "startTime": "2025-07-29T19:23:17.760Z",
+  "totalTests": 25,
+  "passedTests": 2,
+  "failedTests": 0,
+  "currentTest": 3,
+  "currentTestName": "Running unit tests - Test 3/25",
+  "currentSubtest": "Testing API endpoints",
+  "tests": [
+    {
+      "id": "test-1",
+      "name": "unit_test_1",
+      "status": "passed",
+      "duration": 245,
+      "category": "unit",
+      "error": null
+    },
+    {
+      "id": "test-2",
+      "name": "integration_test_1",
+      "status": "passed",
+      "duration": 567,
+      "category": "integration",
+      "error": null
+    }
+  ],
+  "summary": "Running tests: 2/25 completed (8%)",
+  "skippedTests": 0
+}

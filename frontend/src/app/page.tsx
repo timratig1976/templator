@@ -2,26 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../config/api';
-import { Upload, Eye, Package, ArrowRight, Activity, Download, AlertCircle, Copy, Code, Sparkles, Zap, Target, Terminal } from 'lucide-react';
+import { Upload, Eye, Package, ArrowRight, Activity, Download, AlertCircle, Copy, Code, Sparkles, Zap, Target, Terminal, Folder } from 'lucide-react';
 import DesignUpload from '@/components/DesignUpload';
 import HTMLPreview from '@/components/HTMLPreview';
 import AILogViewer from '@/components/AILogViewer';
 import HubSpotModuleEditor from '@/components/HubSpotModuleEditor';
 import LayoutSplittingManager from '@/components/LayoutSplittingManager';
+import SectionStackEditor from '@/components/SectionStackEditor';
+import SaveStatusIndicator from '@/components/SaveStatusIndicator';
+import ProjectManager from '@/components/ProjectManager';
 import { aiLogger } from '@/services/aiLogger';
 import logStreamService from '@/services/logStreamService';
 import layoutSplittingService from '@/services/layoutSplittingService';
+import { PipelineExecutionResult, PipelineSection } from '@/services/pipelineService';
+import { useProjectManager } from '@/hooks/useProjectManager';
 
-interface DesignAnalysisResult {
-  fileName: string;
-  fileSize: number;
-  analysis: {
-    html: string;
-    sections: Section[];
-    components: Component[];
-    description: string;
-  };
-}
+// Legacy DesignAnalysisResult interface removed - now using PipelineExecutionResult
 
 interface Section {
   id: string;
@@ -48,17 +44,21 @@ interface Component {
   defaultValue: string;
 }
 
-type WorkflowStep = 'upload' | 'preview' | 'split' | 'editor' | 'module';
+type WorkflowStep = 'upload' | 'preview' | 'split' | 'editor' | 'module' | 'projects';
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
-  const [designResult, setDesignResult] = useState<any>(null);
+  const [designResult, setDesignResult] = useState<PipelineExecutionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAILogs, setShowAILogs] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState<{url: string, fileName: string} | null>(null);
   const [isLogStreamConnected, setIsLogStreamConnected] = useState(false);
   const [shouldUseSplitting, setShouldUseSplitting] = useState<boolean | null>(null);
   const [splittingResult, setSplittingResult] = useState<any>(null);
+  const [originalFileName, setOriginalFileName] = useState<string>('');
+
+  // Project management
+  const projectManager = useProjectManager();
 
   useEffect(() => {
     // Initialize logging system
@@ -81,13 +81,40 @@ export default function Home() {
     };
   }, []);
 
-  const handleUploadSuccess = async (result: DesignAnalysisResult) => {
+  const handleUploadSuccess = async (result: PipelineExecutionResult, fileName?: string) => {
     setDesignResult(result);
     setError(null);
     
+    // Store original filename for auto-save
+    if (fileName) {
+      setOriginalFileName(fileName);
+    }
+    
+    // Auto-save the project if enabled
+    if (projectManager.autoSaveEnabled && fileName) {
+      try {
+        aiLogger.info('system', '🔄 Auto-saving project after successful upload', {
+          fileName,
+          sectionsCount: result.sections?.length || 0
+        });
+        
+        await projectManager.autoSaveProject(result, fileName);
+        
+        aiLogger.info('system', '✅ Project auto-saved successfully', {
+          fileName,
+          projectName: projectManager.currentProject?.name
+        });
+      } catch (error) {
+        console.warn('Auto-save failed, continuing without saving:', error);
+        aiLogger.error('system', '⚠️ Auto-save failed but continuing', { error });
+      }
+    }
+    
     // Analyze if layout should be split based on size
     try {
-      const fileSize = layoutSplittingService.estimateFileSize(result.analysis.html);
+      // Extract HTML from the pipeline result sections
+      const combinedHtml = result.sections.map(section => section.html).join('\n');
+      const fileSize = layoutSplittingService.estimateFileSize(combinedHtml);
       const analysis = await layoutSplittingService.analyzeLayout(fileSize);
       setShouldUseSplitting(analysis.shouldSplit);
       
@@ -111,14 +138,14 @@ export default function Home() {
 
     const requestId = `module_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     aiLogger.info('processing', 'Starting HubSpot module creation', {
-      fileName: designResult.fileName,
-      sectionsCount: designResult.analysis.sections?.length || 0,
-      componentsCount: designResult.analysis.components?.length || 0
+      fileName: designResult.packagedModule?.name || 'Generated Module',
+      sectionsCount: designResult.sections?.length || 0,
+      componentsCount: designResult.sections?.flatMap(s => s.editableFields || []).length || 0
     }, requestId);
 
     try {
       // Convert sections and components to fields_config format
-      const fieldsConfig = designResult.analysis.sections.flatMap(section => 
+      const fieldsConfig = designResult.sections?.flatMap(section => 
         section.editableFields.map(field => ({
           id: field.id,
           label: field.name,
@@ -127,10 +154,11 @@ export default function Home() {
         }))
       );
 
+      const combinedHtml = designResult.sections?.map(s => s.html).join('\n') || '';
       aiLogger.info('network', 'Sending module creation request to backend', {
         endpoint: API_ENDPOINTS.MODULE_GENERATE,
         fieldsCount: fieldsConfig.length,
-        htmlLength: designResult.analysis.html.length
+        htmlLength: combinedHtml.length
       }, requestId);
 
       // Call the existing module creation endpoint with correct data structure
@@ -140,7 +168,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          html_normalized: designResult.analysis.html,
+          html_normalized: combinedHtml,
           fields_config: fieldsConfig
         }),
       });
@@ -168,7 +196,7 @@ export default function Home() {
           ? result.module_zip_url 
           : `${API_ENDPOINTS.DESIGN_UPLOAD.replace('/api/design/upload', '')}${result.module_zip_url}`;
         
-        const fileName = `${designResult.fileName.replace(/\.[^/.]+$/, '')}-hubspot-module.zip`;
+        const fileName = `${(designResult.packagedModule?.name || 'generated-module').replace(/\.[^/.]+$/, '')}-hubspot-module.zip`;
         
         aiLogger.info('network', 'Downloading module ZIP file', {
           downloadUrl,
@@ -310,9 +338,43 @@ export default function Home() {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-bold gradient-text">Windsurf MVP</h1>
+              
+              {/* Projects Button */}
+              <button
+                onClick={() => setCurrentStep('projects')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center space-x-1 ${
+                  currentStep === 'projects'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                <Folder className="w-4 h-4" />
+                <span>Projects</span>
+                {projectManager.allProjects.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+                    {projectManager.allProjects.length}
+                  </span>
+                )}
+              </button>
             </div>
-            <div className="text-sm text-gray-600">
-              Design → HTML → HubSpot Module
+            
+            <div className="flex items-center space-x-6">
+              {/* Save Status Indicator */}
+              {designResult && (
+                <SaveStatusIndicator
+                  saveStatus={projectManager.saveStatus}
+                  isSaving={projectManager.isSaving}
+                  lastSaved={projectManager.lastSaved}
+                  error={projectManager.error}
+                  autoSaveEnabled={projectManager.autoSaveEnabled}
+                  onToggleAutoSave={projectManager.setAutoSaveEnabled}
+                  className="hidden sm:flex"
+                />
+              )}
+              
+              <div className="text-sm text-gray-600">
+                Design → HTML → HubSpot Module
+              </div>
             </div>
           </div>
         </div>
@@ -402,7 +464,7 @@ export default function Home() {
               </div>
               
               <LayoutSplittingManager
-                html={designResult.analysis.html}
+                html={designResult.sections?.map(s => s.html).join('\n') || ''}
                 onComplete={(result) => {
                   setSplittingResult(result);
                   setCurrentStep('preview');
@@ -436,14 +498,48 @@ export default function Home() {
 
           {currentStep === 'preview' && designResult && (
             <div className="space-y-8">
-              <HTMLPreview
-                html={splittingResult?.combinedModule?.html || designResult.analysis.html}
-                sections={designResult.analysis.sections}
-                components={designResult.analysis.components}
-                description={designResult.analysis.description}
-                fileName={designResult.fileName}
-                onCreateModule={handleCreateModule}
-              />
+              {/* Check if we have multiple sections to show stacked editor */}
+              {designResult.sections && designResult.sections.length > 1 ? (
+                <SectionStackEditor
+                  designResult={designResult}
+                  splittingResult={splittingResult}
+                  onSectionUpdate={(sectionId, updatedSection) => {
+                    // Update the section in designResult
+                    setDesignResult(prev => {
+                      if (!prev || !prev.sections) return prev;
+                      return {
+                        ...prev,
+                        sections: prev.sections.map(section => 
+                          section.id === sectionId ? updatedSection : section
+                        )
+                      };
+                    });
+                  }}
+                  onCreateModuleFromSection={(section) => {
+                    aiLogger.success('processing', 'Module created from section', {
+                      sectionId: section.id,
+                      sectionName: section.name
+                    });
+                  }}
+                />
+              ) : (
+                <HTMLPreview
+                  html={splittingResult?.combinedModule?.html || designResult.sections?.map((s: PipelineSection) => s.html).join('\n') || ''}
+                  sections={designResult.sections || []}
+                  components={designResult.sections?.flatMap((s: PipelineSection) => 
+                    (s.editableFields || []).map(field => ({
+                      id: field.id,
+                      name: field.name,
+                      type: field.type === 'rich_text' ? 'text' : field.type === 'boolean' ? 'text' : field.type as 'text' | 'image' | 'button' | 'link' | 'form' | 'list',
+                      selector: field.selector,
+                      defaultValue: field.defaultValue
+                    }))
+                  ) || []}
+                  description={designResult.metadata?.processingSteps?.join(', ') || 'AI-generated HubSpot module'}
+                  fileName={designResult.packagedModule?.name || 'Generated Module'}
+                  onCreateModule={handleCreateModule}
+                />
+              )}
               
               {splittingResult && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -580,6 +676,41 @@ export default function Home() {
                   Back to Preview
                 </button>
               </div>
+            </div>
+          )}
+
+          {currentStep === 'projects' && (
+            <div className="space-y-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Project Manager
+                </h2>
+                <p className="text-gray-600">
+                  Manage your saved projects, load previous work, or create new projects.
+                </p>
+              </div>
+              
+              <ProjectManager
+                onLoadProject={(project) => {
+                  // Load project data and switch to preview
+                  setDesignResult(project.pipelineResult);
+                  setOriginalFileName(project.originalFileName);
+                  setCurrentStep('preview');
+                  
+                  aiLogger.info('system', '📂 Project loaded from manager', {
+                    projectId: project.id,
+                    projectName: project.name,
+                    sectionsCount: project.pipelineResult.sections?.length || 0
+                  });
+                }}
+                onCreateNew={() => {
+                  // Reset workflow to start new project
+                  resetWorkflow();
+                  
+                  aiLogger.info('system', '✨ Starting new project from manager');
+                }}
+                className="max-w-6xl mx-auto"
+              />
             </div>
           )}
         </div>

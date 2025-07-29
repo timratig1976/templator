@@ -319,47 +319,60 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
 3. **Responsive Design**: Ensure mobile-first approach with proper breakpoints
 4. **Accessibility**: Include proper ARIA labels, alt text, and semantic elements
 5. **Component Identification**: Identify reusable components and sections
+6. **Clean Formatting**: Generate properly formatted, minified HTML without excessive newlines
+7. **REQUIRED IMAGE PLACEHOLDERS**: You MUST include <img> tags with placeholder paths for ALL visual elements in the design
 
 **Output Format**: Return a JSON object with this structure:
 {
-  "html": "Complete HTML code with Tailwind classes",
-  "sections": [
-    {
-      "id": "unique-id",
-      "name": "Section Name",
-      "type": "header|hero|content|footer|sidebar|navigation",
-      "html": "HTML for this section only",
-      "editableFields": [
-        {
-          "id": "field-id",
-          "name": "Field Name",
-          "type": "text|rich_text|image|url|boolean",
-          "selector": "CSS selector for this element",
-          "defaultValue": "Default content",
-          "required": true|false
-        }
-      ]
-    }
-  ],
-  "components": [
-    {
-      "id": "component-id",
-      "name": "Component Name", 
-      "type": "text|image|button|link|form|list",
-      "selector": "CSS selector",
-      "defaultValue": "Default value"
-    }
-  ],
-  "description": "Brief description of the design and layout"
+"html": "Complete clean HTML code with Tailwind classes - properly formatted without excessive newlines",
+"sections": [
+  {
+    "id": "unique-id",
+    "name": "Section Name",
+    "type": "header|hero|content|footer|sidebar|navigation",
+    "html": "Clean HTML for this section only - no excessive newlines",
+    "editableFields": [
+      {
+        "id": "field-id",
+        "name": "Field Name",
+        "type": "text|rich_text|image|url|boolean",
+        "selector": "CSS selector for this element",
+        "defaultValue": "Default content",
+        "required": true|false
+      }
+    ]
+  }
+],
+"components": [
+  {
+    "id": "component-id",
+    "name": "Component Name", 
+    "type": "text|image|button|link|form|list",
+    "selector": "CSS selector",
+    "defaultValue": "Default value"
+  }
+],
+"description": "Brief description of the design and layout"
 }
 
-**Important**: 
-- Use modern Tailwind classes (gradients, shadows, animations)
+**Critical HTML Requirements**: 
+- Generate clean, properly formatted HTML without excessive \\n characters
+- Use semantic HTML elements (header, main, section, article, aside, footer)
+- Include proper DOCTYPE and html structure with head and body tags
+- Use modern Tailwind classes (gradients, shadows, animations, responsive breakpoints)
 - Make text content editable by identifying headlines, paragraphs, buttons
-- Identify images that should be replaceable
+- **MANDATORY IMAGE REQUIREMENTS**: You MUST include <img> tags for ALL visual elements:
+  * Header sections: Include logo image with <img src="/path/to/logo.png" alt="Company Logo" class="h-10 w-auto">
+  * Hero sections: Include hero/banner image with <img src="/path/to/hero.jpg" alt="Hero Image" class="w-full h-96 object-cover">
+  * Content sections: Include relevant content images with <img src="/path/to/image.jpg" alt="Content Image" class="w-full h-auto rounded-lg">
+  * Product sections: Include product images with <img src="/path/to/product.jpg" alt="Product Image" class="w-full h-48 object-cover">
+  * Footer sections: Include social media icons with <img src="/path/to/icon.png" alt="Social Icon" class="w-6 h-6">
+  * Navigation: Include menu icons for mobile with <img src="/path/to/menu.svg" alt="Menu" class="w-6 h-6">
 - Create logical sections that can become HubSpot modules
-- Ensure responsive design with proper breakpoints
-- Use semantic HTML elements
+- Ensure responsive design with proper breakpoints (sm:, md:, lg:, xl:)
+- Use proper indentation and formatting - avoid excessive newlines
+- Generate valid, well-structured HTML that renders correctly
+- ALWAYS include image placeholders even if the design doesn't show specific images - infer where images should logically be placed
 `;
 
       logger.info(`📤 [${requestId}] Sending OpenAI API request`, {
@@ -451,6 +464,19 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
 
       const analysisData = JSON.parse(jsonString);
       
+      // Clean up HTML formatting
+      if (analysisData.html) {
+        analysisData.html = this.cleanupHTML(analysisData.html);
+      }
+      
+      // Clean up section HTML
+      if (analysisData.sections) {
+        analysisData.sections = analysisData.sections.map((section: any) => ({
+          ...section,
+          html: section.html ? this.cleanupHTML(section.html) : section.html
+        }));
+      }
+      
       const totalDuration = Date.now() - startTime;
       logger.info(`✅ [${requestId}] Design analysis completed successfully`, {
         sectionsCount: analysisData.sections?.length || 0,
@@ -517,6 +543,34 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
         (error as Error)?.message || 'Unknown error occurred'
       );
     }
+  }
+
+  /**
+   * Clean up HTML formatting and remove excessive newlines
+   */
+  private cleanupHTML(html: string): string {
+    if (!html) return html;
+    
+    return html
+      // Remove excessive newlines and whitespace
+      .replace(/\n\s*\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      // Clean up quotes around attributes
+      .replace(/"([^"]*)"/g, '"$1"')
+      // Remove extra spaces around tags
+      .replace(/\s+>/g, '>')
+      .replace(/<\s+/g, '<')
+      // Clean up whitespace inside tags
+      .replace(/\s{2,}/g, ' ')
+      // Remove leading/trailing whitespace from lines
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .join('\n')
+      // Ensure proper HTML structure
+      .replace(/^(?!<!DOCTYPE|<html)/i, '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Generated Design</title>\n<script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body>\n')
+      // Ensure closing tags if missing
+      + (html.includes('</body>') ? '' : '\n</body>\n</html>');
   }
 
   /**

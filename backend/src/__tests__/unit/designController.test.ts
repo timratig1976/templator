@@ -135,7 +135,7 @@ describe('Design Controller API Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.fileName).toBe('test-design.jpg');
+      expect(response.body.data.packagedModule?.name).toBe('test-design.jpg');
     });
 
     it('should reject unsupported file types', async () => {
@@ -280,7 +280,7 @@ describe('Integration Tests', () => {
       .expect(200);
 
     expect(uploadResponse.body.success).toBe(true);
-    const generatedHTML = uploadResponse.body.data.analysis.html;
+    const generatedHTML = uploadResponse.body.data.sections?.[0]?.html || '';
 
     // Step 2: Refine the generated HTML
     const refineResponse = await request(app)

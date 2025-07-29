@@ -5,6 +5,7 @@ import { ExpertReviewDashboard } from './ExpertReviewDashboard';
 import { HubSpotValidationService } from './HubSpotValidationService';
 import OpenAIService from './openaiService';
 import TestReportingService from './TestReportingService';
+import HTMLStorageService from './HTMLStorageService';
 
 // Import all types from the dedicated types module
 import {

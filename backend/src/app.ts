@@ -3,6 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import fs from 'fs';
 import path from 'path';
+import designRoutes from './routes/design';
+import apiRoutes from './routes/api';
+import validationRoutes from './routes/validation';
+import projectsRoutes from './routes/projects';
+import testStorageRoutes from './routes/test-storage';
+import testImageRoutes from './routes/test-images';
 
 export function createApp(): express.Application {
   const app = express();
@@ -511,6 +517,14 @@ export function createApp(): express.Application {
     // Default health response
     return res.json(healthData);
   });
+
+  // Register API routes
+  app.use('/api/design', designRoutes);
+  app.use('/api', apiRoutes);
+  app.use('/api/validation', validationRoutes);
+  app.use('/api/projects', projectsRoutes);
+  app.use('/api/test/storage', testStorageRoutes);
+  app.use('/api/test/images', testImageRoutes);
 
   return app;
 }

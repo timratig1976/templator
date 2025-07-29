@@ -67,15 +67,14 @@ describe('End-to-End Test Scenarios', () => {
         .expect(200);
 
       expect(uploadResponse.body.success).toBe(true);
-      expect(uploadResponse.body.data).toHaveProperty('fileName', 'landing-page-design.png');
-      expect(uploadResponse.body.data).toHaveProperty('analysis');
-      expect(uploadResponse.body.data.analysis).toHaveProperty('html');
-      expect(uploadResponse.body.data.analysis).toHaveProperty('sections');
-      expect(uploadResponse.body.data.analysis).toHaveProperty('components');
+      expect(uploadResponse.body.data.packagedModule?.name).toBe('landing-page-design.png');
+      expect(uploadResponse.body.data).toHaveProperty('sections');
+      expect(uploadResponse.body.data.sections).toBeInstanceOf(Array);
+      expect(uploadResponse.body.data.sections.length).toBeGreaterThan(0);
 
-      const generatedHTML = uploadResponse.body.data.analysis.html;
-      const sections = uploadResponse.body.data.analysis.sections;
-      const components = uploadResponse.body.data.analysis.components;
+      const generatedHTML = uploadResponse.body.data.sections?.[0]?.html || '';
+      const sections = uploadResponse.body.data.sections || [];
+      const components = uploadResponse.body.data.sections?.flatMap((s: any) => s.editableFields || []) || [];
 
       // Validate generated content structure
       expect(generatedHTML).toContain('class=');
@@ -121,15 +120,15 @@ describe('End-to-End Test Scenarios', () => {
           .expect(200);
 
         expect(response.body.success).toBe(true);
-        expect(response.body.data.fileName).toBe(image.name);
+        expect(response.body.data.packagedModule?.name).toBe(image.name);
         results.push(response.body.data);
       }
 
       // Verify all uploads were processed
       expect(results).toHaveLength(3);
       results.forEach(result => {
-        expect(result).toHaveProperty('analysis');
-        expect(result.analysis).toHaveProperty('html');
+        expect(result).toHaveProperty('sections');
+        expect(result.sections?.[0]?.html).toBeDefined();
       });
     });
 
@@ -179,7 +178,7 @@ describe('End-to-End Test Scenarios', () => {
       responses.forEach((response: any, index: number) => {
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
-        expect(response.body.data.fileName).toBe(`concurrent-design-${index}.png`);
+        expect(response.body.data.packagedModule?.name).toBe(`concurrent-design-${index}.png`);
       });
     }, 60000); // Extended timeout for concurrent processing
 
@@ -300,7 +299,7 @@ describe('End-to-End Test Scenarios', () => {
 
       expect(response.body.success).toBe(true);
       
-      const sections = response.body.data.analysis.sections;
+      const sections = response.body.data.sections || [];
       
       // Verify sections have proper editable fields for HubSpot
       sections.forEach((section: Section) => {

@@ -197,8 +197,8 @@ describe('API Integration Mock Tests', () => {
     const data = await response.json();
     
     expect(data.success).toBe(true);
-    expect(data.data.fileName).toBe('test.png');
-    expect(data.data.analysis.html).toBe('<div>Test</div>');
+    expect(data.data.packagedModule?.name).toBe('test.png');
+    expect(data.data.sections?.[0]?.html).toBe('<div>Test</div>');
   });
 
   it('should handle API error responses', async () => {

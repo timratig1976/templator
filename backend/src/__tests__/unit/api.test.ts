@@ -101,10 +101,10 @@ describe('API Integration Tests', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.data.fileName).toBe('test-design.png');
-      expect(response.body.data.analysis).toHaveProperty('html');
-      expect(response.body.data.analysis).toHaveProperty('sections');
-      expect(response.body.data.analysis).toHaveProperty('components');
+      expect(response.body.data.packagedModule?.name).toBe('test-design.png');
+      expect(response.body.data).toHaveProperty('sections');
+      expect(response.body.data.sections).toBeInstanceOf(Array);
+      expect(response.body.data.sections?.[0]?.html).toBeDefined();
     });
   });
 

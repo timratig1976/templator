@@ -111,7 +111,7 @@ export default function HTMLPreview({
             <Edit3 className="w-8 h-8 text-green-600" />
             <div className="ml-3">
               <p className="text-2xl font-bold text-gray-900">
-                {sections.reduce((acc, section) => acc + section.editableFields.length, 0)}
+                {sections.reduce((acc, section) => acc + (section.editableFields?.length || 0), 0)}
               </p>
               <p className="text-sm text-gray-600">Editable Fields</p>
             </div>
@@ -177,7 +177,7 @@ export default function HTMLPreview({
                         <script src="https://cdn.tailwindcss.com"></script>
                       </head>
                       <body>
-                        ${html}
+                        ${html.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')}
                       </body>
                       </html>
                     `}
@@ -203,7 +203,7 @@ export default function HTMLPreview({
                 </button>
               </div>
               <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                <code>{html}</code>
+                <code>{html.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')}</code>
               </pre>
             </div>
           )}
@@ -233,7 +233,7 @@ export default function HTMLPreview({
                         <h3 className="font-semibold text-gray-900">{section.name}</h3>
                       </div>
                       <span className="text-sm text-gray-500">
-                        {section.editableFields.length} fields
+                        {section.editableFields?.length || 0} fields
                       </span>
                     </div>
 
@@ -242,7 +242,7 @@ export default function HTMLPreview({
                         <div className="bg-gray-50 rounded-lg p-3">
                           <h4 className="font-medium text-gray-900 mb-2">Editable Fields:</h4>
                           <div className="grid gap-2">
-                            {section.editableFields.map((field) => (
+                            {(section.editableFields || []).map((field) => (
                               <div key={field.id} className="flex items-center justify-between bg-white rounded p-2 border">
                                 <div className="flex items-center space-x-2">
                                   <span className="text-lg">{getFieldTypeIcon(field.type)}</span>
