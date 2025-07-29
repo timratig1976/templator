@@ -4,11 +4,13 @@
  * Phase 5: Export and Deployment System
  */
 
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import archiver from 'archiver';
 import { createHash } from 'crypto';
-import { logger } from '../utils/logger';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger();
 import { HubSpotValidationService } from './HubSpotValidationService';
 
 export interface PackageOptions {

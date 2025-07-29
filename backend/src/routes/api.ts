@@ -9,6 +9,7 @@ import { createLogger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import designRoutes from './design';
 import logsRoutes from './logs';
+import pipelineRoutes from './pipeline';
 
 const router = Router();
 const logger = createLogger();
@@ -30,6 +31,9 @@ router.use('/design', designRoutes);
 
 // AI Logs routes
 router.use('/logs', logsRoutes);
+
+// Quality-focused Pipeline routes
+router.use('/pipeline', pipelineRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {

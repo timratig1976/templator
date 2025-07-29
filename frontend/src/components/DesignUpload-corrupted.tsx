@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Upload, Image, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { aiLogger } from '../services/aiLogger';
-import { pipelineService, PipelineExecutionResult, PipelineStatus } from '../services/pipelineService';
+import { pipelineService, PipelineExecutionResult, PipelineStatus, PipelineError } from '../services/pipelineService';
 
 interface DesignUploadProps {
   onUploadSuccess: (result: PipelineExecutionResult) => void;
@@ -113,8 +113,16 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
 
       const processingTime = Date.now() - startTime;
 
-      // Log successful completion - fix logUploadSuccess call
-      aiLogger.logUploadSuccess(requestId, processingTime.toString(), processingTime);
+      // Log successful completion - convert number to string
+      aiLogger.logUploadSuccess(requestId, processingTime.toString(), {
+        pipelineId: result.id,
+        sectionsGenerated: result.sections.length,
+        qualityScore: result.qualityScore,
+        validationPassed: result.validationPassed,
+        enhancementsApplied: result.enhancementsApplied.length,
+        phaseTimes: result.metadata.phaseTimes,
+        aiModelsUsed: result.metadata.aiModelsUsed
+      });
 
       aiLogger.info('processing', 'Modular pipeline completed successfully', {
         pipelineId: result.id,
@@ -127,43 +135,72 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
 
       // Call success callback with pipeline result
       onUploadSuccess(result);
+            } else if (newProgress >= 50 && prev < 50) {
+              aiLogger.info('openai', 'OpenAI processing design image', {}, requestId);
+            } else if (newProgress >= 70 && prev < 70) {
+              aiLogger.info('processing', 'Generating HTML structure', {}, requestId);
+            }
+          }
+          return newProgress;
+        });
+      }, 300);
+
+      const response = await fetch(API_ENDPOINTS.DESIGN_UPLOAD, {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(95);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const duration = Date.now() - startTime;
+        aiLogger.logUploadError(requestId, errorData.message || 'Upload failed', duration);
+        aiLogger.error('network', 'API request failed', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        }, requestId);
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      const result = await response.json();
+      const duration = Date.now() - startTime;
+      
+      setUploadProgress(100);
+      aiLogger.logUploadSuccess(requestId, selectedFile.name, duration);
+      aiLogger.success('processing', 'Design-to-HTML conversion completed successfully', {
+        sectionsGenerated: result.data?.analysis?.sections?.length || 0,
+        componentsGenerated: result.data?.analysis?.components?.length || 0,
+        htmlLength: result.data?.analysis?.html?.length || 0
+      }, requestId, duration);
+      
+      setTimeout(() => {
+        onUploadSuccess(result.data);
+        setIsUploading(false);
+        setSelectedFile(null);
+        setUploadProgress(0);
+        aiLogger.info('system', 'Upload process completed, UI updated', {}, requestId);
+      }, 500);
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
-      
-      // Handle pipeline-specific errors
-      if (error instanceof Error && 'code' in error) {
-        const pipelineError = error as any;
-        aiLogger.logUploadError(requestId, pipelineError.message, processingTime);
-
-        aiLogger.error('processing', `Pipeline failed in ${pipelineError.phase || 'unknown'} phase: ${pipelineError.message}`, {
-          errorCode: pipelineError.code,
-          phase: pipelineError.phase,
-          details: pipelineError.details
-        }, requestId);
-
-        onUploadError(`Pipeline Error (${pipelineError.code}): ${pipelineError.message}`);
-      } else {
-        // Handle generic errors
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        
-        aiLogger.logUploadError(requestId, errorMessage, processingTime);
-
-        aiLogger.error('processing', `Unexpected error during pipeline execution: ${errorMessage}`, {
-          error: error instanceof Error ? error.stack : error
-        }, requestId);
-
-        onUploadError(`Upload failed: ${errorMessage}`);
-      }
-    } finally {
+      const duration = Date.now() - startTime;
       setIsUploading(false);
       setUploadProgress(0);
-      setCurrentPhase('');
-      setPipelineStatus(null);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      aiLogger.logUploadError(requestId, errorMessage, duration);
+      aiLogger.error('system', 'Upload process failed', {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined
+      }, requestId);
+      
+      onUploadError(errorMessage);
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
+  const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -171,34 +208,9 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getPhaseDisplayName = (phase: string): string => {
-    const phaseNames: Record<string, string> = {
-      'input_processing': 'Processing Input',
-      'ai_generation': 'AI Analysis',
-      'quality_assurance': 'Quality Check',
-      'enhancement': 'Enhancement',
-      'module_packaging': 'Packaging'
-    };
-    return phaseNames[phase] || phase;
-  };
-
-  const getProgressMessage = (): string => {
-    if (!pipelineStatus) {
-      if (uploadProgress < 20) return 'Uploading file...';
-      if (uploadProgress < 40) return 'Processing input...';
-      return 'Starting AI analysis...';
-    }
-
-    const currentPhaseStatus = pipelineStatus.phases.find(p => p.status === 'running');
-    if (currentPhaseStatus) {
-      return `${getPhaseDisplayName(currentPhaseStatus.name)}...`;
-    }
-
-    return `${getPhaseDisplayName(pipelineStatus.currentPhase)}...`;
-  };
-
   return (
     <div className="w-full max-w-2xl mx-auto">
+      {/* Upload Area */}
       <div
         className={`
           relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300
@@ -226,7 +238,7 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
             <Loader2 className="w-12 h-12 mx-auto text-blue-600 animate-spin" />
             <div className="space-y-2">
               <p className="text-lg font-semibold text-gray-900">
-                Converting Design with AI Pipeline...
+                Converting Design to HTML...
               </p>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
@@ -235,30 +247,8 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
                 />
               </div>
               <p className="text-sm text-gray-600">
-                {getProgressMessage()}
+                {uploadProgress < 90 ? 'Uploading...' : 'AI is analyzing your design...'}
               </p>
-              
-              {/* Phase Progress Indicators */}
-              {pipelineStatus && (
-                <div className="mt-4 grid grid-cols-5 gap-2">
-                  {pipelineStatus.phases.map((phase, index) => (
-                    <div key={phase.name} className="text-center">
-                      <div className={`
-                        w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-semibold
-                        ${phase.status === 'completed' ? 'bg-green-500 text-white' : 
-                          phase.status === 'running' ? 'bg-blue-500 text-white animate-pulse' :
-                          phase.status === 'failed' ? 'bg-red-500 text-white' :
-                          'bg-gray-300 text-gray-600'}
-                      `}>
-                        {index + 1}
-                      </div>
-                      <p className="text-xs mt-1 text-gray-600">
-                        {getPhaseDisplayName(phase.name)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         ) : selectedFile ? (
@@ -269,7 +259,7 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
                 {selectedFile.name}
               </p>
               <p className="text-sm text-gray-600">
-                {formatFileSize(selectedFile.size)} • Ready for AI Pipeline
+                {formatFileSize(selectedFile.size)} • Ready to convert
               </p>
               <button
                 onClick={(e) => {
@@ -279,7 +269,7 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
                 className="btn-primary mt-4"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                Process with AI Pipeline
+                Convert to HTML
               </button>
             </div>
           </div>
@@ -316,15 +306,14 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
         ))}
       </div>
 
-      {/* Enhanced Tips for Pipeline */}
+      {/* Tips */}
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-        <h4 className="font-semibold text-blue-900 mb-2">🚀 AI Pipeline Features</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">💡 Tips for Best Results</h4>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• <strong>5-Phase Processing:</strong> Input → AI → Quality → Enhancement → Packaging</li>
-          <li>• <strong>Real-time Progress:</strong> Track each phase with live updates</li>
-          <li>• <strong>Quality Scoring:</strong> Automatic quality assessment and validation</li>
-          <li>• <strong>Smart Enhancement:</strong> AI-powered improvements and error correction</li>
-          <li>• <strong>HubSpot Ready:</strong> Fully validated and packaged modules</li>
+          <li>• Use high-resolution images for better AI analysis</li>
+          <li>• Ensure text and elements are clearly visible</li>
+          <li>• PNG format works best for designs with text</li>
+          <li>• Clean, well-organized layouts convert better</li>
         </ul>
       </div>
     </div>
