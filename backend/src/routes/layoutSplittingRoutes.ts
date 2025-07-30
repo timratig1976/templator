@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { validateZodRequest } from '../middleware/zodValidation';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
-import { layoutSectionSplittingService } from '../services/LayoutSectionSplittingService';
-import { sequentialSectionProcessingService } from '../services/SequentialSectionProcessingService';
+import { layoutSectionSplittingService } from '../services/analysis/LayoutSectionSplittingService';
+import { sequentialSectionProcessingService } from '../services/analysis/SequentialSectionProcessingService';
 
 const router = express.Router();
 const logger = createLogger();

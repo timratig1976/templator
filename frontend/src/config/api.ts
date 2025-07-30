@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
   PIPELINE_STATUS: `${API_BASE_URL}/api/pipeline/status`,
   PIPELINE_QUALITY: `${API_BASE_URL}/api/pipeline/quality`,
   PIPELINE_ENHANCE: `${API_BASE_URL}/api/pipeline/enhance`,
+  PIPELINE_REGENERATE_HTML: `${API_BASE_URL}/api/pipeline/regenerate-html`,
   PIPELINE_SUPPORTED_TYPES: `${API_BASE_URL}/api/pipeline/supported-types`,
   
   // System endpoints

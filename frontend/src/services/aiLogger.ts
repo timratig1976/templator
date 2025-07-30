@@ -142,114 +142,38 @@ class AILoggerService {
     return JSON.stringify(this.logs, null, 2);
   }
 
-  // Enhanced OpenAI specific logging methods
-  public logOpenAIRequest(requestId: string, model: string, prompt: string, metadata?: Record<string, any>): void {
-    this.info('openai', `🚀 Starting OpenAI request`, {
-      model,
-      promptLength: prompt.length,
-      promptPreview: prompt.substring(0, 200) + (prompt.length > 200 ? '...' : ''),
-      ...metadata
-    }, requestId);
+  // Compact flow-focused logging methods
+  public logFlowStep(requestId: string, step: string, status: 'start' | 'complete' | 'error', metadata?: Record<string, any>): void {
+    const emoji = status === 'start' ? '🔄' : status === 'complete' ? '✅' : '❌';
+    const level = status === 'error' ? 'error' : status === 'complete' ? 'success' : 'info';
+    this.log(level, 'processing', `${emoji} ${step}`, metadata, requestId);
   }
 
-  public logOpenAIFullRequest(requestId: string, requestData: any, metadata?: Record<string, any>): void {
-    this.info('openai', `📤 Full OpenAI API Request`, {
-      model: requestData.model,
-      maxTokens: requestData.max_tokens,
-      temperature: requestData.temperature,
-      messages: requestData.messages?.map((msg: any) => ({
-        role: msg.role,
-        contentLength: msg.content?.length || 0,
-        contentType: typeof msg.content,
-        hasImages: Array.isArray(msg.content) && msg.content.some((c: any) => c.type === 'image_url')
-      })),
-      fullPrompt: requestData.messages?.[0]?.content || '',
-      ...metadata
-    }, requestId);
+  public logAICall(requestId: string, model: string, purpose: string, status: 'start' | 'complete' | 'error', metadata?: Record<string, any>): void {
+    const emoji = status === 'start' ? '🤖' : status === 'complete' ? '✨' : '💥';
+    const level = status === 'error' ? 'error' : status === 'complete' ? 'success' : 'info';
+    this.log(level, 'openai', `${emoji} ${purpose} (${model})`, metadata, requestId);
   }
 
-  public logOpenAIResponse(requestId: string, response: any, duration: number, metadata?: Record<string, any>): void {
-    const responseContent = response.choices?.[0]?.message?.content || '';
-    this.success('openai', `✅ OpenAI request completed`, {
-      usage: {
-        promptTokens: response.usage?.prompt_tokens,
-        completionTokens: response.usage?.completion_tokens,
-        totalTokens: response.usage?.total_tokens,
-        estimatedCost: this.estimateOpenAICost(response.usage, response.model)
-      },
-      finishReason: response.choices?.[0]?.finish_reason,
-      responseLength: responseContent.length,
-      responsePreview: responseContent.substring(0, 300) + (responseContent.length > 300 ? '...' : ''),
-      model: response.model,
-      id: response.id,
-      created: response.created,
-      ...metadata
-    }, requestId, duration);
+  // Simplified OpenAI request logging
+  public logOpenAIRequest(requestId: string, model: string, purpose: string, hasImages: boolean = false): void {
+    this.logAICall(requestId, model, purpose, 'start', { hasImages });
   }
 
-  public logOpenAIFullResponse(requestId: string, response: any, duration: number): void {
-    const responseContent = response.choices?.[0]?.message?.content || '';
-    this.log('info', 'openai', `📥 Full OpenAI API Response`, {
-      id: response.id,
-      object: response.object,
-      created: response.created,
-      model: response.model,
-      systemFingerprint: response.system_fingerprint,
-      choices: response.choices?.map((choice: any) => ({
-        index: choice.index,
-        message: {
-          role: choice.message?.role,
-          contentLength: choice.message?.content?.length || 0
-        },
-        logprobs: choice.logprobs,
-        finishReason: choice.finish_reason
-      })),
-      usage: response.usage,
-      fullResponse: responseContent,
-      duration: `${duration}ms`
-    }, requestId, duration);
-  }
-
-  public logOpenAIError(requestId: string, error: any, duration: number, metadata?: Record<string, any>): void {
-    this.log('error', 'openai', `❌ OpenAI request failed`, {
-      error: error.message || error,
-      code: error.code,
-      status: error.status,
-      type: error.type,
-      param: error.param,
-      response: error.response?.data,
-      headers: error.response?.headers,
+  public logOpenAIResponse(requestId: string, response: any, duration: number, purpose: string): void {
+    const usage = response.usage || {};
+    this.logAICall(requestId, response.model || 'unknown', purpose, 'complete', {
+      tokens: usage.total_tokens,
       duration: `${duration}ms`,
-      ...metadata
-    }, requestId, duration, metadata);
+      cost: this.estimateOpenAICost(usage, response.model)
+    });
   }
 
-  public logTokenUsage(requestId: string, usage: any, model: string, operation: string): void {
-    const cost = this.estimateOpenAICost(usage, model);
-    this.info('openai', `💰 Token Usage - ${operation}`, {
-      promptTokens: usage?.prompt_tokens || 0,
-      completionTokens: usage?.completion_tokens || 0,
-      totalTokens: usage?.total_tokens || 0,
-      model,
-      estimatedCost: cost,
-      costBreakdown: {
-        promptCost: this.calculatePromptCost(usage?.prompt_tokens || 0, model),
-        completionCost: this.calculateCompletionCost(usage?.completion_tokens || 0, model)
-      }
-    }, requestId);
-  }
-
-  public logPromptDetails(requestId: string, prompt: string, imageCount: number = 0): void {
-    this.info('openai', `📝 Prompt Analysis`, {
-      promptLength: prompt.length,
-      wordCount: prompt.split(/\s+/).length,
-      lineCount: prompt.split('\n').length,
-      imageCount,
-      promptSample: prompt.substring(0, 500) + (prompt.length > 500 ? '\n\n[... truncated ...]' : ''),
-      containsInstructions: prompt.toLowerCase().includes('analyze') || prompt.toLowerCase().includes('convert'),
-      containsJSON: prompt.includes('JSON') || prompt.includes('json'),
-      containsHTML: prompt.includes('HTML') || prompt.includes('html')
-    }, requestId);
+  public logOpenAIError(requestId: string, error: any, duration: number, purpose: string): void {
+    this.logAICall(requestId, 'unknown', purpose, 'error', {
+      error: error.message || 'Unknown error',
+      duration: `${duration}ms`
+    });
   }
 
   private estimateOpenAICost(usage: any, model: string): string {

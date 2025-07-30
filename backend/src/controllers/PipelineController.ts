@@ -140,6 +140,53 @@ export class PipelineController {
   }
 
   /**
+   * Regenerate HTML for a specific section using OpenAI
+   */
+  async regenerateSectionHTML(params: {
+    sectionId: string;
+    originalImage?: string;
+    customPrompt?: string;
+  }): Promise<any> {
+    const { sectionId, originalImage, customPrompt } = params;
+    
+    logger.info('🔄 Regenerating HTML for section', {
+      sectionId,
+      hasOriginalImage: !!originalImage,
+      hasCustomPrompt: !!customPrompt
+    });
+
+    try {
+      // Use the orchestrator to regenerate HTML for a specific section
+      const regeneratedSection = await this.orchestrator.regenerateSectionHTML({
+        sectionId,
+        originalImage,
+        customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'
+      });
+
+      logger.info('✅ Section HTML regenerated successfully', {
+        sectionId,
+        newHtmlLength: regeneratedSection.html?.length || 0,
+        fieldsCount: regeneratedSection.editableFields?.length || 0
+      });
+
+      return regeneratedSection;
+
+    } catch (error) {
+      logger.error('❌ Section HTML regeneration failed', {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        sectionId
+      });
+
+      throw createError(
+        `Section HTML regeneration failed: ${(error as Error).message}`,
+        500,
+        'INTERNAL_ERROR'
+      );
+    }
+  }
+
+  /**
    * Get supported file types (for compatibility with existing API)
    */
   getSupportedTypes(): string[] {

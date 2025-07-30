@@ -1,7 +1,7 @@
 import { PhaseHandler, PipelineContext } from '../base/PhaseHandler';
 import { ValidatedSections, EnhancedSections, EnhancedSection, Enhancement, EnhancementSummary } from '../types/PipelineTypes';
-import { IterativeRefinementService } from '../../services/IterativeRefinementService';
-import { AutoErrorCorrectionService } from '../../services/AutoErrorCorrectionService';
+import { IterativeRefinementService } from '../../services/analysis/IterativeRefinementService';
+import { AutoErrorCorrectionService } from '../../services/quality/AutoErrorCorrectionService';
 import { createLogger } from '../../utils/logger';
 
 const logger = createLogger();

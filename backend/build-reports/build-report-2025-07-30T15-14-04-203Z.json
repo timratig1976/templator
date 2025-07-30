@@ -1,0 +1,71 @@
+{
+  "success": true,
+  "timestamp": "2025-07-30T15:14:04.203Z",
+  "duration": 2186,
+  "errors": [],
+  "warnings": [],
+  "filesCounted": 102,
+  "summary": {
+    "totalFiles": 102,
+    "errorFiles": 0,
+    "warningFiles": 0,
+    "newFiles": [],
+    "modifiedFiles": [],
+    "serviceHealth": {
+      "ai": {
+        "status": "healthy",
+        "fileCount": 7,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "analysis": {
+        "status": "healthy",
+        "fileCount": 3,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "deployment": {
+        "status": "healthy",
+        "fileCount": 4,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "input": {
+        "status": "healthy",
+        "fileCount": 3,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "module": {
+        "status": "healthy",
+        "fileCount": 5,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "quality": {
+        "status": "healthy",
+        "fileCount": 6,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "schema": {
+        "status": "healthy",
+        "fileCount": 2,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "storage": {
+        "status": "healthy",
+        "fileCount": 3,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      },
+      "testing": {
+        "status": "healthy",
+        "fileCount": 6,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:14:04.203Z"
+      }
+    }
+  }
+}

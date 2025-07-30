@@ -1,6 +1,6 @@
 import { PhaseHandler, PipelineContext } from '../base/PhaseHandler';
 import { EnhancedSections, PackagedModule, ModuleMetadata } from '../types/PipelineTypes';
-import ModulePackagingService from '../../services/ModulePackagingService';
+import ModulePackagingService from '../../services/module/ModulePackagingService';
 import { createLogger } from '../../utils/logger';
 
 const logger = createLogger();

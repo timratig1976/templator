@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
-import HTMLStorageService from '../services/HTMLStorageService';
+import HTMLStorageService from '../services/storage/HTMLStorageService';
 import { createLogger } from '../utils/logger';
 import { PipelineExecutionResult } from '../pipeline/types/PipelineTypes';
 

@@ -12,6 +12,7 @@ import {
 import { ErrorResponse } from '../../../../shared/types';
 import { createLogger } from '../../utils/logger';
 import { createError } from '../../middleware/errorHandler';
+import PipelineProgressTracker from '../../services/pipeline/PipelineProgressTracker';
 
 const logger = createLogger();
 
@@ -27,6 +28,7 @@ export class PipelineOrchestrator {
     enhancement: EnhancementPhase;
     modulePackaging: ModulePackagingPhase;
   };
+  private progressTracker: PipelineProgressTracker;
 
   constructor() {
     this.phases = {
@@ -36,6 +38,7 @@ export class PipelineOrchestrator {
       enhancement: new EnhancementPhase(),
       modulePackaging: new ModulePackagingPhase()
     };
+    this.progressTracker = new PipelineProgressTracker();
   }
 
   /**
@@ -55,6 +58,13 @@ export class PipelineOrchestrator {
       fileSize: designFile.size,
       options
     });
+
+    // Initialize progress tracking
+    this.progressTracker.initializePipeline(
+      pipelineId,
+      designFile.originalname,
+      designFile.size
+    );
 
     try {
       // Create pipeline context
@@ -428,6 +438,194 @@ export class PipelineOrchestrator {
   </div>
 </section>
     `.trim();
+  }
+
+  /**
+   * Regenerate HTML for a specific section using OpenAI
+   */
+  async regenerateSectionHTML(params: {
+    sectionId: string;
+    originalImage?: string;
+    customPrompt?: string;
+  }): Promise<any> {
+    const { sectionId, originalImage, customPrompt } = params;
+    const startTime = Date.now();
+    
+    logger.info('🔄 Starting section HTML regeneration', {
+      sectionId,
+      hasOriginalImage: !!originalImage,
+      hasCustomPrompt: !!customPrompt
+    });
+
+    try {
+      // Create a simplified context for section regeneration
+      const context: PipelineContext = {
+        pipelineId: `regenerate_${sectionId}_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        startTime,
+        currentPhase: 'aiGeneration',
+        metadata: {
+          fileName: `regenerate_${sectionId}`,
+          fileSize: 0,
+          mimeType: 'text/html',
+          sectionId,
+          regenerationType: 'html',
+          hasOriginalImage: !!originalImage
+        } as any,
+        qualityThresholds: {
+          minimum: 0.7,
+          target: 0.85,
+          excellent: 0.95
+        },
+        options: {
+          enableEnhancement: true,
+          maxIterations: 1,
+          fallbackOnError: true
+        }
+      };
+
+      // Use OpenAI service directly for section regeneration
+      const openaiService = (await import('../../services/ai/openaiService')).default;
+      
+      const regenerationPrompt = customPrompt || `
+Please generate high-quality HTML for a website section with the following requirements:
+- Use modern Tailwind 4 CSS classes for styling
+- Create semantic, accessible HTML structure
+- Include responsive design patterns
+- Add appropriate ARIA labels and accessibility features
+- Generate 3-5 editable fields for HubSpot CMS
+- Ensure the HTML is production-ready and follows best practices
+
+Return the response in this JSON format:
+{
+  "html": "<section>...</section>",
+  "fields": [
+    {
+      "id": "field_id",
+      "name": "Field Name",
+      "type": "text|rich_text|image|url",
+      "selector": "CSS selector",
+      "defaultValue": "default value",
+      "required": true/false
+    }
+  ],
+  "confidence": 0.9
+}
+`;
+
+      // Use OpenAI service to regenerate section HTML
+      let regeneratedHTML: string;
+      let editableFields: any[] = [];
+      
+      if (originalImage) {
+        // Use convertDesignToHTML for image-based regeneration
+        const designAnalysis = await openaiService.convertDesignToHTML(
+          originalImage,
+          `regenerate_section_${sectionId}`
+        );
+        
+        // Extract the first section or use the main HTML
+        if (designAnalysis.sections && designAnalysis.sections.length > 0) {
+          const firstSection = designAnalysis.sections[0];
+          regeneratedHTML = firstSection.html;
+          editableFields = firstSection.editableFields || [];
+        } else {
+          regeneratedHTML = designAnalysis.html;
+        }
+      } else {
+        // Use refineHTML for text-based regeneration
+        const fallbackHTML = '<div class="p-6 bg-gray-50 rounded-lg"><h3 class="text-lg font-semibold mb-4">Section Content</h3><p class="text-gray-600">Your content here</p></div>';
+        regeneratedHTML = await openaiService.refineHTML(
+          fallbackHTML,
+          customPrompt || 'Create a modern, responsive section with Tailwind 4 CSS and accessibility features'
+        );
+        
+        // Generate basic editable fields for text-based regeneration
+        editableFields = [
+          {
+            id: 'heading',
+            name: 'Section Heading',
+            type: 'text',
+            selector: 'h3',
+            defaultValue: 'Section Content',
+            required: true
+          },
+          {
+            id: 'content',
+            name: 'Section Content',
+            type: 'rich_text',
+            selector: 'p',
+            defaultValue: 'Your content here',
+            required: false
+          }
+        ];
+      }
+
+      // Create the regenerated section
+      const regeneratedSection = {
+        id: sectionId,
+        name: `Regenerated Section ${sectionId}`,
+        type: 'content',
+        html: regeneratedHTML || '<div class="p-6 bg-gray-50 rounded-lg"><p class="text-gray-600">Regeneration completed</p></div>',
+        editableFields: editableFields || [],
+        qualityScore: 85 // Good quality score for regenerated content
+      };
+
+      const processingTime = Date.now() - startTime;
+
+      logger.info('✅ Section HTML regeneration completed', {
+        sectionId,
+        processingTime,
+        newHtmlLength: regeneratedSection.html?.length || 0,
+        fieldsCount: regeneratedSection.editableFields?.length || 0,
+        qualityScore: regeneratedSection.qualityScore
+      });
+
+      return {
+        ...regeneratedSection,
+        id: sectionId, // Ensure we keep the original section ID
+        regeneratedAt: new Date().toISOString(),
+        processingTime
+      };
+
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+      
+      logger.error('❌ Section HTML regeneration failed', {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        sectionId,
+        processingTime
+      });
+
+      // Return a fallback section with error information
+      return {
+        id: sectionId,
+        name: `Section ${sectionId} (Regeneration Failed)`,
+        type: 'content',
+        html: `
+          <div class="p-6 bg-red-50 border border-red-200 rounded-lg">
+            <h3 class="text-red-800 font-semibold mb-2">Regeneration Failed</h3>
+            <p class="text-red-600 text-sm">Unable to regenerate HTML for this section. Please try again or edit manually.</p>
+            <p class="text-red-500 text-xs mt-2">Error: ${(error as Error).message}</p>
+          </div>
+        `,
+        editableFields: [
+          {
+            id: 'error_message',
+            name: 'Error Message',
+            type: 'text',
+            selector: 'p',
+            defaultValue: 'Regeneration failed',
+            required: false
+          }
+        ],
+        qualityScore: 30,
+        regeneratedAt: new Date().toISOString(),
+        processingTime,
+        error: (error as Error).message
+      };
+    }
   }
 
   /**

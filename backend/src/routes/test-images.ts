@@ -1,6 +1,6 @@
 import express from 'express';
 import { createLogger } from '../utils/logger';
-import ImageHandlingService from '../services/ImageHandlingService';
+import ImageHandlingService from '../services/input/ImageHandlingService';
 
 const router = express.Router();
 const logger = createLogger();
@@ -10,7 +10,7 @@ const logger = createLogger();
  */
 router.post('/process-html', async (req, res) => {
   try {
-    const { html, originalImageBase64 } = req.body;
+    const { html, originalImageBase64, sectionType } = req.body;
     
     if (!html) {
       return res.status(400).json({
@@ -21,11 +21,12 @@ router.post('/process-html', async (req, res) => {
 
     logger.info('Testing image processing in HTML', {
       htmlLength: html.length,
-      hasOriginalImage: !!originalImageBase64
+      hasOriginalImage: !!originalImageBase64,
+      sectionType
     });
 
     const imageService = ImageHandlingService.getInstance();
-    const processedHTML = await imageService.processImagesInHTML(html, originalImageBase64);
+    const processedHTML = await imageService.processImagesInHTML(html, originalImageBase64, sectionType);
 
     // Count images before and after processing
     const originalImgCount = (html.match(/<img[^>]*>/gi) || []).length;

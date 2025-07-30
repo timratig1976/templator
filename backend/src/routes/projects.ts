@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
-import HTMLStorageService from '../services/HTMLStorageService';
+import HTMLStorageService from '../services/storage/HTMLStorageService';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
 import { validateRequest } from '../middleware/validation';

@@ -1,6 +1,6 @@
 import { PhaseHandler, PipelineContext } from '../base/PhaseHandler';
 import { GeneratedSections, ValidatedSections, ValidatedSection, ValidationSummary, QualityMetrics } from '../types/PipelineTypes';
-import { HubSpotValidationService } from '../../services/HubSpotValidationService';
+import { HubSpotValidationService } from '../../services/quality/HubSpotValidationService';
 import { createLogger } from '../../utils/logger';
 
 const logger = createLogger();

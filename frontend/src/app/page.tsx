@@ -12,7 +12,7 @@ import SectionStackEditor from '@/components/SectionStackEditor';
 import SaveStatusIndicator from '@/components/SaveStatusIndicator';
 import ProjectManager from '@/components/ProjectManager';
 import { aiLogger } from '@/services/aiLogger';
-import logStreamService from '@/services/logStreamService';
+import { socketClient } from '@/services/socketClient';
 import layoutSplittingService from '@/services/layoutSplittingService';
 import { PipelineExecutionResult, PipelineSection } from '@/services/pipelineService';
 import { useProjectManager } from '@/hooks/useProjectManager';
@@ -62,14 +62,12 @@ export default function Home() {
 
   useEffect(() => {
     // Initialize logging system
-    aiLogger.info('system', '🚀 Templator application started', {
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    });
+    aiLogger.logFlowStep('app-init', 'Templator Started', 'start');
 
     // Check log stream connection status
     const checkConnection = () => {
-      setIsLogStreamConnected(logStreamService.isStreamConnected());
+      const status = socketClient.getConnectionStatus();
+      setIsLogStreamConnected(status.connected);
     };
 
     // Check connection status every 5 seconds
@@ -93,20 +91,17 @@ export default function Home() {
     // Auto-save the project if enabled
     if (projectManager.autoSaveEnabled && fileName) {
       try {
-        aiLogger.info('system', '🔄 Auto-saving project after successful upload', {
+        aiLogger.logFlowStep('auto-save', 'Auto-saving Project', 'start', {
           fileName,
-          sectionsCount: result.sections?.length || 0
+          sections: result.sections?.length || 0
         });
-        
-        await projectManager.autoSaveProject(result, fileName);
-        
-        aiLogger.info('system', '✅ Project auto-saved successfully', {
-          fileName,
-          projectName: projectManager.currentProject?.name
+        const saveResult = await projectManager.autoSaveProject(result, fileName);
+        aiLogger.logFlowStep('auto-save', 'Project Auto-saved', 'complete', {
+          projectId: saveResult.id
         });
       } catch (error) {
         console.warn('Auto-save failed, continuing without saving:', error);
-        aiLogger.error('system', '⚠️ Auto-save failed but continuing', { error });
+        aiLogger.logFlowStep('auto-save', 'Auto-save Failed', 'error', { error: error.message });
       }
     }
     
@@ -137,11 +132,9 @@ export default function Home() {
     if (!designResult) return;
 
     const requestId = `module_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    aiLogger.info('processing', 'Starting HubSpot module creation', {
-      fileName: designResult.packagedModule?.name || 'Generated Module',
-      sectionsCount: designResult.sections?.length || 0,
-      componentsCount: designResult.sections?.flatMap(s => s.editableFields || []).length || 0
-    }, requestId);
+    aiLogger.logFlowStep('module-creation', 'Creating HubSpot Module', 'start', {
+      sections: designResult.sections?.length || 0
+    });
 
     try {
       // Convert sections and components to fields_config format
@@ -155,11 +148,9 @@ export default function Home() {
       );
 
       const combinedHtml = designResult.sections?.map(s => s.html).join('\n') || '';
-      aiLogger.info('network', 'Sending module creation request to backend', {
-        endpoint: API_ENDPOINTS.MODULE_GENERATE,
-        fieldsCount: fieldsConfig.length,
-        htmlLength: combinedHtml.length
-      }, requestId);
+      aiLogger.logFlowStep('module-creation', 'Sending to Backend', 'start', {
+        fields: fieldsConfig.length
+      });
 
       // Call the existing module creation endpoint with correct data structure
       const response = await fetch(API_ENDPOINTS.MODULE_GENERATE, {
@@ -175,19 +166,16 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        aiLogger.error('network', 'Module creation request failed', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        }, requestId);
+        aiLogger.logFlowStep('module-creation', 'Backend Request Failed', 'error', {
+          status: response.status
+        });
         throw new Error(errorData.message || 'Failed to create HubSpot module');
       }
 
       const result = await response.json();
-      aiLogger.success('processing', 'HubSpot module created successfully', {
-        moduleSlug: result.module_slug,
-        downloadUrl: result.module_zip_url
-      }, requestId);
+      aiLogger.logFlowStep('module-creation', 'Module Created Successfully', 'complete', {
+        moduleId: result.moduleId
+      });
 
       // Download the module with enhanced user feedback
       if (result.module_zip_url) {

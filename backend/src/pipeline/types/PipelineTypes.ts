@@ -58,10 +58,14 @@ export interface PackagedModule {
 
 // Core data structures
 export interface DesignSection {
+  /**
+   * Optional base64-encoded PNG/JPEG screenshot for this section
+   */
+  originalImage?: string;
   id: string;
   name: string;
   type: 'header' | 'hero' | 'content' | 'features' | 'footer' | 'navigation' | 'sidebar';
-  imageData: string;
+  imageData?: string;
   bounds: { x: number; y: number; width: number; height: number };
   complexity: number;
   estimatedElements: number;

@@ -1,15 +1,22 @@
 import { Router } from 'express';
 import { validateRequest, parseRequestSchema, moduleRequestSchema, previewRequestSchema } from '../middleware/validation';
-import { ParserService } from '../services/ParserService';
-import { FieldMapperService } from '../services/FieldMapperService';
-import { HubSpotModuleBuilder } from '../services/HubSpotModuleBuilder';
-import { PreviewService } from '../services/PreviewService';
+import { ParserService } from '../services/input/ParserService';
+import { FieldMapperService } from '../services/input/FieldMapperService';
+import { HubSpotModuleBuilder } from '../services/module/HubSpotModuleBuilder';
+import { PreviewService } from '../services/deployment/PreviewService';
 import { createError } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import designRoutes from './design';
 import logsRoutes from './logs';
 import pipelineRoutes from './pipeline';
+import htmlValidationRoutes from './htmlValidation';
+import promptsRoutes from './prompts';
+import exportRoutes from './exportRoutes';
+import buildTestRoutes from './buildTest';
+import layoutSplittingRoutes from './layoutSplittingRoutes';
+import testEndpoints from './testEndpoints';
+import testImagesRoutes from './test-images';
 
 const router = Router();
 const logger = createLogger();
@@ -34,6 +41,27 @@ router.use('/logs', logsRoutes);
 
 // Quality-focused Pipeline routes
 router.use('/pipeline', pipelineRoutes);
+
+// HTML Validation routes
+router.use('/html-validation', htmlValidationRoutes);
+
+// Prompt management routes
+router.use('/prompts', promptsRoutes);
+
+// Export and deployment routes
+router.use('/export', exportRoutes);
+
+// Build test and monitoring routes
+router.use('/build-test', buildTestRoutes);
+
+// Layout splitting and analysis routes
+router.use('/layout', layoutSplittingRoutes);
+
+// Test endpoints for system stability testing
+router.use('/test', testEndpoints);
+
+// Test endpoints for image processing
+router.use('/test-images', testImagesRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {

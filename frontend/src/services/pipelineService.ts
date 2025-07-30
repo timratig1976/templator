@@ -26,6 +26,13 @@ export interface PipelineSection {
   qualityScore?: number;
   validationStatus?: 'passed' | 'failed' | 'warning';
   enhancementSuggestions?: string[];
+  originalImage?: string; // Base64 encoded original section image
+  boundingBox?: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  };
 }
 
 export interface EditableField {
@@ -235,6 +242,43 @@ export class PipelineService {
       throw new PipelineError({
         code: result.code || 'ENHANCEMENT_ERROR',
         message: result.error || 'Failed to enhance section',
+        details: result,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return result.data;
+  }
+
+  /**
+   * Regenerate HTML for a specific section using OpenAI
+   */
+  async regenerateHTML(sectionId: string, originalImage?: string, customPrompt?: string): Promise<PipelineSection> {
+    const response = await fetch(API_ENDPOINTS.PIPELINE_REGENERATE_HTML, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        sectionId, 
+        originalImage,
+        customPrompt 
+      }),
+    });
+
+    if (!response.ok) {
+      throw new PipelineError({
+        code: `HTTP_${response.status}`,
+        message: `Failed to regenerate HTML: ${response.statusText}`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new PipelineError({
+        code: result.code || 'REGENERATE_ERROR',
+        message: result.error || 'Failed to regenerate HTML',
         details: result,
         timestamp: new Date().toISOString()
       });

@@ -1,6 +1,7 @@
 import { PhaseHandler, PipelineContext } from '../base/PhaseHandler';
 import { ProcessedInput, GeneratedSections, GeneratedSection, EditableField, QualityIssue } from '../types/PipelineTypes';
-import { OpenAIService } from '../../services/openaiService';
+import openaiService from '../../services/ai/openaiService';
+import ImageHandlingService from '../../services/input/ImageHandlingService';
 import { createLogger } from '../../utils/logger';
 
 const logger = createLogger();
@@ -10,11 +11,11 @@ const logger = createLogger();
  * Converts design sections into semantic HTML with Tailwind CSS and editable fields
  */
 export class AIGenerationPhase extends PhaseHandler<ProcessedInput, GeneratedSections> {
-  private openaiService: OpenAIService;
+  private openaiService = openaiService;
+  private imageService = ImageHandlingService.getInstance();
 
   constructor() {
     super('AI Generation');
-    this.openaiService = new OpenAIService();
   }
 
   protected async execute(input: ProcessedInput, context: PipelineContext): Promise<GeneratedSections> {
@@ -157,11 +158,33 @@ export class AIGenerationPhase extends PhaseHandler<ProcessedInput, GeneratedSec
       // Parse the response and extract structured data
       const parsedResponse = this.parseAIResponse(response);
       
+      // Process images in the generated HTML to replace placeholders with local SVG data URIs
+      let processedHTML = parsedResponse.html;
+      try {
+        processedHTML = await this.imageService.processImagesInHTML(
+          parsedResponse.html, 
+          input.imageBase64, 
+          section.type
+        );
+        logger.info(`Images processed for section: ${section.name}`, {
+          pipelineId: context.pipelineId,
+          sectionId: section.id,
+          hasChanges: processedHTML !== parsedResponse.html
+        });
+      } catch (imageError) {
+        logger.warn(`Image processing failed for section: ${section.name}`, {
+          pipelineId: context.pipelineId,
+          sectionId: section.id,
+          error: (imageError as Error).message
+        });
+        // Continue with original HTML if image processing fails
+      }
+      
       return {
         id: section.id,
         name: section.name,
         type: section.type,
-        html: parsedResponse.html,
+        html: processedHTML,
         editableFields: parsedResponse.fields,
         qualityScore: this.calculateSectionQuality(parsedResponse),
         issues: this.identifyQualityIssues(parsedResponse),
@@ -199,10 +222,18 @@ Requirements:
 4. Ensure responsive design (mobile-first)
 5. Include accessibility attributes (ARIA labels, alt text)
 6. Generate 3-5 editable fields per section
+7. **MANDATORY IMAGE REQUIREMENTS**: Include appropriate images using ONLY these safe data URI patterns:
+   - Logo: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMxZjI5MzciLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuMzVlbSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZmZmZiI+TE9HTzwvdGV4dD48L3N2Zz4=
+   - Hero: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjNjM2NmYxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiNmZmZmZmYiPkhFUk88L3RleHQ+PC9zdmc+
+   - Content: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTVlN2ViIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMzIiIGZpbGw9IiM2Yjc2ODAiPklNQUdFPC90ZXh0Pjwvc3ZnPg==
+   - Product: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjU5ZTBiIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMzIiIGZpbGw9IiNmZmZmZmYiPlBST0RVQ1Q8L3RleHQ+PC9zdmc+
+   - Icon: data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzNiODJmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCAtYXBwbGUtc3lzdGVtLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSIjZmZmZmZmIj7imIU8L3RleHQ+PC9zdmc+
+8. **CRITICAL**: NEVER use file paths like logo.png, feature1.jpg, image.jpg, or template variables like {{ logo_url }}
+9. **CRITICAL**: ONLY use the exact data URI patterns provided above - NO exceptions
 
 Return JSON format:
 {
-  "html": "semantic HTML with Tailwind classes",
+  "html": "semantic HTML with Tailwind classes and proper data URI images",
   "fields": [
     {
       "id": "unique_field_id",

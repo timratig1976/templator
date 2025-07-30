@@ -1,4 +1,5 @@
 import { PhaseHandler, PipelineContext } from '../base/PhaseHandler';
+import sharp from 'sharp';
 import { DesignFile, ProcessedInput, DesignSection, DesignComplexity } from '../types/PipelineTypes';
 import { createLogger } from '../../utils/logger';
 
@@ -25,7 +26,7 @@ export class InputProcessingPhase extends PhaseHandler<DesignFile, ProcessedInpu
     const complexity = this.analyzeDesignComplexity(input);
     
     // Step 3: Detect logical sections (simplified for now)
-    const sections = this.detectSections(imageBase64, complexity);
+    const sections = await this.detectSections(imageBase64, complexity);
     
     const processingTime = Date.now() - startTime;
 
@@ -179,7 +180,7 @@ export class InputProcessingPhase extends PhaseHandler<DesignFile, ProcessedInpu
    * Detect logical sections in the design (simplified implementation)
    * In the full implementation, this would use AI for section detection
    */
-  private detectSections(imageBase64: string, complexity: DesignComplexity): DesignSection[] {
+  private async detectSections(imageBase64: string, complexity: DesignComplexity): Promise<DesignSection[]> {
     const sections: DesignSection[] = [];
     const sectionCount = complexity.recommendedSections;
 
@@ -189,11 +190,34 @@ export class InputProcessingPhase extends PhaseHandler<DesignFile, ProcessedInpu
 
     for (let i = 0; i < sectionCount && i < sectionTypes.length; i++) {
       const sectionType = sectionTypes[i];
+      // Crop the image for this section
+      let originalImage = imageBase64;
+      try {
+        // Decode base64 to buffer
+        const matches = imageBase64.match(/^data:(.+);base64,(.+)$/);
+        if (matches) {
+          const mimeType = matches[1];
+          const buffer = Buffer.from(matches[2], 'base64');
+          // For simplicity, we assume vertical slicing
+          const metadata = await sharp(buffer).metadata();
+          const height = metadata.height || 1000;
+          const width = metadata.width || 1000;
+          const sectionHeight = Math.floor(height / sectionCount);
+          const top = i * sectionHeight;
+          const cropped = await sharp(buffer)
+            .extract({ left: 0, top, width, height: sectionHeight })
+            .toBuffer();
+          originalImage = `data:${mimeType};base64,${cropped.toString('base64')}`;
+        }
+      } catch (err) {
+        // fallback to full image
+        originalImage = imageBase64;
+      }
       sections.push({
         id: `section_${i + 1}`,
         name: this.getSectionName(sectionType),
         type: sectionType,
-        imageData: imageBase64, // In full implementation, this would be section-specific
+        originalImage, // assign cropped image
         bounds: {
           x: 0,
           y: (i * 100) / sectionCount,

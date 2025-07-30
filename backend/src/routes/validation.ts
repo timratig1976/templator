@@ -7,9 +7,9 @@
 import express from 'express';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
-import { HubSpotValidationService, ValidationResult } from '../services/HubSpotValidationService';
-import { schemaUpdateService } from '../services/SchemaUpdateService';
-import { schemaDiffDetector } from '../services/SchemaDiffDetector';
+import { HubSpotValidationService, ValidationResult } from '../services/quality/HubSpotValidationService';
+import { schemaUpdateService } from '../services/schema/SchemaUpdateService';
+import { schemaDiffDetector } from '../services/schema/SchemaDiffDetector';
 
 const router = express.Router();
 const logger = createLogger();

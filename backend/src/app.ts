@@ -9,6 +9,11 @@ import validationRoutes from './routes/validation';
 import projectsRoutes from './routes/projects';
 import testStorageRoutes from './routes/test-storage';
 import testImageRoutes from './routes/test-images';
+import pipelineMonitoringRoutes from './routes/pipelineMonitoring';
+import dashboardRoutes from './routes/dashboard';
+import aiEnhancementRoutes from './routes/aiEnhancement';
+import sectionComparisonRoutes from './routes/sectionComparison';
+import interactivePromptsRoutes from './routes/interactivePrompts';
 
 export function createApp(): express.Application {
   const app = express();
@@ -525,6 +530,11 @@ export function createApp(): express.Application {
   app.use('/api/projects', projectsRoutes);
   app.use('/api/test/storage', testStorageRoutes);
   app.use('/api/test/images', testImageRoutes);
+  app.use('/api/monitoring', pipelineMonitoringRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/ai-enhancement', aiEnhancementRoutes);
+  app.use('/api/comparison', sectionComparisonRoutes);
+  app.use('/api/prompts', interactivePromptsRoutes);
 
   return app;
 }

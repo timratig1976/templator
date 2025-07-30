@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Section Comparison & Interactive Prompts Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            height: 500px;
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .html-preview {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow: auto;
+            background: white;
+        }
+        .prompt-editor {
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+        }
+        .context-item {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .context-item.enabled {
+            border-color: #10b981;
+            background-color: #f0fdf4;
+        }
+        .rating-stars {
+            display: flex;
+            gap: 0.25rem;
+        }
+        .star {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #d1d5db;
+            transition: color 0.2s;
+        }
+        .star.active {
+            color: #fbbf24;
+        }
+        .star:hover {
+            color: #f59e0b;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Section Comparison & Interactive Prompts</h1>
+        
+        <!-- Navigation Tabs -->
+        <div class="mb-8">
+            <nav class="flex space-x-8">
+                <button onclick="showTab('comparison')" id="comparison-tab" class="tab-button active">
+                    Visual Comparison
+                </button>
+                <button onclick="showTab('prompts')" id="prompts-tab" class="tab-button">
+                    Interactive Prompts
+                </button>
+                <button onclick="showTab('analytics')" id="analytics-tab" class="tab-button">
+                    Analytics & Learning
+                </button>
+            </nav>
+        </div>
+
+        <!-- Visual Comparison Tab -->
+        <div id="comparison-content" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Upload Section for Comparison</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Original Design Section</label>
+                        <input type="file" id="originalImage" accept="image/*" class="w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Section Type</label>
+                        <select id="sectionType" class="w-full p-2 border border-gray-300 rounded-md">
+                            <option value="hero">Hero Section</option>
+                            <option value="navigation">Navigation</option>
+                            <option value="form">Form</option>
+                            <option value="footer">Footer</option>
+                            <option value="content">Content Block</option>
+                            <option value="cta">Call to Action</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="generateHTML()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    Generate HTML with AI
+                </button>
+            </div>
+
+            <!-- Side-by-side Comparison -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6" id="comparisonView" style="display: none;">
+                <h2 class="text-xl font-semibold mb-4">Visual Comparison</h2>
+                <div class="comparison-container">
+                    <div>
+                        <h3 class="text-lg font-medium mb-2">Original Design</h3>
+                        <img id="originalImagePreview" class="image-preview" alt="Original design">
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium mb-2">Generated HTML</h3>
+                        <div id="htmlPreview" class="html-preview"></div>
+                    </div>
+                </div>
+                
+                <!-- Rating & Feedback -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-medium mb-3">Rate this generation:</h4>
+                    <div class="rating-stars mb-4" id="ratingStars">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">What worked well?</label>
+                            <textarea id="improvements" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="List improvements (comma-separated)"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">What needs fixing?</label>
+                            <textarea id="issues" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="List issues (comma-separated)"></textarea>
+                        </div>
+                    </div>
+                    <textarea id="comments" class="w-full p-2 border border-gray-300 rounded-md mt-2" rows="2" placeholder="Additional comments..."></textarea>
+                    <button onclick="submitRating()" class="mt-3 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                        Submit Feedback
+                    </button>
+                    <button onclick="regenerateWithPrompt()" class="mt-3 ml-2 bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700">
+                        Regenerate with Custom Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Prompts Tab -->
+        <div id="prompts-content" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">Interactive Prompt Builder</h2>
+                
+                <!-- Template Selection -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Choose Template</label>
+                    <select id="templateSelect" class="w-full p-2 border border-gray-300 rounded-md" onchange="loadTemplate()">
+                        <option value="">Select a template...</option>
+                        <option value="hero-section">Hero Section Generator</option>
+                        <option value="navigation">Navigation Generator</option>
+                        <option value="form">Form Generator</option>
+                    </select>
+                </div>
+
+                <!-- Base Prompt -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Base Prompt</label>
+                    <textarea id="basePrompt" class="w-full p-3 border border-gray-300 rounded-md prompt-editor" placeholder="Enter your base prompt..."></textarea>
+                </div>
+
+                <!-- Context Management -->
+                <div class="mb-4">
+                    <h3 class="text-lg font-medium mb-2">Context & Requirements</h3>
+                    <div id="contextList" class="mb-4">
+                        <!-- Context items will be loaded here -->
+                    </div>
+                    
+                    <!-- Add Custom Context -->
+                    <div class="border-t pt-4">
+                        <h4 class="font-medium mb-2">Add Custom Context</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                            <select id="contextCategory" class="p-2 border border-gray-300 rounded-md">
+                                <option value="design">Design</option>
+                                <option value="accessibility">Accessibility</option>
+                                <option value="performance">Performance</option>
+                                <option value="tailwind">Tailwind CSS</option>
+                                <option value="hubspot">HubSpot</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                            <input type="text" id="contextTitle" placeholder="Context title" class="p-2 border border-gray-300 rounded-md">
+                            <input type="number" id="contextPriority" placeholder="Priority (1-10)" min="1" max="10" value="5" class="p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <textarea id="contextContent" placeholder="Context content..." class="w-full p-2 border border-gray-300 rounded-md mb-2" rows="2"></textarea>
+                        <button onclick="addCustomContext()" class="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700">
+                            Add Context
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Additional Requirements -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Requirements</label>
+                    <textarea id="userRequirements" class="w-full p-2 border border-gray-300 rounded-md" rows="3" placeholder="Any specific requirements or constraints..."></textarea>
+                </div>
+
+                <button onclick="generateEnhancedPrompt()" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    Generate Enhanced Prompt
+                </button>
+            </div>
+
+            <!-- Enhanced Prompt Preview -->
+            <div id="promptPreview" class="bg-white rounded-lg shadow-md p-6 mb-6" style="display: none;">
+                <h2 class="text-xl font-semibold mb-4">Enhanced Prompt Preview</h2>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <pre id="enhancedPromptText" class="whitespace-pre-wrap text-sm"></pre>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="usePromptForGeneration()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                        Use This Prompt
+                    </button>
+                    <button onclick="editPrompt()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        Edit Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analytics-content" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4">Performance Analytics</h2>
+                    <div id="analyticsData">
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-blue-600">4.2/5</div>
+                            <div class="text-sm text-gray-600">Average Rating</div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-2xl font-bold text-green-600">127</div>
+                            <div class="text-sm text-gray-600">Total Generations</div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-lg font-semibold">Best Section Types:</div>
+                            <div class="text-sm text-gray-600">
+                                1. Hero Sections (4.6/5)<br>
+                                2. Navigation (4.3/5)<br>
+                                3. Forms (4.1/5)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold mb-4">Learning Insights</h2>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-green-50 border border-green-200 rounded-md">
+                            <div class="font-medium text-green-800">✓ Accessibility contexts improve ratings by 15%</div>
+                        </div>
+                        <div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <div class="font-medium text-blue-800">ℹ️ Tailwind-specific prompts perform 12% better</div>
+                        </div>
+                        <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                            <div class="font-medium text-yellow-800">⚠️ Mobile responsiveness needs more emphasis</div>
+                        </div>
+                        <div class="p-3 bg-purple-50 border border-purple-200 rounded-md">
+                            <div class="font-medium text-purple-800">🎯 Hero sections with clear CTAs rate highest</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentComparison = null;
+        let currentGeneration = null;
+        let customContexts = [];
+
+        // Tab Management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active', 'text-blue-600', 'border-blue-600');
+                btn.classList.add('text-gray-500', 'border-transparent');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-content').classList.remove('hidden');
+            
+            // Add active class to selected tab button
+            const activeBtn = document.getElementById(tabName + '-tab');
+            activeBtn.classList.add('active', 'text-blue-600', 'border-blue-600');
+            activeBtn.classList.remove('text-gray-500', 'border-transparent');
+        }
+
+        // Image Preview
+        document.getElementById('originalImage').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('originalImagePreview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Generate HTML
+        async function generateHTML() {
+            const imageFile = document.getElementById('originalImage').files[0];
+            const sectionType = document.getElementById('sectionType').value;
+            
+            if (!imageFile) {
+                alert('Please select an image first');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('comparisonView').style.display = 'block';
+            document.getElementById('htmlPreview').innerHTML = '<div class="text-center p-8">Generating HTML with AI...</div>';
+
+            // Simulate HTML generation (in real implementation, this would call the API)
+            setTimeout(() => {
+                const mockHTML = `
+                    <section class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
+                        <div class="container mx-auto px-4 text-center">
+                            <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                                Welcome to Our Platform
+                            </h1>
+                            <p class="text-xl mb-8 max-w-2xl mx-auto">
+                                Experience the future of web development with our AI-powered tools
+                            </p>
+                            <button class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                                Get Started
+                            </button>
+                        </div>
+                    </section>
+                `;
+                
+                document.getElementById('htmlPreview').innerHTML = mockHTML;
+                currentComparison = {
+                    id: 'comp_' + Date.now(),
+                    sectionType: sectionType,
+                    html: mockHTML
+                };
+            }, 2000);
+        }
+
+        // Rating System
+        document.querySelectorAll('.star').forEach(star => {
+            star.addEventListener('click', function() {
+                const rating = parseInt(this.dataset.rating);
+                updateStarRating(rating);
+            });
+            
+            star.addEventListener('mouseover', function() {
+                const rating = parseInt(this.dataset.rating);
+                highlightStars(rating);
+            });
+        });
+
+        document.getElementById('ratingStars').addEventListener('mouseleave', function() {
+            const currentRating = getCurrentRating();
+            highlightStars(currentRating);
+        });
+
+        function updateStarRating(rating) {
+            document.querySelectorAll('.star').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        function highlightStars(rating) {
+            document.querySelectorAll('.star').forEach((star, index) => {
+                if (index < rating) {
+                    star.style.color = '#f59e0b';
+                } else {
+                    star.style.color = '#d1d5db';
+                }
+            });
+        }
+
+        function getCurrentRating() {
+            return document.querySelectorAll('.star.active').length;
+        }
+
+        // Submit Rating
+        async function submitRating() {
+            const rating = getCurrentRating();
+            const improvements = document.getElementById('improvements').value;
+            const issues = document.getElementById('issues').value;
+            const comments = document.getElementById('comments').value;
+
+            if (rating === 0) {
+                alert('Please provide a rating');
+                return;
+            }
+
+            // In real implementation, this would call the API
+            console.log('Submitting rating:', {
+                comparisonId: currentComparison?.id,
+                rating,
+                improvements,
+                issues,
+                comments
+            });
+
+            alert('Feedback submitted successfully!');
+        }
+
+        // Template Management
+        async function loadTemplate() {
+            const templateId = document.getElementById('templateSelect').value;
+            if (!templateId) return;
+
+            // Mock template data (in real implementation, this would call the API)
+            const templates = {
+                'hero-section': {
+                    basePrompt: 'Create a modern, engaging hero section that captures attention and clearly communicates the value proposition.',
+                    contexts: [
+                        {
+                            id: 'hero-design',
+                            category: 'design',
+                            title: 'Hero Design Principles',
+                            content: 'Hero sections should have a clear hierarchy, compelling headline, supporting text, and prominent call-to-action.',
+                            priority: 9,
+                            enabled: true
+                        },
+                        {
+                            id: 'hero-accessibility',
+                            category: 'accessibility',
+                            title: 'Hero Accessibility',
+                            content: 'Ensure sufficient color contrast, readable font sizes, proper heading hierarchy (h1).',
+                            priority: 8,
+                            enabled: true
+                        }
+                    ]
+                }
+            };
+
+            const template = templates[templateId];
+            if (template) {
+                document.getElementById('basePrompt').value = template.basePrompt;
+                loadContexts(template.contexts);
+            }
+        }
+
+        function loadContexts(contexts) {
+            const contextList = document.getElementById('contextList');
+            contextList.innerHTML = '';
+
+            contexts.forEach(context => {
+                const contextDiv = document.createElement('div');
+                contextDiv.className = `context-item ${context.enabled ? 'enabled' : ''}`;
+                contextDiv.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <div class="font-medium">${context.title}</div>
+                            <div class="text-sm text-gray-600">${context.category} • Priority: ${context.priority}</div>
+                        </div>
+                        <label class="flex items-center">
+                            <input type="checkbox" ${context.enabled ? 'checked' : ''} 
+                                   onchange="toggleContext('${context.id}')" class="mr-2">
+                            <span class="text-sm">Enabled</span>
+                        </label>
+                    </div>
+                    <div class="text-sm text-gray-700">${context.content}</div>
+                `;
+                contextList.appendChild(contextDiv);
+            });
+        }
+
+        function toggleContext(contextId) {
+            // Toggle context enabled state
+            console.log('Toggling context:', contextId);
+        }
+
+        function addCustomContext() {
+            const category = document.getElementById('contextCategory').value;
+            const title = document.getElementById('contextTitle').value;
+            const content = document.getElementById('contextContent').value;
+            const priority = document.getElementById('contextPriority').value;
+
+            if (!title || !content) {
+                alert('Please fill in title and content');
+                return;
+            }
+
+            const context = {
+                id: 'custom_' + Date.now(),
+                category,
+                title,
+                content,
+                priority: parseInt(priority),
+                enabled: true,
+                userAdded: true
+            };
+
+            customContexts.push(context);
+            loadContexts([...getDefaultContexts(), ...customContexts]);
+
+            // Clear form
+            document.getElementById('contextTitle').value = '';
+            document.getElementById('contextContent').value = '';
+            document.getElementById('contextPriority').value = '5';
+        }
+
+        function getDefaultContexts() {
+            // Return currently loaded template contexts
+            return [];
+        }
+
+        // Generate Enhanced Prompt
+        async function generateEnhancedPrompt() {
+            const basePrompt = document.getElementById('basePrompt').value;
+            const userRequirements = document.getElementById('userRequirements').value;
+
+            if (!basePrompt) {
+                alert('Please enter a base prompt');
+                return;
+            }
+
+            // Mock enhanced prompt generation
+            const enhancedPrompt = `
+SYSTEM CONTEXT:
+You are an expert HubSpot module developer with deep knowledge of modern web development, accessibility, and performance optimization.
+
+RELEVANT KNOWLEDGE BASE:
+- DESIGN_PRINCIPLE: Hero sections should have a clear hierarchy, compelling headline, supporting text, and prominent call-to-action.
+  (Relevance: 95.2%)
+- ACCESSIBILITY: Ensure sufficient color contrast, readable font sizes, proper heading hierarchy (h1).
+  (Relevance: 88.7%)
+- TAILWIND_PATTERN: Use responsive utilities (sm:, md:, lg:), flexbox for centering, gradient backgrounds.
+  (Relevance: 92.1%)
+
+DYNAMIC CONTEXT:
+Current pipeline phase: AI Generation
+Quality insights: Focus on accessibility and mobile responsiveness
+Error patterns: None detected
+
+ORIGINAL REQUEST:
+${basePrompt}
+
+${userRequirements ? `ADDITIONAL REQUIREMENTS:\n${userRequirements}\n` : ''}
+
+ENHANCEMENT INSTRUCTIONS:
+1. Use the relevant knowledge base entries to inform your response
+2. Address any quality issues mentioned in the dynamic context
+3. Follow HubSpot best practices and requirements
+4. Ensure accessibility and performance optimization
+5. Learn from previous errors to avoid similar issues
+6. Adapt your response to the current pipeline phase
+
+Please generate high-quality, production-ready code that incorporates all this context.
+            `;
+
+            document.getElementById('enhancedPromptText').textContent = enhancedPrompt.trim();
+            document.getElementById('promptPreview').style.display = 'block';
+
+            currentGeneration = {
+                id: 'gen_' + Date.now(),
+                originalPrompt: basePrompt,
+                enhancedPrompt: enhancedPrompt.trim(),
+                userRequirements
+            };
+        }
+
+        function usePromptForGeneration() {
+            alert('Enhanced prompt ready for HTML generation!');
+            // In real implementation, this would trigger HTML generation
+        }
+
+        function editPrompt() {
+            const currentPrompt = document.getElementById('enhancedPromptText').textContent;
+            document.getElementById('basePrompt').value = currentPrompt;
+            document.getElementById('promptPreview').style.display = 'none';
+        }
+
+        function regenerateWithPrompt() {
+            showTab('prompts');
+            // Pre-populate with current comparison data
+            if (currentComparison) {
+                document.getElementById('basePrompt').value = `Improve this ${currentComparison.sectionType} section based on user feedback.`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add tab button styling
+            const style = document.createElement('style');
+            style.textContent = `
+                .tab-button {
+                    padding: 0.5rem 1rem;
+                    border-bottom: 2px solid transparent;
+                    font-medium: 500;
+                    transition: all 0.2s;
+                }
+                .tab-button:hover {
+                    text-color: rgb(59 130 246);
+                }
+                .tab-button.active {
+                    color: rgb(37 99 235);
+                    border-bottom-color: rgb(37 99 235);
+                }
+            `;
+            document.head.appendChild(style);
+        });
+    </script>
+</body>
+</html>

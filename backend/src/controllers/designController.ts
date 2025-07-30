@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { createError } from '../middleware/errorHandler';
-import openaiService, { DesignAnalysis } from '../services/openaiService';
+import openaiService, { DesignAnalysis } from '../services/ai/openaiService';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger();

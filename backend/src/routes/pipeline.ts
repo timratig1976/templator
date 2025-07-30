@@ -212,6 +212,61 @@ router.post('/enhance/:sectionId', async (req: Request, res: Response, next: Nex
 });
 
 /**
+ * POST /api/pipeline/regenerate-html
+ * Regenerate HTML for a specific section using OpenAI
+ */
+router.post('/regenerate-html', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sectionId, originalImage, customPrompt } = req.body;
+    
+    if (!sectionId) {
+      throw createError('Section ID is required', 400, 'INPUT_INVALID');
+    }
+    
+    logger.info('🔄 HTML regeneration requested', {
+      sectionId,
+      hasOriginalImage: !!originalImage,
+      hasCustomPrompt: !!customPrompt,
+      timestamp: new Date().toISOString()
+    });
+
+    // Use the pipeline controller to regenerate HTML for the section
+    const regeneratedSection = await pipelineController.regenerateSectionHTML({
+      sectionId,
+      originalImage,
+      customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'
+    });
+
+    logger.info('✅ HTML regeneration completed successfully', {
+      sectionId,
+      newHtmlLength: regeneratedSection.html.length,
+      fieldsCount: regeneratedSection.editableFields?.length || 0,
+      qualityScore: regeneratedSection.qualityScore
+    });
+
+    res.json({
+      success: true,
+      data: regeneratedSection,
+      message: 'HTML regenerated successfully',
+      metadata: {
+        sectionId,
+        regeneratedAt: new Date().toISOString(),
+        htmlLength: regeneratedSection.html.length,
+        fieldsGenerated: regeneratedSection.editableFields?.length || 0
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('❌ HTML regeneration failed', {
+      error: error?.message || 'Unknown error',
+      stack: error?.stack,
+      sectionId: req.body?.sectionId
+    });
+    next(error);
+  }
+});
+
+/**
  * GET /api/pipeline/supported-types
  * Get supported file types and requirements
  */

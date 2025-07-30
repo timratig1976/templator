@@ -1,0 +1,975 @@
+{
+  "success": false,
+  "timestamp": "2025-07-30T15:44:03.003Z",
+  "duration": 964,
+  "errors": [
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 204,
+      "column": 5,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 204,
+      "column": 11,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 229,
+      "column": 2,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 231,
+      "column": 11,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 231,
+      "column": 16,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 239,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 248,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 248,
+      "column": 11,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 248,
+      "column": 36,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 248,
+      "column": 50,
+      "message": "Expression expected.",
+      "code": "TS1109",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 249,
+      "column": 11,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 249,
+      "column": 45,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 252,
+      "column": 9,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 440,
+      "column": 6,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 442,
+      "column": 11,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 442,
+      "column": 78,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 448,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 448,
+      "column": 11,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 448,
+      "column": 50,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 448,
+      "column": 64,
+      "message": "Expression expected.",
+      "code": "TS1109",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 449,
+      "column": 11,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 449,
+      "column": 63,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 10,
+      "message": "Identifier expected. 'const' is a reserved word that cannot be used here.",
+      "code": "TS1359",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 16,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 22,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 25,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 29,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 43,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 451,
+      "column": 45,
+      "message": "Property assignment expected.",
+      "code": "TS1136",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 459,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 464,
+      "column": 3,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 465,
+      "column": 12,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 466,
+      "column": 9,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 467,
+      "column": 13,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 468,
+      "column": 9,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 468,
+      "column": 18,
+      "message": "An element access expression should take an argument.",
+      "code": "TS1011",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 469,
+      "column": 4,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 469,
+      "column": 18,
+      "message": "Expression expected.",
+      "code": "TS1109",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 470,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 470,
+      "column": 58,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 472,
+      "column": 9,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 482,
+      "column": 7,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 484,
+      "column": 11,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 484,
+      "column": 76,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 491,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 491,
+      "column": 11,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 491,
+      "column": 50,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 491,
+      "column": 56,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 493,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 493,
+      "column": 19,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 493,
+      "column": 27,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 493,
+      "column": 28,
+      "message": "Expression expected.",
+      "code": "TS1109",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 493,
+      "column": 30,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 493,
+      "column": 34,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 495,
+      "column": 20,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 495,
+      "column": 50,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 495,
+      "column": 52,
+      "message": "Property assignment expected.",
+      "code": "TS1136",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 508,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 510,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 510,
+      "column": 11,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 510,
+      "column": 45,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 510,
+      "column": 51,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 512,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 512,
+      "column": 19,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 512,
+      "column": 27,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 512,
+      "column": 28,
+      "message": "Expression expected.",
+      "code": "TS1109",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 512,
+      "column": 30,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 512,
+      "column": 34,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 514,
+      "column": 19,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 514,
+      "column": 26,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 514,
+      "column": 28,
+      "message": "Property assignment expected.",
+      "code": "TS1136",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 527,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 529,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 529,
+      "column": 44,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 529,
+      "column": 50,
+      "message": "An element access expression should take an argument.",
+      "code": "TS1011",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 529,
+      "column": 52,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 529,
+      "column": 54,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 544,
+      "column": 3,
+      "message": "Declaration or statement expected.",
+      "code": "TS1128",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 544,
+      "column": 41,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 544,
+      "column": 50,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 544,
+      "column": 52,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 563,
+      "column": 3,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 564,
+      "column": 15,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 565,
+      "column": 12,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 566,
+      "column": 12,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 567,
+      "column": 4,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 568,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 568,
+      "column": 122,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 570,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 575,
+      "column": 7,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 577,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 577,
+      "column": 85,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 578,
+      "column": 12,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 578,
+      "column": 23,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 584,
+      "column": 3,
+      "message": "Unexpected keyword or identifier.",
+      "code": "TS1434",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 585,
+      "column": 9,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 586,
+      "column": 13,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 587,
+      "column": 12,
+      "message": "',' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 588,
+      "column": 4,
+      "message": "';' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    },
+    {
+      "file": "src/services/ai/EnhancedAIService.ts",
+      "line": 589,
+      "column": 11,
+      "message": "':' expected.",
+      "code": "TS1005",
+      "severity": "error",
+      "category": "syntax_error"
+    }
+  ],
+  "warnings": [],
+  "filesCounted": 102,
+  "summary": {
+    "totalFiles": 102,
+    "errorFiles": 1,
+    "warningFiles": 0,
+    "newFiles": [],
+    "modifiedFiles": [
+      "/Users/timratig/CascadeProjects/templator/backend/src/services/ai/EnhancedAIService.ts",
+      "/Users/timratig/CascadeProjects/templator/backend/src/services/ai/openaiService.ts"
+    ],
+    "serviceHealth": {
+      "ai": {
+        "status": "error",
+        "fileCount": 7,
+        "errorCount": 100,
+        "lastChecked": "2025-07-30T15:44:03.002Z"
+      },
+      "analysis": {
+        "status": "healthy",
+        "fileCount": 3,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "deployment": {
+        "status": "healthy",
+        "fileCount": 4,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "input": {
+        "status": "healthy",
+        "fileCount": 3,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "module": {
+        "status": "healthy",
+        "fileCount": 5,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "quality": {
+        "status": "healthy",
+        "fileCount": 6,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "schema": {
+        "status": "healthy",
+        "fileCount": 2,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "storage": {
+        "status": "healthy",
+        "fileCount": 3,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      },
+      "testing": {
+        "status": "healthy",
+        "fileCount": 6,
+        "errorCount": 0,
+        "lastChecked": "2025-07-30T15:44:03.003Z"
+      }
+    }
+  }
+}

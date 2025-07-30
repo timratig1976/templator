@@ -11,9 +11,11 @@ import {
   Settings,
   Package,
   Check,
-  X
+  X,
+  RefreshCw,
+  Image as ImageIcon
 } from 'lucide-react';
-import { PipelineExecutionResult, PipelineSection } from '../services/pipelineService';
+import { PipelineExecutionResult, PipelineSection, pipelineService } from '../services/pipelineService';
 import { aiLogger } from '../services/aiLogger';
 import { API_ENDPOINTS } from '../config/api';
 
@@ -30,6 +32,8 @@ interface SectionState {
   editedHtml: string;
   isCreatingModule: boolean;
   moduleCreated: boolean;
+  isRegenerating: boolean;
+  showOriginalImage: boolean;
 }
 
 const SectionStackEditor: React.FC<SectionStackEditorProps> = ({
@@ -46,7 +50,9 @@ const SectionStackEditor: React.FC<SectionStackEditorProps> = ({
         isEditing: false,
         editedHtml: section.html,
         isCreatingModule: false,
-        moduleCreated: false
+        moduleCreated: false,
+        isRegenerating: false,
+        showOriginalImage: false
       };
     });
     return initialStates;
@@ -94,6 +100,56 @@ const SectionStackEditor: React.FC<SectionStackEditorProps> = ({
       isEditing: false,
       editedHtml: section.html
     });
+  };
+
+  const toggleOriginalImage = (sectionId: string) => {
+    updateSectionState(sectionId, { 
+      showOriginalImage: !sectionStates[sectionId]?.showOriginalImage 
+    });
+  };
+
+  const regenerateHTML = async (sectionId: string) => {
+    const section = designResult.sections?.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const requestId = `regenerate_${Date.now()}`;
+    updateSectionState(sectionId, { isRegenerating: true });
+
+    try {
+      aiLogger.info('processing', 'Regenerating HTML for section', {
+        sectionId: section.id,
+        sectionName: section.name,
+        sectionType: section.type
+      }, requestId);
+
+      const regeneratedSection = await pipelineService.regenerateHTML(
+        sectionId, 
+        section.originalImage,
+        `Please regenerate HTML for this ${section.type} section with improved quality and Tailwind 4 styling.`
+      );
+
+      // Update the section with regenerated HTML
+      updateSectionState(sectionId, { 
+        isRegenerating: false,
+        editedHtml: regeneratedSection.html
+      });
+
+      // Notify parent component of the update
+      onSectionUpdate?.(sectionId, regeneratedSection);
+
+      aiLogger.success('processing', 'HTML regenerated successfully', {
+        sectionId,
+        newHtmlLength: regeneratedSection.html.length,
+        fieldsCount: regeneratedSection.editableFields?.length || 0
+      }, requestId);
+
+    } catch (error) {
+      updateSectionState(sectionId, { isRegenerating: false });
+      aiLogger.error('processing', 'Failed to regenerate HTML', {
+        sectionId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, requestId);
+    }
   };
 
   const createModuleFromSection = async (section: PipelineSection) => {
@@ -218,7 +274,9 @@ const SectionStackEditor: React.FC<SectionStackEditorProps> = ({
           isEditing: false,
           editedHtml: section.html,
           isCreatingModule: false,
-          moduleCreated: false
+          moduleCreated: false,
+          isRegenerating: false,
+          showOriginalImage: false
         };
         
         return (
@@ -256,6 +314,31 @@ const SectionStackEditor: React.FC<SectionStackEditorProps> = ({
                     </span>
                   )}
                   
+                  {/* Toggle Original Image Button */}
+                  {section.originalImage && (
+                    <button
+                      onClick={() => toggleOriginalImage(section.id)}
+                      className="flex items-center space-x-1 bg-gray-100 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-200 text-sm"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      <span>
+                        {state.showOriginalImage ? 'Hide Image' : 'Show Original'}
+                      </span>
+                    </button>
+                  )}
+                  
+                  {/* Regenerate HTML Button */}
+                  <button
+                    onClick={() => regenerateHTML(section.id)}
+                    disabled={state.isRegenerating}
+                    className="flex items-center space-x-1 bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${state.isRegenerating ? 'animate-spin' : ''}`} />
+                    <span>
+                      {state.isRegenerating ? 'Regenerating...' : 'Regenerate HTML'}
+                    </span>
+                  </button>
+                  
                   <button
                     onClick={() => createModuleFromSection(section)}
                     disabled={state.isCreatingModule}
@@ -273,6 +356,27 @@ const SectionStackEditor: React.FC<SectionStackEditorProps> = ({
             {/* Section Content */}
             {state.isExpanded && (
               <div className="p-6 space-y-6">
+                {/* Original Image Display */}
+                {state.showOriginalImage && section.originalImage && (
+                  <div className="bg-gray-50 rounded-lg p-4 border">
+                    <h4 className="font-medium text-gray-700 mb-3 flex items-center space-x-2">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Original Section Image</span>
+                    </h4>
+                    <div className="flex justify-center">
+                      <img 
+                        src={section.originalImage} 
+                        alt={`Original ${section.name} section`}
+                        className="max-w-full max-h-96 rounded-lg shadow-sm border"
+                        style={{ objectFit: 'contain' }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2 text-center">
+                      This is the original section from your uploaded design that AI used to generate the HTML below.
+                    </p>
+                  </div>
+                )}
+
                 {/* Section Info */}
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
