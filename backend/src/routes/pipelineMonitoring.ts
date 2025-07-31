@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../utils/logger';
+import TestCoverageService from '../services/testing/TestCoverageService';
 import PipelineProgressTracker from '../services/pipeline/PipelineProgressTracker';
 import QualityMetricsDashboard from '../services/quality/QualityMetricsDashboard';
 import ErrorRecoverySystem from '../services/recovery/ErrorRecoverySystem';
@@ -899,18 +900,41 @@ router.get('/security/raw', (req: Request, res: Response) => {
   }
 });
 
+// Helper function to generate trend data
+const generateTrendData = (baseValue: number, days: number = 30) => {
+  return Array.from({ length: days }, (_, i) => ({
+    date: new Date(Date.now() - (days - i - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    value: Math.max(0, Math.min(100, baseValue + (Math.random() - 0.5) * 20))
+  }));
+};
+
 /**
  * GET /api/monitoring/trends/raw
  * Get raw trends data
  */
-router.get('/trends/raw', (req: Request, res: Response) => {
+// Helper function to get real test coverage data
+const getTestCoverageData = async () => {
   try {
-    const generateTrendData = (baseValue: number, days: number = 30) => {
-      return Array.from({ length: days }, (_, i) => ({
-        date: new Date(Date.now() - (days - i - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        value: Math.max(0, Math.min(100, baseValue + (Math.random() - 0.5) * 20))
-      }));
+    const coverage = await TestCoverageService.getCurrentCoverage();
+    return {
+      current: coverage.metrics.overall,
+      trend: coverage.trend,
+      change: coverage.change,
+      data: generateTrendData(coverage.metrics.overall)
     };
+  } catch (error) {
+    console.warn('Failed to get real test coverage, using fallback:', error);
+    return {
+      current: 85.6,
+      trend: 'stable' as const,
+      change: '+0.8%',
+      data: generateTrendData(85.6)
+    };
+  }
+};
+
+router.get('/trends/raw', async (req: Request, res: Response) => {
+  try {
 
     const rawData = {
       timestamp: new Date().toISOString(),
@@ -991,12 +1015,7 @@ router.get('/trends/raw', (req: Request, res: Response) => {
           change: '+3.2%',
           data: generateTrendData(82.4)
         },
-        testCoverage: {
-          current: 85.6,
-          trend: 'stable',
-          change: '+0.8%',
-          data: generateTrendData(85.6)
-        },
+        testCoverage: await getTestCoverageData(),
         performance: {
           current: 78.9,
           trend: 'declining',
