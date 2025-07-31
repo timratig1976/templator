@@ -1,0 +1,32 @@
+{
+  "metrics": {
+    "overall": 60,
+    "vulnerabilities": {
+      "critical": 0,
+      "high": 2,
+      "medium": 0,
+      "low": 0,
+      "total": 2
+    },
+    "dependencies": {
+      "total": 39,
+      "outdated": 11,
+      "vulnerable": 2
+    },
+    "codeAnalysis": {
+      "hardcodedSecrets": 3,
+      "insecurePatterns": 1,
+      "authenticationIssues": 0
+    },
+    "trend": "stable",
+    "change": "+0.0%",
+    "lastScan": "2025-07-31T14:08:31.756Z",
+    "recommendations": [
+      "Address 2 high-severity vulnerabilityies",
+      "Remove 3 hardcoded secrets from code",
+      "Fix 1 insecure coding pattern",
+      "Update 11 outdated dependencies"
+    ]
+  },
+  "timestamp": 1753970911756
+}

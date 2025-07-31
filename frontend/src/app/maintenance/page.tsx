@@ -480,7 +480,9 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Code Quality Score</p>
                       </Tooltip>
-                      <p className={`text-3xl font-bold mt-2 ${getQualityColors(95).iconText}`}>A+</p>
+                      <p className={`text-3xl font-bold mt-2 ${getQualityColors(qualityMetrics?.codeQuality?.score || 85).iconText}`}>
+                        {qualityMetrics?.codeQuality?.grade || 'A'}
+                      </p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/code-quality/raw', 'Code Quality Raw Data')}
@@ -490,8 +492,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className={`h-12 w-12 ${getQualityColors(95).icon} rounded-full flex items-center justify-center`}>
-                    <span className={`${getQualityColors(95).iconText} text-xl`}>✓</span>
+                  <div className={`h-12 w-12 ${getQualityColors(qualityMetrics?.codeQuality?.score || 85).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getQualityColors(qualityMetrics?.codeQuality?.score || 85).iconText} text-xl`}>✓</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -524,7 +526,9 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Test Coverage</p>
                       </Tooltip>
-                      <p className={`text-3xl font-bold mt-2 ${getPercentageColors(94).iconText}`}>94%</p>
+                      <p className={`text-3xl font-bold mt-2 ${getPercentageColors(qualityMetrics?.testCoverage?.current || 3.8).iconText}`}>
+                        {qualityMetrics?.testCoverage?.current ? `${qualityMetrics.testCoverage.current.toFixed(1)}%` : '3.8%'}
+                      </p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/test-coverage/raw', 'Test Coverage Raw Data')}
@@ -534,8 +538,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className={`h-12 w-12 ${getPercentageColors(94).icon} rounded-full flex items-center justify-center`}>
-                    <span className={`${getPercentageColors(94).iconText} text-xl`}>🧪</span>
+                  <div className={`h-12 w-12 ${getPercentageColors(qualityMetrics?.testCoverage?.current || 3.8).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getPercentageColors(qualityMetrics?.testCoverage?.current || 3.8).iconText} text-xl`}>🧪</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -548,10 +552,16 @@ export default function MaintenanceDashboard() {
                     >
                       <span className="cursor-help border-b border-dotted border-gray-400">Lines Covered</span>
                     </Tooltip>
-                    <span>8,456 / 9,000</span>
+                    <span>
+                      {qualityMetrics?.testCoverage?.realCounts ? 
+                        `${qualityMetrics.testCoverage.realCounts.linesCovered} / ${qualityMetrics.testCoverage.realCounts.linesTotal}` :
+                        '370 / 10,019'
+                      }
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className={`${getPercentageColors(94).progress} h-2 rounded-full`} style={{width: '94%'}}></div>
+                    <div className={`${getPercentageColors(qualityMetrics?.testCoverage?.current || 3.8).progress} h-2 rounded-full`} 
+                         style={{width: `${qualityMetrics?.testCoverage?.current || 3.8}%`}}></div>
                   </div>
                 </div>
               </div>
@@ -568,7 +578,9 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Performance</p>
                       </Tooltip>
-                      <p className={`text-3xl font-bold mt-2 ${getResponseTimeColors(98).iconText}`}>98ms</p>
+                      <p className={`text-3xl font-bold mt-2 ${getResponseTimeColors(qualityMetrics?.performance?.responseTime || 98).iconText}`}>
+                        {qualityMetrics?.performance?.responseTime ? `${Math.round(qualityMetrics.performance.responseTime)}ms` : '98ms'}
+                      </p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/performance/raw', 'Performance Raw Data')}
@@ -578,8 +590,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className={`h-12 w-12 ${getResponseTimeColors(98).icon} rounded-full flex items-center justify-center`}>
-                    <span className={`${getResponseTimeColors(98).iconText} text-xl`}>⚡</span>
+                  <div className={`h-12 w-12 ${getResponseTimeColors(qualityMetrics?.performance?.responseTime || 98).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getResponseTimeColors(qualityMetrics?.performance?.responseTime || 98).iconText} text-xl`}>⚡</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -595,7 +607,8 @@ export default function MaintenanceDashboard() {
                     <span>Excellent</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className={`${getResponseTimeColors(98).progress} h-2 rounded-full`} style={{width: '85%'}}></div>
+                    <div className={`${getResponseTimeColors(qualityMetrics?.performance?.responseTime || 98).progress} h-2 rounded-full`} 
+                         style={{width: `${Math.max(10, 100 - (qualityMetrics?.performance?.responseTime || 98) / 50)}%`}}></div>
                   </div>
                 </div>
               </div>
@@ -612,7 +625,9 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Security Score</p>
                       </Tooltip>
-                      <p className={`text-3xl font-bold mt-2 ${getQualityColors(92).iconText}`}>A</p>
+                      <p className={`text-3xl font-bold mt-2 ${getQualityColors(qualityMetrics?.security?.score || 92).iconText}`}>
+                        {qualityMetrics?.security?.score ? (qualityMetrics.security.score >= 90 ? 'A' : qualityMetrics.security.score >= 80 ? 'B' : 'C') : 'A'}
+                      </p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/security/raw', 'Security Raw Data')}

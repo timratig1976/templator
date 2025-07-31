@@ -1,0 +1,27 @@
+{
+  "metrics": {
+    "overall": 59,
+    "typescript": 100,
+    "eslint": 80,
+    "complexity": 0,
+    "documentation": 23,
+    "trend": "stable",
+    "change": "+0.0%",
+    "breakdown": {
+      "typescript": 100,
+      "eslint": 80,
+      "complexity": 0,
+      "documentation": 23
+    },
+    "details": {
+      "typeScriptErrors": 0,
+      "eslintErrors": 3,
+      "eslintWarnings": 8,
+      "averageComplexity": 37.7,
+      "documentationCoverage": 23.3,
+      "totalFiles": 80,
+      "analyzedFiles": 80
+    }
+  },
+  "timestamp": 1753967962471
+}
