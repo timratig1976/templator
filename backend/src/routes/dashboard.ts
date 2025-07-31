@@ -5,8 +5,8 @@ import fs from 'fs';
 const router = express.Router();
 
 /**
- * Backend Dashboard Routes
- * Serves the visual dashboard for monitoring and maintenance
+ * Test Suite Dashboard Routes
+ * Serves the visual test suite dashboard for monitoring and maintenance
  */
 
 // Serve the main dashboard HTML
@@ -59,13 +59,13 @@ router.get('/status', (req, res) => {
     data: {
       dashboardVersion: '1.0.0',
       features: [
-        'Real-time Pipeline Monitoring',
-        'Quality Metrics Dashboard', 
+        'Interactive Test Suite Execution',
+        'Real-time Test Progress Monitoring',
+        'Build & Compilation Validation', 
+        'Quality Metrics Dashboard',
         'Error Recovery System',
-        'WebSocket Management',
-        'Build Test System',
-        'System Health Monitor',
-        'Comprehensive Dashboard'
+        'WebSocket Test Updates',
+        'System Health Monitor'
       ],
       endpoints: {
         dashboard: '/api/dashboard',

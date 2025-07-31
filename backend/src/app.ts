@@ -11,6 +11,7 @@ import testStorageRoutes from './routes/test-storage';
 import testImageRoutes from './routes/test-images';
 import pipelineMonitoringRoutes from './routes/pipelineMonitoring';
 import dashboardRoutes from './routes/dashboard';
+import buildTestRoutes from './routes/buildTest';
 import aiEnhancementRoutes from './routes/aiEnhancement';
 import sectionComparisonRoutes from './routes/sectionComparison';
 import interactivePromptsRoutes from './routes/interactivePrompts';
@@ -66,7 +67,8 @@ export function createApp(): express.Application {
         runTests: '/health?action=run-tests',
         testStatus: '/health?action=test-status',
         testResults: '/health?action=test-results',
-        dashboard: '/health?action=dashboard'
+        dashboard: '/health?action=dashboard',
+        testsuite: '/health?action=testsuite'
       }
     };
 
@@ -436,8 +438,8 @@ export function createApp(): express.Application {
       }
     }
 
-    // DASHBOARD endpoint
-    if (action === 'dashboard') {
+    // TEST SUITE DASHBOARD endpoint
+    if (action === 'testsuite' || action === 'dashboard') {
       const dashboardHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -500,7 +502,8 @@ export function createApp(): express.Application {
             <div class="endpoint">GET /health?action=run-tests</div>
             <div class="endpoint">GET /health?action=test-status</div>
             <div class="endpoint">GET /health?action=test-results</div>
-            <div class="endpoint">GET /health?action=dashboard</div>
+            <div class="endpoint">GET /health?action=testsuite</div>
+            <div class="endpoint">GET /health?action=dashboard (legacy)</div>
         </div>
     </div>
 
@@ -532,6 +535,7 @@ export function createApp(): express.Application {
   app.use('/api/test/images', testImageRoutes);
   app.use('/api/monitoring', pipelineMonitoringRoutes);
   app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/build-test', buildTestRoutes);
   app.use('/api/ai-enhancement', aiEnhancementRoutes);
   app.use('/api/comparison', sectionComparisonRoutes);
   app.use('/api/prompts', interactivePromptsRoutes);

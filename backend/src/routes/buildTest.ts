@@ -1,6 +1,7 @@
 /**
- * Build Test API Routes
+ * Test Suite API Routes
  * Endpoints for monitoring and controlling the AutoBuildTestService
+ * Part of the Test Suite Dashboard system
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
@@ -19,6 +20,50 @@ const buildTestService = new AutoBuildTestService(getBuildTestConfig());
 // buildTestService.start().catch(error => {
 //   logger.error('Failed to start AutoBuildTestService:', error);
 // });
+
+/**
+ * GET /api/build-test
+ * Root endpoint - provides overview of build test system and available endpoints
+ */
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const latestResult = buildTestService.getLatestBuildResult();
+    const serviceHealth = buildTestService.getServiceHealthSummary();
+    const isHealthy = buildTestService.isServiceHealthy();
+    
+    res.json({
+      status: 'success',
+      message: 'Test Suite Dashboard API',
+      data: {
+        system: {
+          name: 'Templator Test Suite Dashboard',
+          version: '1.0.0',
+          isRunning: buildTestService['isRunning'],
+          isHealthy,
+          lastBuildTime: latestResult?.timestamp || null
+        },
+        endpoints: {
+          status: '/api/build-test/status',
+          run: '/api/build-test/run (POST)',
+          history: '/api/build-test/history',
+          health: '/api/build-test/health',
+          errors: '/api/build-test/errors',
+          config: '/api/build-test/config (POST)'
+        },
+        quickStats: {
+          totalErrors: latestResult?.errors?.length || 0,
+          totalWarnings: latestResult?.warnings?.length || 0,
+          lastTestDuration: latestResult?.duration || null,
+          healthyServices: Object.values(serviceHealth).filter((s: any) => s.status === 'healthy').length,
+          totalServices: Object.keys(serviceHealth).length
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Error getting build test overview:', error);
+    next(error);
+  }
+});
 
 /**
  * GET /api/build-test/status

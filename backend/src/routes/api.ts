@@ -17,6 +17,7 @@ import buildTestRoutes from './buildTest';
 import layoutSplittingRoutes from './layoutSplittingRoutes';
 import testEndpoints from './testEndpoints';
 import testImagesRoutes from './test-images';
+import pipelineMonitoringRoutes from './pipelineMonitoring';
 
 const router = Router();
 const logger = createLogger();
@@ -62,6 +63,9 @@ router.use('/test', testEndpoints);
 
 // Test endpoints for image processing
 router.use('/test-images', testImagesRoutes);
+
+// Pipeline monitoring and quality metrics routes
+router.use('/monitoring', pipelineMonitoringRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {
