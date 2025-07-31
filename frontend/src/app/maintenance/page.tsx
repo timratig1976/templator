@@ -34,6 +34,100 @@ export default function MaintenanceDashboard() {
   const [testRunning, setTestRunning] = useState(false);
   const [testProgress, setTestProgress] = useState<string>('');
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
+
+  // Simplified color system: Green = Good, Orange = Medium, Red = Low
+  const getQualityColors = (score: number) => {
+    if (score >= 85) {
+      return {
+        bg: 'bg-green-100',
+        text: 'text-green-800',
+        icon: 'bg-green-100',
+        iconText: 'text-green-600',
+        progress: 'bg-green-500',
+        chart: 'bg-green-500'
+      };
+    } else if (score >= 70) {
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
+        icon: 'bg-orange-100',
+        iconText: 'text-orange-600',
+        progress: 'bg-orange-500',
+        chart: 'bg-orange-500'
+      };
+    } else {
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        icon: 'bg-red-100',
+        iconText: 'text-red-600',
+        progress: 'bg-red-500',
+        chart: 'bg-red-500'
+      };
+    }
+  };
+
+  const getPercentageColors = (percentage: number) => {
+    if (percentage >= 90) {
+      return {
+        bg: 'bg-green-100',
+        text: 'text-green-800',
+        icon: 'bg-green-100',
+        iconText: 'text-green-600',
+        progress: 'bg-green-500',
+        chart: 'bg-green-500'
+      };
+    } else if (percentage >= 75) {
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
+        icon: 'bg-orange-100',
+        iconText: 'text-orange-600',
+        progress: 'bg-orange-500',
+        chart: 'bg-orange-500'
+      };
+    } else {
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        icon: 'bg-red-100',
+        iconText: 'text-red-600',
+        progress: 'bg-red-500',
+        chart: 'bg-red-500'
+      };
+    }
+  };
+
+  const getResponseTimeColors = (responseTime: number) => {
+    if (responseTime <= 100) {
+      return {
+        bg: 'bg-green-100',
+        text: 'text-green-800',
+        icon: 'bg-green-100',
+        iconText: 'text-green-600',
+        progress: 'bg-green-500',
+        chart: 'bg-green-500'
+      };
+    } else if (responseTime <= 300) {
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
+        icon: 'bg-orange-100',
+        iconText: 'text-orange-600',
+        progress: 'bg-orange-500',
+        chart: 'bg-orange-500'
+      };
+    } else {
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        icon: 'bg-red-100',
+        iconText: 'text-red-600',
+        progress: 'bg-red-500',
+        chart: 'bg-red-500'
+      };
+    }
+  };
   
   // Raw data modal state
   const [showRawDataModal, setShowRawDataModal] = useState(false);
@@ -386,7 +480,7 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Code Quality Score</p>
                       </Tooltip>
-                      <p className="text-3xl font-bold text-green-600 mt-2">A+</p>
+                      <p className={`text-3xl font-bold mt-2 ${getQualityColors(95).iconText}`}>A+</p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/code-quality/raw', 'Code Quality Raw Data')}
@@ -396,8 +490,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-green-600 text-xl">✓</span>
+                  <div className={`h-12 w-12 ${getQualityColors(95).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getQualityColors(95).iconText} text-xl`}>✓</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -413,7 +507,7 @@ export default function MaintenanceDashboard() {
                     <span>100%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full" style={{width: '100%'}}></div>
+                    <div className={`${getPercentageColors(100).progress} h-2 rounded-full`} style={{width: '100%'}}></div>
                   </div>
                 </div>
               </div>
@@ -430,7 +524,7 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Test Coverage</p>
                       </Tooltip>
-                      <p className="text-3xl font-bold text-blue-600 mt-2">94%</p>
+                      <p className={`text-3xl font-bold mt-2 ${getPercentageColors(94).iconText}`}>94%</p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/test-coverage/raw', 'Test Coverage Raw Data')}
@@ -440,8 +534,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 text-xl">🧪</span>
+                  <div className={`h-12 w-12 ${getPercentageColors(94).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getPercentageColors(94).iconText} text-xl`}>🧪</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -457,7 +551,7 @@ export default function MaintenanceDashboard() {
                     <span>8,456 / 9,000</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-500 h-2 rounded-full" style={{width: '94%'}}></div>
+                    <div className={`${getPercentageColors(94).progress} h-2 rounded-full`} style={{width: '94%'}}></div>
                   </div>
                 </div>
               </div>
@@ -474,7 +568,7 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Performance</p>
                       </Tooltip>
-                      <p className="text-3xl font-bold text-purple-600 mt-2">98ms</p>
+                      <p className={`text-3xl font-bold mt-2 ${getResponseTimeColors(98).iconText}`}>98ms</p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/performance/raw', 'Performance Raw Data')}
@@ -484,8 +578,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-purple-600 text-xl">⚡</span>
+                  <div className={`h-12 w-12 ${getResponseTimeColors(98).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getResponseTimeColors(98).iconText} text-xl`}>⚡</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -501,7 +595,7 @@ export default function MaintenanceDashboard() {
                     <span>Excellent</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-purple-500 h-2 rounded-full" style={{width: '85%'}}></div>
+                    <div className={`${getResponseTimeColors(98).progress} h-2 rounded-full`} style={{width: '85%'}}></div>
                   </div>
                 </div>
               </div>
@@ -518,7 +612,7 @@ export default function MaintenanceDashboard() {
                       >
                         <p className="text-sm font-medium text-gray-600 cursor-help border-b border-dotted border-gray-400">Security Score</p>
                       </Tooltip>
-                      <p className="text-3xl font-bold text-orange-600 mt-2">A</p>
+                      <p className={`text-3xl font-bold mt-2 ${getQualityColors(92).iconText}`}>A</p>
                     </div>
                     <button
                       onClick={() => openRawDataModal('/api/monitoring/security/raw', 'Security Raw Data')}
@@ -528,8 +622,8 @@ export default function MaintenanceDashboard() {
                       📄
                     </button>
                   </div>
-                  <div className="h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <span className="text-orange-600 text-xl">🔒</span>
+                  <div className={`h-12 w-12 ${getQualityColors(92).icon} rounded-full flex items-center justify-center`}>
+                    <span className={`${getQualityColors(92).iconText} text-xl`}>🔒</span>
                   </div>
                 </div>
                 <div className="mt-4">
@@ -545,7 +639,7 @@ export default function MaintenanceDashboard() {
                     <span>0 Critical</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-orange-500 h-2 rounded-full" style={{width: '92%'}}></div>
+                    <div className={`${getQualityColors(92).progress} h-2 rounded-full`} style={{width: '92%'}}></div>
                   </div>
                 </div>
               </div>
@@ -573,21 +667,20 @@ export default function MaintenanceDashboard() {
                   <div>Week 6</div>
                   <div>Current</div>
                 </div>
-                
-                {/* Code Quality Trend */}
+                                {/* Code Quality Trend */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">Code Quality</span>
-                    <span className="text-sm text-green-600 font-medium">+5% ↑</span>
+                    <span className={`text-sm font-medium ${getQualityColors(95).iconText}`}>+5% ↑</span>
                   </div>
                   <div className="grid grid-cols-7 gap-2 h-8 items-end">
-                    <div className="bg-green-200 rounded" style={{height: '60%'}}></div>
-                    <div className="bg-green-300 rounded" style={{height: '70%'}}></div>
-                    <div className="bg-green-300 rounded" style={{height: '75%'}}></div>
-                    <div className="bg-green-400 rounded" style={{height: '80%'}}></div>
-                    <div className="bg-green-400 rounded" style={{height: '90%'}}></div>
-                    <div className="bg-green-500 rounded" style={{height: '95%'}}></div>
-                    <div className="bg-green-600 rounded" style={{height: '100%'}}></div>
+                    <div className={`${getQualityColors(85).chart} rounded`} style={{height: '60%'}}></div>
+                    <div className={`${getQualityColors(87).chart} rounded`} style={{height: '70%'}}></div>
+                    <div className={`${getQualityColors(89).chart} rounded`} style={{height: '75%'}}></div>
+                    <div className={`${getQualityColors(91).chart} rounded`} style={{height: '80%'}}></div>
+                    <div className={`${getQualityColors(93).chart} rounded`} style={{height: '90%'}}></div>
+                    <div className={`${getQualityColors(95).chart} rounded`} style={{height: '95%'}}></div>
+                    <div className={`${getQualityColors(97).chart} rounded`} style={{height: '100%'}}></div>
                   </div>
                 </div>
                 
@@ -595,16 +688,16 @@ export default function MaintenanceDashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">Test Coverage</span>
-                    <span className="text-sm text-blue-600 font-medium">+8% ↑</span>
+                    <span className={`text-sm font-medium ${getPercentageColors(94).iconText}`}>+8% ↑</span>
                   </div>
                   <div className="grid grid-cols-7 gap-2 h-8 items-end">
-                    <div className="bg-blue-200 rounded" style={{height: '70%'}}></div>
-                    <div className="bg-blue-300 rounded" style={{height: '75%'}}></div>
-                    <div className="bg-blue-300 rounded" style={{height: '78%'}}></div>
-                    <div className="bg-blue-400 rounded" style={{height: '85%'}}></div>
-                    <div className="bg-blue-400 rounded" style={{height: '88%'}}></div>
-                    <div className="bg-blue-500 rounded" style={{height: '92%'}}></div>
-                    <div className="bg-blue-600 rounded" style={{height: '94%'}}></div>
+                    <div className={`${getPercentageColors(70).chart} rounded`} style={{height: '70%'}}></div>
+                    <div className={`${getPercentageColors(75).chart} rounded`} style={{height: '75%'}}></div>
+                    <div className={`${getPercentageColors(78).chart} rounded`} style={{height: '78%'}}></div>
+                    <div className={`${getPercentageColors(85).chart} rounded`} style={{height: '85%'}}></div>
+                    <div className={`${getPercentageColors(88).chart} rounded`} style={{height: '88%'}}></div>
+                    <div className={`${getPercentageColors(92).chart} rounded`} style={{height: '92%'}}></div>
+                    <div className={`${getPercentageColors(94).chart} rounded`} style={{height: '94%'}}></div>
                   </div>
                 </div>
                 
@@ -612,16 +705,16 @@ export default function MaintenanceDashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">Performance (Response Time)</span>
-                    <span className="text-sm text-purple-600 font-medium">-12ms ↓</span>
+                    <span className={`text-sm font-medium ${getResponseTimeColors(98).iconText}`}>-12ms ↓</span>
                   </div>
                   <div className="grid grid-cols-7 gap-2 h-8 items-end">
-                    <div className="bg-purple-600 rounded" style={{height: '100%'}}></div>
-                    <div className="bg-purple-500 rounded" style={{height: '90%'}}></div>
-                    <div className="bg-purple-500 rounded" style={{height: '85%'}}></div>
-                    <div className="bg-purple-400 rounded" style={{height: '75%'}}></div>
-                    <div className="bg-purple-400 rounded" style={{height: '70%'}}></div>
-                    <div className="bg-purple-300 rounded" style={{height: '65%'}}></div>
-                    <div className="bg-purple-200 rounded" style={{height: '60%'}}></div>
+                    <div className={`${getResponseTimeColors(150).chart} rounded`} style={{height: '100%'}}></div>
+                    <div className={`${getResponseTimeColors(140).chart} rounded`} style={{height: '90%'}}></div>
+                    <div className={`${getResponseTimeColors(130).chart} rounded`} style={{height: '85%'}}></div>
+                    <div className={`${getResponseTimeColors(120).chart} rounded`} style={{height: '75%'}}></div>
+                    <div className={`${getResponseTimeColors(110).chart} rounded`} style={{height: '70%'}}></div>
+                    <div className={`${getResponseTimeColors(105).chart} rounded`} style={{height: '65%'}}></div>
+                    <div className={`${getResponseTimeColors(98).chart} rounded`} style={{height: '60%'}}></div>
                   </div>
                 </div>
               </div>
@@ -937,28 +1030,64 @@ export default function MaintenanceDashboard() {
           </div>
         )}
 
-        {/* Raw Data Modal */}
+        {/* Enhanced Raw Data Modal */}
         {showRawDataModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full h-[95vh] flex flex-col">
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">🔍 {rawDataTitle}</h2>
-                  <p className="text-sm text-gray-500 mt-1">Raw data for verification and auditing</p>
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center space-x-3">
+                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 text-sm">🔍</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">{rawDataTitle}</h2>
+                    <p className="text-xs text-gray-500">Raw data for verification and auditing</p>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   {rawDataContent && (
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(JSON.stringify(rawDataContent, null, 2));
-                        alert('Raw data copied to clipboard!');
-                      }}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                      title="Copy JSON to clipboard"
-                    >
-                      📋 Copy
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          const jsonString = JSON.stringify(rawDataContent, null, 2);
+                          navigator.clipboard.writeText(jsonString);
+                          // Show temporary success message
+                          const button = event?.target as HTMLButtonElement;
+                          const originalText = button.textContent;
+                          button.textContent = '✅ Copied!';
+                          button.className = button.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-green-600 hover:bg-green-700');
+                          setTimeout(() => {
+                            button.textContent = originalText;
+                            button.className = button.className.replace('bg-green-600 hover:bg-green-700', 'bg-blue-600 hover:bg-blue-700');
+                          }, 2000);
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                        title="Copy JSON to clipboard"
+                      >
+                        <span>📋</span>
+                        <span>Copy</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const jsonString = JSON.stringify(rawDataContent, null, 2);
+                          const blob = new Blob([jsonString], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${rawDataTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors flex items-center space-x-1"
+                        title="Download JSON file"
+                      >
+                        <span>💾</span>
+                        <span>Download</span>
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => {
@@ -966,8 +1095,8 @@ export default function MaintenanceDashboard() {
                       setRawDataContent(null);
                       setRawDataTitle('');
                     }}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                    title="Close modal"
+                    className="text-gray-400 hover:text-gray-600 text-xl px-2 py-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Close modal (ESC)"
                   >
                     ×
                   </button>
@@ -975,7 +1104,7 @@ export default function MaintenanceDashboard() {
               </div>
               
               {/* Modal Content */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden flex flex-col">
                 {isLoadingRawData ? (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center">
@@ -984,14 +1113,17 @@ export default function MaintenanceDashboard() {
                     </div>
                   </div>
                 ) : rawDataContent ? (
-                  <div className="h-full overflow-auto">
+                  <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Data Metadata */}
                     {rawDataContent.data && (
-                      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 m-4">
+                      <div className="bg-blue-50 border-l-4 border-blue-400 p-3 m-4 mb-2 rounded-r">
                         <div className="flex">
-                          <div className="ml-3">
-                            <h3 className="text-sm font-medium text-blue-800">📊 Data Information</h3>
-                            <div className="mt-2 text-sm text-blue-700">
+                          <div className="ml-2">
+                            <h3 className="text-sm font-medium text-blue-800 flex items-center">
+                              <span className="mr-2">📊</span>
+                              Data Information
+                            </h3>
+                            <div className="mt-2 text-xs text-blue-700 grid grid-cols-2 gap-2">
                               {rawDataContent.data.source && (
                                 <p><strong>Source:</strong> {rawDataContent.data.source}</p>
                               )}
@@ -1010,16 +1142,34 @@ export default function MaintenanceDashboard() {
                       </div>
                     )}
                     
-                    {/* JSON Content */}
-                    <div className="p-4">
-                      <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto text-sm font-mono whitespace-pre-wrap">
-                        {JSON.stringify(rawDataContent, null, 2)}
-                      </pre>
+                    {/* JSON Content with Enhanced Scrolling */}
+                    <div className="flex-1 mx-4 mb-4 overflow-hidden">
+                      <div className="h-full bg-gray-900 rounded-lg flex flex-col">
+                        {/* JSON Header */}
+                        <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-400 text-sm font-mono">JSON</span>
+                            <span className="text-gray-400 text-xs">•</span>
+                            <span className="text-gray-400 text-xs">{JSON.stringify(rawDataContent).length} characters</span>
+                          </div>
+                          <div className="text-gray-400 text-xs">
+                            Use Ctrl+F to search • Scroll to navigate
+                          </div>
+                        </div>
+                        
+                        {/* Scrollable JSON Content */}
+                        <div className="flex-1 overflow-y-auto overflow-x-auto">
+                          <pre className="text-green-400 p-4 text-sm font-mono whitespace-pre leading-relaxed h-full">
+                            {JSON.stringify(rawDataContent, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center text-gray-500">
+                      <div className="text-4xl mb-2">📄</div>
                       <p>No data available</p>
                     </div>
                   </div>
