@@ -190,7 +190,7 @@ async function verifyTypeScriptCompilation() {
   log('\n🔍 6. TypeScript Compilation Verification', colors.blue);
   
   try {
-    const { stdout, stderr } = await execAsync('cd backend && npx tsc --noEmit');
+    const { stdout, stderr } = await execAsync('npx tsc --noEmit');
     
     if (stderr === '') {
       log('✅ TypeScript compilation: No errors', colors.green);

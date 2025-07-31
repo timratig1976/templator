@@ -304,6 +304,15 @@ export class ComprehensiveTestSuite {
           test_cases: await this.createValidationTestCases(),
           setup_requirements: ['Load module configuration'],
           teardown_requirements: ['Clean up test data']
+        },
+        {
+          category_id: 'hybrid_layout_api_tests',
+          category_name: 'Hybrid Layout API Tests',
+          category_type: 'integration',
+          priority: 'high',
+          test_cases: await this.createHybridLayoutApiTestCases(),
+          setup_requirements: ['Initialize API testing environment'],
+          teardown_requirements: ['Clean up test data']
         }
       ],
       execution_mode: 'sequential',
@@ -582,6 +591,221 @@ export class ComprehensiveTestSuite {
         ],
         tags: ['accessibility', 'wcag', 'compliance'],
         estimated_duration_ms: 5000
+      }
+    ];
+  }
+
+  /**
+   * Creates test cases for hybrid layout API endpoints
+   * Tests both the analyze and generate endpoints
+   */
+  private async createHybridLayoutApiTestCases(): Promise<TestCase[]> {
+    return [
+      {
+        test_id: 'hybrid_layout_001',
+        test_name: 'Hybrid Layout Analysis API',
+        description: 'Tests the hybrid layout analysis endpoint for correct section identification',
+        test_type: 'integration',
+        preconditions: ['API server running'],
+        test_steps: [
+          {
+            step_id: 'step_001',
+            step_description: 'Call hybrid layout analysis endpoint',
+            action_type: 'execute',
+            action_details: {
+              action_name: 'post_request',
+              parameters: {
+                endpoint: '/api/hybrid-layout-test/analyze',
+                payload: {
+                  designData: {
+                    sections: [
+                      { type: 'header', content: 'Sample header content' },
+                      { type: 'hero', content: 'Sample hero section' },
+                      { type: 'content', content: 'Sample main content' }
+                    ],
+                    metadata: {
+                      title: 'Test Design',
+                      description: 'Test design for hybrid layout analysis'
+                    }
+                  }
+                }
+              }
+            },
+            expected_outcome: 'Successful response with sections',
+            failure_handling: 'abort'
+          }
+        ],
+        expected_results: [
+          {
+            result_type: 'output',
+            description: 'API should return success with sections',
+            success_criteria: {
+              conditions: ['Status code 200', 'Contains sections array', 'Success flag is true']
+            },
+            failure_criteria: {
+              error_conditions: ['Status code not 200', 'Missing sections array'],
+              timeout_conditions: ['Response time > 10s'],
+              performance_violations: [],
+              quality_violations: []
+            }
+          }
+        ],
+        assertions: [
+          {
+            assertion_id: 'hybrid_assert_001',
+            assertion_type: 'contains',
+            target_value: 'response.body',
+            expected_value: 'sections'
+          },
+          {
+            assertion_id: 'hybrid_assert_002',
+            assertion_type: 'equals',
+            target_value: 'response.body.success',
+            expected_value: true
+          },
+          {
+            assertion_id: 'hybrid_assert_003',
+            assertion_type: 'greater_than',
+            target_value: 'response.body.sections.length',
+            expected_value: 3
+          }
+        ],
+        tags: ['api', 'hybrid-layout', 'analysis'],
+        estimated_duration_ms: 5000
+      },
+      {
+        test_id: 'hybrid_layout_002',
+        test_name: 'Hybrid Layout Generation API',
+        description: 'Tests the hybrid layout generation endpoint for HTML generation from sections',
+        test_type: 'integration',
+        preconditions: ['API server running'],
+        test_steps: [
+          {
+            step_id: 'step_001',
+            step_description: 'Call hybrid layout generation endpoint',
+            action_type: 'execute',
+            action_details: {
+              action_name: 'post_request',
+              parameters: {
+                endpoint: '/api/hybrid-layout-test/generate',
+                payload: {
+                  sections: [
+                    { type: 'header', content: 'Sample header content' },
+                    { type: 'hero', content: 'Sample hero section' },
+                    { type: 'content', content: 'Sample main content' }
+                  ],
+                  options: {
+                    format: 'html',
+                    includeImages: true,
+                    responsiveDesign: true
+                  }
+                }
+              }
+            },
+            expected_outcome: 'Successful response with HTML content',
+            failure_handling: 'abort'
+          }
+        ],
+        expected_results: [
+          {
+            result_type: 'output',
+            description: 'API should return success with HTML content',
+            success_criteria: {
+              conditions: ['Status code 200', 'Contains HTML string', 'Success flag is true']
+            },
+            failure_criteria: {
+              error_conditions: ['Status code not 200', 'Missing HTML content'],
+              timeout_conditions: ['Response time > 15s'],
+              performance_violations: [],
+              quality_violations: []
+            }
+          }
+        ],
+        assertions: [
+          {
+            assertion_id: 'hybrid_assert_004',
+            assertion_type: 'contains',
+            target_value: 'response.body',
+            expected_value: 'html'
+          },
+          {
+            assertion_id: 'hybrid_assert_005',
+            assertion_type: 'contains',
+            target_value: 'response.body.html',
+            expected_value: '<html'
+          },
+          {
+            assertion_id: 'hybrid_assert_006',
+            assertion_type: 'contains',
+            target_value: 'response.body.html',
+            expected_value: 'class='
+          },
+          {
+            assertion_id: 'hybrid_assert_007',
+            assertion_type: 'equals',
+            target_value: 'response.body.sections.length',
+            expected_value: 3
+          }
+        ],
+        tags: ['api', 'hybrid-layout', 'generation'],
+        estimated_duration_ms: 8000
+      },
+      {
+        test_id: 'hybrid_layout_003',
+        test_name: 'Hybrid Layout Error Handling',
+        description: 'Tests error handling in hybrid layout API endpoints',
+        test_type: 'integration',
+        preconditions: ['API server running'],
+        test_steps: [
+          {
+            step_id: 'step_001',
+            step_description: 'Call hybrid layout analysis endpoint with invalid data',
+            action_type: 'execute',
+            action_details: {
+              action_name: 'post_request',
+              parameters: {
+                endpoint: '/api/hybrid-layout-test/analyze',
+                payload: {
+                  // Intentionally malformed payload to test error handling
+                  designData: null
+                }
+              }
+            },
+            expected_outcome: 'Error response with appropriate message',
+            failure_handling: 'continue'
+          }
+        ],
+        expected_results: [
+          {
+            result_type: 'output',
+            description: 'API should return error for invalid input',
+            success_criteria: {
+              conditions: ['Status code 400', 'Contains error message', 'Success flag is false']
+            },
+            failure_criteria: {
+              error_conditions: ['Status code 200', 'Missing error message'],
+              timeout_conditions: [],
+              performance_violations: [],
+              quality_violations: []
+            }
+          }
+        ],
+        assertions: [
+          {
+            assertion_id: 'hybrid_assert_008',
+            assertion_type: 'equals',
+            target_value: 'response.body.success',
+            expected_value: false
+          },
+          {
+            assertion_id: 'hybrid_assert_009',
+            assertion_type: 'contains',
+            target_value: 'response.body',
+            expected_value: 'error'
+          }
+        ],
+        tags: ['api', 'hybrid-layout', 'error-handling'],
+        estimated_duration_ms: 3000
       }
     ];
   }

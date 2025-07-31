@@ -581,6 +581,218 @@ class LayoutSectionSplittingService {
       complexitySummary
     };
   }
+
+  /**
+   * Enhance sections with additional metadata and processing
+   * @param sections Array of sections to enhance
+   * @returns Enhanced sections with additional metadata
+   */
+  async enhanceSections(sections: any[]): Promise<any[]> {
+    try {
+      logger.info('Enhancing sections', { sectionCount: sections.length });
+      
+      if (!sections || !Array.isArray(sections) || sections.length === 0) {
+        return [];
+      }
+      
+      // Process each section to add additional metadata
+      const enhancedSections = sections.map((section, index) => {
+        // Ensure section has required properties
+        if (!section.id) section.id = `section-${index + 1}`;
+        if (!section.type) section.type = this.inferSectionType(section.html || '');
+        
+        // Add complexity analysis if not present
+        if (!section.complexity) {
+          section.complexity = this.analyzeSectionComplexity(section.html || '');
+        }
+        
+        // Estimate editable fields if not present
+        if (!section.estimatedFields) {
+          section.estimatedFields = this.estimateFieldCount(section.html || '');
+        }
+        
+        // Add priority based on section type if not present
+        if (!section.priority) {
+          section.priority = this.getSectionPriority(section.type);
+        }
+        
+        // Add empty dependencies array if not present
+        if (!section.dependencies) {
+          section.dependencies = [];
+        }
+        
+        return section;
+      });
+      
+      // Analyze dependencies between sections
+      this.analyzeDependencies(enhancedSections);
+      
+      // Sort by priority
+      return enhancedSections.sort((a, b) => a.priority - b.priority);
+    } catch (error) {
+      logger.error('Error enhancing sections', { error });
+      return sections; // Return original sections on error
+    }
+  }
+  
+  /**
+   * Combine multiple sections into a single HTML document
+   * @param sections Array of sections to combine
+   * @returns Combined HTML document
+   */
+  async combineSectionsHTML(sections: any[]): Promise<string> {
+    try {
+      logger.info('Combining sections HTML', { sectionCount: sections.length });
+      
+      if (!sections || !Array.isArray(sections) || sections.length === 0) {
+        return '<!DOCTYPE html><html><head><title>Empty Layout</title></head><body><p>No sections provided</p></body></html>';
+      }
+      
+      // Create HTML structure
+      let combinedHTML = '<!DOCTYPE html>\n<html lang="en">\n<head>\n';
+      combinedHTML += '  <meta charset="UTF-8">\n';
+      combinedHTML += '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n';
+      combinedHTML += '  <title>Combined Layout</title>\n';
+      combinedHTML += '  <script src="https://cdn.tailwindcss.com"></script>\n';
+      combinedHTML += '</head>\n<body>\n';
+      
+      // Sort sections by priority
+      const sortedSections = [...sections].sort((a, b) => {
+        const priorityA = a.priority || this.getSectionPriority(a.type);
+        const priorityB = b.priority || this.getSectionPriority(b.type);
+        return priorityA - priorityB;
+      });
+      
+      // Add each section's HTML
+      sortedSections.forEach(section => {
+        if (section.html) {
+          // Extract just the content part, not full HTML document
+          let sectionHTML = section.html;
+          
+          // Remove doctype, html, head, body tags if present
+          sectionHTML = sectionHTML.replace(/<!DOCTYPE[^>]*>/i, '');
+          sectionHTML = sectionHTML.replace(/<\/?html[^>]*>/gi, '');
+          sectionHTML = sectionHTML.replace(/<head>([\s\S]*?)<\/head>/i, '');
+          sectionHTML = sectionHTML.replace(/<\/?body[^>]*>/gi, '');
+          
+          // Add section wrapper with data attributes
+          combinedHTML += `\n<!-- Section: ${section.type} (${section.id}) -->\n`;
+          combinedHTML += `<section data-section-id="${section.id}" data-section-type="${section.type}" class="section-wrapper">\n`;
+          combinedHTML += sectionHTML.trim();
+          combinedHTML += '\n</section>\n';
+        }
+      });
+      
+      // Close HTML structure
+      combinedHTML += '\n</body>\n</html>';
+      
+      return combinedHTML;
+    } catch (error) {
+      logger.error('Error combining sections HTML', { error });
+      throw createError(
+        'Failed to combine sections HTML',
+        500,
+        'INTERNAL_ERROR',
+        error instanceof Error ? error.message : 'Unknown error',
+        'Check the HTML structure of the sections'
+      );
+    }
+  }
+  
+  /**
+   * Get section priority based on type
+   */
+  private getSectionPriority(type: string): number {
+    switch (type) {
+      case 'header': return 1;
+      case 'navigation': return 2;
+      case 'hero': return 3;
+      case 'feature': return 4;
+      case 'content': return 5;
+      case 'testimonial': return 6;
+      case 'gallery': return 7;
+      case 'contact': return 8;
+      case 'footer': return 9;
+      default: return 10;
+    }
+  }
+  
+  /**
+   * Infer section type from HTML content
+   */
+  private inferSectionType(html: string): string {
+    const $ = cheerio.load(html);
+    
+    // Check for header elements
+    if ($('header, .header, #header, [role="banner"]').length > 0) {
+      return 'header';
+    }
+    
+    // Check for navigation elements
+    if ($('nav, .nav, .navigation, [role="navigation"]').length > 0) {
+      return 'navigation';
+    }
+    
+    // Check for hero/banner elements
+    if ($('.hero, .banner, .jumbotron, .hero-section, .intro-section').length > 0) {
+      return 'hero';
+    }
+    
+    // Check for footer elements
+    if ($('footer, .footer, #footer, [role="contentinfo"]').length > 0) {
+      return 'footer';
+    }
+    
+    // Default to content
+    return 'content';
+  }
+  
+  /**
+   * Analyze section complexity based on HTML content
+   * @param html HTML content to analyze
+   * @returns Complexity level: 'low', 'medium', or 'high'
+   */
+  private analyzeSectionComplexity(html: string): 'low' | 'medium' | 'high' {
+    if (!html || html.trim().length === 0) return 'low';
+    
+    const $ = cheerio.load(html);
+    let complexityScore = 0;
+    
+    // Count elements
+    const elementCount = $('*').length;
+    
+    // Count interactive elements
+    const interactiveElements = $('a, button, input, select, textarea, [role="button"]').length;
+    
+    // Count media elements
+    const mediaElements = $('img, video, audio, canvas, svg').length;
+    
+    // Calculate nesting depth
+    const nestingDepth = this.calculateNestingDepth($);
+    
+    // Score based on element count
+    if (elementCount > 50) complexityScore += 3;
+    else if (elementCount > 20) complexityScore += 2;
+    else if (elementCount > 10) complexityScore += 1;
+    
+    // Nesting depth scoring
+    if (nestingDepth > 8) complexityScore += 3;
+    else if (nestingDepth > 5) complexityScore += 2;
+    else if (nestingDepth > 3) complexityScore += 1;
+    
+    // Interactive elements scoring
+    if (interactiveElements > 10) complexityScore += 3;
+    else if (interactiveElements > 5) complexityScore += 2;
+    else if (interactiveElements > 0) complexityScore += 1;
+    
+    // Media elements scoring
+    if (mediaElements > 5) complexityScore += 2;
+    else if (mediaElements > 2) complexityScore += 1;
+    
+    if (complexityScore >= 7) return 'high';
+    if (complexityScore >= 4) return 'medium';
+    return 'low';
+  }
 }
 
 export const layoutSectionSplittingService = LayoutSectionSplittingService.getInstance();

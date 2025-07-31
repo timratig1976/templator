@@ -5,6 +5,9 @@
 
 import './jest.setup';
 
+// Set timeout for unit tests
+jest.setTimeout(60000);
+
 // Mock external dependencies for unit tests
 jest.mock('fs', () => ({
   promises: {

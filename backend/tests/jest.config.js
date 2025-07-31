@@ -8,12 +8,12 @@ module.exports = {
   testEnvironment: 'node',
   
   // Root directory
-  rootDir: '../',
+  rootDir: './',
   
   // Test directories
   testMatch: [
-    '<rootDir>/tests/**/*.test.ts',
-    '<rootDir>/tests/**/*.spec.ts'
+    '<rootDir>/**/*.test.ts',
+    '<rootDir>/**/*.spec.ts'
   ],
   
   // Module file extensions
@@ -26,19 +26,19 @@ module.exports = {
   
   // Module name mapping for path aliases
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@fixtures/(.*)$': '<rootDir>/tests/fixtures/$1',
-    '^@tests/(.*)$': '<rootDir>/tests/$1'
+    '^@/(.*)$': '<rootDir>/../src/$1',
+    '^@fixtures/(.*)$': '<rootDir>/fixtures/$1',
+    '^@tests/(.*)$': '<rootDir>/$1'
   },
   
   // Setup files
   setupFilesAfterEnv: [
-    '<rootDir>/tests/setup/jest.setup.ts'
+    '<rootDir>/setup/jest.setup.ts'
   ],
   
   // Coverage configuration
   collectCoverage: true,
-  coverageDirectory: '<rootDir>/coverage',
+  coverageDirectory: '<rootDir>/../coverage',
   coverageReporters: [
     'text',
     'lcov',
@@ -55,13 +55,13 @@ module.exports = {
       statements: 80
     },
     // Higher thresholds for critical services
-    './src/services/ai/': {
+    '../src/services/ai/': {
       branches: 85,
       functions: 85,
       lines: 85,
       statements: 85
     },
-    './src/services/quality/': {
+    '../src/services/quality/': {
       branches: 85,
       functions: 85,
       lines: 85,
@@ -71,12 +71,12 @@ module.exports = {
   
   // Files to collect coverage from
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.interface.ts',
-    '!src/**/*.type.ts',
-    '!src/index.ts',
-    '!src/server.ts'
+    '../src/**/*.{ts,tsx}',
+    '!../src/**/*.d.ts',
+    '!../src/**/*.interface.ts',
+    '!../src/**/*.type.ts',
+    '!../src/index.ts',
+    '!../src/server.ts'
   ],
   
   // Test timeout
@@ -89,28 +89,28 @@ module.exports = {
   projects: [
     {
       displayName: 'Integration Tests',
-      testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
-      setupFilesAfterEnv: ['<rootDir>/../tests/setup/integration.setup.ts'],
-      timeout: 120000,
+      testMatch: ['<rootDir>/integration/**/*.test.ts'],
+      setupFilesAfterEnv: ['<rootDir>/setup/integration.setup.ts'],
+      // timeout is set in the setup file using jest.setTimeout()
     },
     {
       displayName: 'Unit Tests',
-      testMatch: ['<rootDir>/tests/unit/**/*.test.ts'],
-      setupFilesAfterEnv: ['<rootDir>/../tests/setup/unit.setup.ts'],
-      timeout: 60000,
+      testMatch: ['<rootDir>/unit/**/*.test.ts'],
+      setupFilesAfterEnv: ['<rootDir>/setup/unit.setup.ts'],
+      // timeout is set in the setup file using jest.setTimeout()
     },
     {
       displayName: 'e2e',
-      testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
+      testMatch: ['<rootDir>/e2e/**/*.test.ts'],
       testEnvironment: 'node',
-      setupFilesAfterEnv: ['<rootDir>/tests/setup/e2e.setup.ts'],
-      testTimeout: 120000
+      setupFilesAfterEnv: ['<rootDir>/setup/e2e.setup.ts']
+      // timeout is set in e2e.setup.ts using jest.setTimeout()
     },
     {
       displayName: 'contracts',
-      testMatch: ['<rootDir>/tests/contracts/**/*.test.ts'],
+      testMatch: ['<rootDir>/contracts/**/*.test.ts'],
       testEnvironment: 'node',
-      setupFilesAfterEnv: ['<rootDir>/tests/setup/contracts.setup.ts']
+      setupFilesAfterEnv: ['<rootDir>/setup/contracts.setup.ts']
     }
   ],
   

@@ -15,6 +15,8 @@ import buildTestRoutes from './routes/buildTest';
 import aiEnhancementRoutes from './routes/aiEnhancement';
 import sectionComparisonRoutes from './routes/sectionComparison';
 import interactivePromptsRoutes from './routes/interactivePrompts';
+import hybridLayoutRoutes from './routes/hybridLayout';
+import hybridLayoutTestRoutes from './routes/hybridLayoutTest';
 
 export function createApp(): express.Application {
   const app = express();
@@ -539,6 +541,8 @@ export function createApp(): express.Application {
   app.use('/api/ai-enhancement', aiEnhancementRoutes);
   app.use('/api/comparison', sectionComparisonRoutes);
   app.use('/api/prompts', interactivePromptsRoutes);
+  app.use('/api/hybrid-layout', hybridLayoutRoutes);
+  app.use('/api/hybrid-layout-test', hybridLayoutTestRoutes);
 
   return app;
 }

@@ -7,10 +7,11 @@
 import './jest.setup';
 
 // Integration test environment variables
-process.env.NODE_ENV = 'test';
-process.env.PORT = '3001'; // Different port for integration tests
-process.env.JWT_SECRET = 'integration-test-jwt-secret';
-process.env.DATABASE_URL = 'test://localhost:5432/integration_test_db';
+// Use Object.defineProperty to avoid TypeScript read-only property error
+Object.defineProperty(process.env, 'NODE_ENV', { value: 'test' });
+Object.defineProperty(process.env, 'PORT', { value: '3001' }); // Different port for integration tests
+Object.defineProperty(process.env, 'JWT_SECRET', { value: 'integration-test-jwt-secret' });
+Object.defineProperty(process.env, 'DATABASE_URL', { value: 'test://localhost:5432/integration_test_db' });
 
 // Mock external APIs but allow internal service communication
 jest.mock('openai', () => ({
@@ -42,7 +43,10 @@ jest.mock('fs', () => ({
     writeFile: jest.fn().mockResolvedValue(undefined),
     mkdir: jest.fn().mockResolvedValue(undefined),
     access: jest.fn().mockResolvedValue(undefined),
-    stat: jest.fn().mockResolvedValue({ isFile: () => true, isDirectory: () => false })
+    stat: jest.fn().mockImplementation(() => Promise.resolve({
+      isFile: () => true,
+      isDirectory: () => false
+    }))
   },
   existsSync: jest.fn().mockReturnValue(true),
   readFileSync: jest.fn().mockReturnValue('mock file content'),
@@ -66,7 +70,7 @@ export const IntegrationTestHelpers = {
     try {
       const apiRoutes = require('../../src/routes/api');
       app.use('/api', apiRoutes);
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Could not load API routes for integration tests:', error.message);
     }
     
@@ -134,7 +138,7 @@ export const IntegrationTestHelpers = {
       status: 200,
       body: { success: true, data: data || {} },
       headers: {}
-    };
+    } as any;
   },
 
   /**
@@ -242,7 +246,7 @@ beforeAll(async () => {
   try {
     testServer = await IntegrationTestHelpers.startTestServer();
     console.log('Integration test server started on port 3001');
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Could not start integration test server:', error.message);
   }
   
