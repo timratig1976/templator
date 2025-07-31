@@ -525,6 +525,280 @@ ANALYTICS_RETENTION_DAYS=90
 
 ---
 
+## Phase F: Hybrid AI + User-Driven Layout Splitting (Week 7-8)
+
+### F1. Enhanced Layout Analysis
+
+#### F1.1 OpenAI Vision Integration for Layout Analysis
+**File**: `backend/src/services/layout/LayoutAnalysisService.ts`
+
+```typescript
+export class LayoutAnalysisService {
+  async analyzeLayout(imageBuffer: Buffer): Promise<LayoutAnalysisResult> {
+    const prompt = `
+      Analyze this PNG layout and return a JSON array of Y-axis positions (in pixels) 
+      where horizontal section boundaries should be placed. Focus on visual breaks 
+      between components like headers, hero sections, image blocks, text blocks, CTAs, 
+      and footers. Look for whitespace gaps, color/background changes, repeated patterns, 
+      and typography changes.
+      
+      Return format: {
+        "cutLines": [120, 450, 780, 1200], 
+        "confidence": 0.85, 
+        "sections": ["header", "hero", "features", "footer"]
+      }
+    `;
+    
+    const analysis = await this.openaiService.analyzeImage(imageBuffer, prompt);
+    return this.parseLayoutAnalysis(analysis);
+  }
+  
+  private parseLayoutAnalysis(response: string): LayoutAnalysisResult {
+    // Parse OpenAI response and validate Y-positions
+  }
+}
+```
+
+#### F1.2 Interactive Canvas Component
+**File**: `frontend/src/components/LayoutSplitter.tsx`
+
+```typescript
+import { Stage, Layer, Image as KonvaImage, Line } from 'react-konva';
+import useImage from 'use-image';
+
+export const LayoutSplitter: React.FC = () => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [image] = useImage(imageUrl || '');
+  const [cutLines, setCutLines] = useState<CutLine[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<number[]>([]);
+  const stageRef = useRef<any>(null);
+  
+  const handleImageUpload = async (file: File) => {
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    
+    // Get AI suggestions for cut lines
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const response = await fetch('/api/layout/analyze', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const analysis = await response.json();
+    setAiSuggestions(analysis.cutLines);
+    setCutLines(analysis.cutLines.map((y: number, i: number) => ({
+      id: `ai-${i}`,
+      y,
+      type: 'suggested',
+      sectionType: analysis.sections[i]
+    })));
+  };
+  
+  const addCutLine = (y: number) => {
+    const newLine = {
+      id: `user-${Date.now()}`,
+      y,
+      type: 'user-added',
+      sectionType: 'custom'
+    };
+    setCutLines(prev => [...prev, newLine]);
+  };
+  
+  const exportSections = async () => {
+    if (!image || !stageRef.current) return;
+    
+    const sortedLines = [...cutLines.map(l => l.y), 0, image.height]
+      .sort((a, b) => a - b);
+    
+    const sections = [];
+    for (let i = 0; i < sortedLines.length - 1; i++) {
+      const top = sortedLines[i];
+      const bottom = sortedLines[i + 1];
+      const height = bottom - top;
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(image, 0, top, image.width, height, 0, 0, image.width, height);
+        const blob = await new Promise<Blob>(resolve => 
+          canvas.toBlob(resolve as BlobCallback, 'image/png')
+        );
+        
+        sections.push({
+          index: i,
+          blob,
+          sectionType: cutLines.find(l => l.y === top)?.sectionType || 'unknown'
+        });
+      }
+    }
+    
+    // Send sections to backend for HTML generation
+    await processSections(sections);
+  };
+  
+  return (
+    <div className="layout-splitter">
+      <div className="upload-area">
+        <input 
+          type="file" 
+          accept="image/*" 
+          onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+        />
+      </div>
+      
+      {image && (
+        <div className="canvas-container">
+          <Stage
+            ref={stageRef}
+            width={Math.min(image.width, 1200)}
+            height={Math.min(image.height, 800)}
+            scaleX={Math.min(1200 / image.width, 1)}
+            scaleY={Math.min(800 / image.height, 1)}
+            onClick={(e) => {
+              const y = e.evt.offsetY / (Math.min(800 / image.height, 1));
+              addCutLine(y);
+            }}
+          >
+            <Layer>
+              <KonvaImage image={image} />
+              {cutLines.map((line) => (
+                <Line
+                  key={line.id}
+                  points={[0, line.y, image.width, line.y]}
+                  stroke={line.type === 'suggested' ? '#3b82f6' : '#ef4444'}
+                  strokeWidth={2}
+                  dash={[10, 5]}
+                  draggable
+                  onDragEnd={(e) => {
+                    const newY = e.target.y();
+                    setCutLines(prev => 
+                      prev.map(l => l.id === line.id ? {...l, y: newY} : l)
+                    );
+                  }}
+                />
+              ))}
+            </Layer>
+          </Stage>
+          
+          <div className="controls">
+            <button onClick={exportSections} className="export-btn">
+              Split & Generate HTML
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+#### F1.3 Image Splitting Service
+**File**: `backend/src/services/layout/ImageSplittingService.ts`
+
+```typescript
+export class ImageSplittingService {
+  async splitImage(imageBuffer: Buffer, cutLines: number[]): Promise<ImageSection[]> {
+    const image = await sharp(imageBuffer);
+    const { width, height } = await image.metadata();
+    
+    const sortedLines = [0, ...cutLines, height].sort((a, b) => a - b);
+    const sections: ImageSection[] = [];
+    
+    for (let i = 0; i < sortedLines.length - 1; i++) {
+      const top = sortedLines[i];
+      const sectionHeight = sortedLines[i + 1] - top;
+      
+      const sectionBuffer = await image
+        .extract({ left: 0, top, width, height: sectionHeight })
+        .png()
+        .toBuffer();
+      
+      sections.push({
+        index: i,
+        buffer: sectionBuffer,
+        dimensions: { width, height: sectionHeight },
+        position: { x: 0, y: top }
+      });
+    }
+    
+    return sections;
+  }
+  
+  async generateHtmlForSections(sections: ImageSection[]): Promise<SectionHtmlResult[]> {
+    const results: SectionHtmlResult[] = [];
+    
+    for (const section of sections) {
+      // Process each section through the existing pipeline
+      const htmlResult = await this.pipelineController.processSingleSection(section);
+      results.push({
+        sectionIndex: section.index,
+        html: htmlResult.html,
+        quality: htmlResult.quality,
+        metadata: htmlResult.metadata
+      });
+    }
+    
+    return results;
+  }
+}
+```
+
+### F2. API Endpoints for Layout Splitting
+
+```typescript
+// Layout Analysis & Splitting
+POST /api/layout/analyze         // Analyze image with OpenAI vision
+POST /api/layout/split           // Split image into sections
+POST /api/layout/generate        // Generate HTML for split sections
+GET  /api/layout/sections/:id    // Retrieve section data
+DELETE /api/layout/sections/:id  // Delete section
+```
+
+### F3. Enhanced Pipeline Integration
+
+#### F3.1 Section-Aware Pipeline Processing
+**File**: `backend/src/controllers/PipelineController.ts` (Enhanced)
+
+```typescript
+export class PipelineController {
+  // Existing methods...
+  
+  async processSectionedLayout(sections: ImageSection[]): Promise<SectionedPipelineResult> {
+    const sectionResults: SectionResult[] = [];
+    
+    for (const section of sections) {
+      const result = await this.processSingleSection(section);
+      sectionResults.push(result);
+    }
+    
+    // Combine sections into cohesive module
+    const combinedModule = await this.combineSection(sectionResults);
+    
+    return {
+      sections: sectionResults,
+      combinedModule,
+      overallQuality: this.calculateOverallQuality(sectionResults)
+    };
+  }
+  
+  private async processSingleSection(section: ImageSection): Promise<SectionResult> {
+    // Process section through modified pipeline with section context
+    const context = {
+      sectionType: section.metadata?.sectionType || 'unknown',
+      position: section.position,
+      isPartOfLargerLayout: true
+    };
+    
+    return await this.executePhases(section, context);
+  }
+}
+```
+
 ## 🎯 Success Metrics
 
 ### Technical Metrics
@@ -532,12 +806,15 @@ ANALYTICS_RETENTION_DAYS=90
 - **Quality Score**: Average >85 for generated modules
 - **Performance**: <2 minutes end-to-end processing
 - **Error Recovery**: >90% automatic error resolution
+- **Layout Splitting Accuracy**: >90% user satisfaction with AI suggestions
+- **Section Processing**: <30 seconds per section
 
 ### User Experience Metrics
 - **User Satisfaction**: >4.5/5 rating
 - **Time to Module**: <5 minutes from upload to download
 - **Error Rate**: <5% user-reported issues
 - **Adoption Rate**: >80% users complete full pipeline
+- **Layout Splitting Usage**: >70% users utilize interactive splitting
 
 ---
 
