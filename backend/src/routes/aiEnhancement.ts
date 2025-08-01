@@ -1,7 +1,32 @@
 import express from 'express';
 import { EnhancedAIService } from '../services/ai/EnhancedAIService';
 import { FineTuningService } from '../services/ai/FineTuningService';
+import openaiService, { OpenAIService, Section, EditableField, Component } from '../services/ai/openaiService';
 import { createLogger } from '../utils/logger';
+import { logToFrontend } from '../routes/logs';
+import { v4 as uuidv4 } from 'uuid';
+
+// Interface for layout analysis response
+interface LayoutAnalysisResult {
+  sections: Section[];
+  html: string;
+  description: string;
+  components: Component[];
+  confidence: number;
+  quality: number;
+  processingTime: number;
+  enhancedAnalysis: {
+    recommendations: {
+      suggestedAdjustments: string[];
+      qualityScore: number;
+      improvementTips: string[];
+    };
+    detectionMetrics: {
+      averageConfidence: number;
+      processingTime: number;
+    };
+  };
+}
 
 const router = express.Router();
 const logger = createLogger();
@@ -583,5 +608,232 @@ function getJobNextSteps(status: string): string[] {
   
   return nextSteps[status] || ['Check job status'];
 }
+
+/**
+ * Helper function to validate base64 image format
+ */
+function isValidBase64Image(base64String: string): boolean {
+  // Check if it's a data URL format
+  if (!base64String.startsWith('data:image/')) {
+    return false;
+  }
+  
+  // Extract the base64 part after the comma
+  const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|svg\+xml);base64,([A-Za-z0-9+/=]*)$/;
+  const match = base64String.match(base64Regex);
+  
+  if (!match) {
+    return false;
+  }
+  
+  // Validate base64 characters
+  const base64Part = match[2];
+  const validBase64Regex = /^[A-Za-z0-9+/=]+$/;
+  
+  if (!validBase64Regex.test(base64Part)) {
+    return false;
+  }
+  
+  // Check if length is valid (must be multiple of 4)
+  if (base64Part.length % 4 !== 0) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * POST /api/ai-enhancement/analyze-layout
+ * Analyze design layout using OpenAI Vision API
+ */
+router.post('/analyze-layout', async (req, res) => {
+  const requestId = uuidv4();
+  const startTime = Date.now();
+  const analysisType = req.body.analysisType || 'comprehensive';
+  
+  try {
+    // Validate request body
+    const { image } = req.body;
+    
+    if (!image) {
+      return res.status(400).json({
+        success: false,
+        error: 'Image data is required',
+        code: 'MISSING_IMAGE'
+      });
+    }
+    
+    // Validate base64 image format
+    if (!isValidBase64Image(image)) {
+      logger.error(`[${requestId}] Invalid base64 image format provided`);
+      logToFrontend('error', 'processing', '❌ Invalid image format provided. Please ensure it is a valid base64 encoded image.', { error: 'Invalid base64 image' }, requestId);
+      
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid image format', 
+        details: 'The provided image data is not in a valid base64 format',
+        code: 'INVALID_BASE64'
+      });
+    }
+    
+    // Log the start of the analysis process
+    logger.info(`[${requestId}] Starting layout analysis`, { 
+      requestId, 
+      analysisType,
+      imageSize: image.length
+    });
+    logToFrontend('info', 'processing', `Starting AI vision analysis of design layout...`, { imageSize: image.length }, requestId);
+    
+    // Call the OpenAI service to analyze the layout
+    const designAnalysis = await openaiService.convertDesignToHTML(image, 'uploaded-design.png');
+    
+    // Calculate the processing time
+    const duration = Date.now() - startTime;
+    
+    // Create a structured analysis result with enhanced metadata
+    const analysisResult: LayoutAnalysisResult = {
+      html: designAnalysis.html,
+      sections: designAnalysis.sections,
+      components: designAnalysis.components,
+      description: designAnalysis.description,
+      confidence: 0.85, // Default confidence score
+      quality: 0.8, // Default quality score
+      processingTime: duration, // Add processing time
+      enhancedAnalysis: {
+        recommendations: {
+          suggestedAdjustments: [],
+          qualityScore: 0.9,
+          improvementTips: []
+        },
+        detectionMetrics: {
+          averageConfidence: 0.85,
+          processingTime: duration
+        }
+      }
+    };
+    
+    // Generate IDs for sections if they don't have them
+    analysisResult.sections = analysisResult.sections.map((section: Section) => {
+      // Create a new section object with all required properties
+      const enhancedSection: Section = {
+        id: section.id || uuidv4(),
+        name: section.name || 'Unnamed Section',
+        type: section.type || 'content',
+        html: section.html || '',
+        editableFields: section.editableFields || []
+      };
+      
+      return enhancedSection;
+    });
+    
+    // Add any additional recommendations or metrics if needed
+    if (!analysisResult.enhancedAnalysis) {
+      analysisResult.enhancedAnalysis = {
+        recommendations: {
+          suggestedAdjustments: [
+            'Consider adding more contrast between sections',
+            'Ensure consistent spacing between elements'
+          ],
+          qualityScore: 0.8,
+          improvementTips: [
+            'Use consistent color scheme throughout the design',
+            'Consider accessibility in your design choices'
+          ]
+        },
+        detectionMetrics: {
+          averageConfidence: 0.8,
+          processingTime: duration
+        }
+      };
+    } else if (!analysisResult.enhancedAnalysis.recommendations) {
+      analysisResult.enhancedAnalysis.recommendations = {
+        suggestedAdjustments: [
+          'Consider adding more contrast between sections',
+          'Ensure consistent spacing between elements'
+        ],
+        qualityScore: 0.8,
+        improvementTips: [
+          'Use consistent color scheme throughout the design',
+          'Consider accessibility in your design choices'
+        ]
+      };
+    }
+    
+    // Make sure suggestedAdjustments and improvementTips are arrays if they don't exist
+    if (!analysisResult.enhancedAnalysis.recommendations.suggestedAdjustments) {
+      analysisResult.enhancedAnalysis.recommendations.suggestedAdjustments = [];
+    }
+    
+    if (!analysisResult.enhancedAnalysis.recommendations.improvementTips) {
+      analysisResult.enhancedAnalysis.recommendations.improvementTips = [];
+    }
+    
+    // Log the successful analysis
+    logger.info(`[${requestId}] Layout analysis completed successfully`, {
+      requestId,
+      duration,
+      sectionCount: analysisResult.sections.length
+    });
+    
+    logToFrontend('success', 'processing', `✅ AI vision analysis completed in ${(duration / 1000).toFixed(2)}s with ${analysisResult.sections.length} sections detected`, { sectionCount: analysisResult.sections.length }, requestId, duration);
+    
+    // Return the analysis result with additional metadata
+    return res.status(200).json({
+      success: true,
+      data: analysisResult,
+      meta: {
+        processingTime: duration,
+        requestId,
+        analysisType,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error: any) {
+    // Extract detailed error information
+    const errorMessage = error.message || 'Unknown error';
+    const errorCode = error.code || 'INTERNAL_ERROR';
+    const statusCode = error.status || 500;
+    const errorDetails = error.details || errorMessage;
+    
+    // Log detailed error information
+    logger.error(`[${requestId}] Error analyzing layout: ${errorMessage}`, { 
+      error: { 
+        statusCode, 
+        code: errorCode, 
+        details: errorDetails,
+        stack: error.stack
+      },
+      requestId
+    });
+    
+    // Send helpful error message to frontend
+    logToFrontend('error', 'processing', `❌ Error analyzing layout: ${errorMessage}`, { error: 'Failed to analyze design', details: errorDetails }, requestId);
+    
+    // Return appropriate error response based on the type of error
+    if (errorMessage.includes('invalid_base64') || errorMessage.includes('Invalid image')) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid image format', 
+        details: 'The provided image data is not in a valid base64 format',
+        code: 'INVALID_BASE64'
+      });
+    } else if (errorMessage.includes('timeout')) {
+      return res.status(504).json({ 
+        success: false, 
+        error: 'Analysis timeout', 
+        details: 'The image analysis took too long to complete',
+        code: 'TIMEOUT'
+      });
+    } else {
+      return res.status(statusCode).json({ 
+        success: false, 
+        error: 'Failed to analyze layout', 
+        details: errorDetails,
+        code: errorCode
+      });
+    }
+  }
+});
 
 export default router;
