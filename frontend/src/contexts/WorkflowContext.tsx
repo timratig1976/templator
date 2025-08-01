@@ -6,7 +6,7 @@ import { useProjectManager } from '@/hooks/useProjectManager';
 import { aiLogger } from '@/services/aiLogger';
 import { socketClient } from '@/services/socketClient';
 
-export type WorkflowStep = 'upload' | 'preview' | 'hybrid-split' | 'split' | 'editor' | 'module' | 'projects';
+export type WorkflowStep = 'upload' | 'preview' | 'hybrid-split' | 'editor' | 'module' | 'projects';
 
 export interface Section {
   id: string;
@@ -57,11 +57,7 @@ interface WorkflowContextType {
   // Connection status
   isLogStreamConnected: boolean;
   
-  // Layout splitting
-  shouldUseSplitting: boolean | null;
-  setShouldUseSplitting: (should: boolean | null) => void;
-  splittingResult: any;
-  setSplittingResult: (result: any) => void;
+
   
   // File info
   originalFileName: string;
@@ -90,8 +86,6 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
   const [showAILogs, setShowAILogs] = useState(false);
   const [downloadInfo, setDownloadInfo] = useState<{url: string, fileName: string} | null>(null);
   const [isLogStreamConnected, setIsLogStreamConnected] = useState(false);
-  const [shouldUseSplitting, setShouldUseSplitting] = useState<boolean | null>(null);
-  const [splittingResult, setSplittingResult] = useState<any>(null);
   const [originalFileName, setOriginalFileName] = useState<string>('');
   const [hybridAnalysisResult, setHybridAnalysisResult] = useState<any>(null);
   const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
@@ -125,8 +119,6 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     setDesignResult(null);
     setError(null);
     setDownloadInfo(null);
-    setShouldUseSplitting(null);
-    setSplittingResult(null);
     setOriginalFileName('');
     setHybridAnalysisResult(null);
     setUploadedImageFile(null);
@@ -158,12 +150,6 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     
     // Connection status
     isLogStreamConnected,
-    
-    // Layout splitting
-    shouldUseSplitting,
-    setShouldUseSplitting,
-    splittingResult,
-    setSplittingResult,
     
     // File info
     originalFileName,

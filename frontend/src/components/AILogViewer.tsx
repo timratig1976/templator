@@ -20,6 +20,7 @@ import {
   Globe,
   Settings
 } from 'lucide-react';
+
 import { aiLogger, AILogEntry } from '../services/aiLogger';
 
 interface AILogViewerProps {
@@ -30,11 +31,11 @@ interface AILogViewerProps {
 }
 
 const categoryIcons = {
-  openai: Zap,
-  upload: Upload,
-  processing: Cpu,
-  network: Globe,
-  system: Settings
+  openai: Zap || Terminal,
+  upload: Upload || Terminal,
+  processing: Cpu || Terminal,
+  network: Globe || Terminal,
+  system: Settings || Terminal
 };
 
 const levelColors = {
@@ -45,10 +46,10 @@ const levelColors = {
 };
 
 const levelIcons = {
-  info: Info,
-  success: CheckCircle,
-  warning: AlertTriangle,
-  error: AlertCircle
+  info: Info || Terminal,
+  success: CheckCircle || Terminal,
+  warning: AlertTriangle || Terminal,
+  error: AlertCircle || Terminal
 };
 
 export default function AILogViewer({ 

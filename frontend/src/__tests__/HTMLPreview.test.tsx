@@ -216,7 +216,7 @@ describe('HTMLPreview Component', () => {
       // Mock clipboard API
       Object.assign(navigator, {
         clipboard: {
-          writeText: jest.fn().mockResolvedValue(undefined),
+          writeText: jest.fn(() => Promise.resolve()),
         },
       });
 

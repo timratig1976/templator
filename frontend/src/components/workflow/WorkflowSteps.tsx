@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Upload, Eye, Package, ArrowRight, Activity, Download, AlertCircle, Copy, Code, Sparkles, Zap, Target, Terminal, Folder } from 'lucide-react';
+import { Upload, Eye, Package, ArrowRight, Activity, Download, AlertCircle, Copy, Code, Sparkles, Zap, Terminal, Folder } from 'lucide-react';
 import { useWorkflow } from '@/contexts/WorkflowContext';
 
 interface StepConfig {
@@ -27,14 +27,8 @@ const stepConfigs: StepConfig[] = [
   {
     id: 'hybrid-split',
     title: 'AI Layout Analysis',
-    description: 'Review and adjust AI-detected sections',
+    description: 'AI-powered section detection and review',
     icon: Sparkles
-  },
-  {
-    id: 'split',
-    title: 'Split Layout',
-    description: 'Split design into sections',
-    icon: Target
   },
   {
     id: 'editor',
@@ -68,14 +62,9 @@ export default function WorkflowSteps() {
       return ['projects'];
     }
     
-    // Handle hybrid workflow
+    // Handle AI-powered workflow (hybrid-split -> editor -> module)
     if (currentStep === 'hybrid-split' || currentStep === 'editor' || currentStep === 'module') {
       return [...baseSteps, 'hybrid-split', 'editor', 'module'];
-    }
-    
-    // Handle traditional split workflow
-    if (currentStep === 'split') {
-      return [...baseSteps, 'split', 'editor', 'module'];
     }
     
     // Default to base steps

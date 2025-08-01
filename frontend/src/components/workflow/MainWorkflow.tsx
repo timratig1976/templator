@@ -7,7 +7,6 @@ import WorkflowSteps from './WorkflowSteps';
 import UploadStep from './steps/UploadStep';
 import PreviewStep from './steps/PreviewStep';
 import HybridSplitStep from './steps/HybridSplitStep';
-import SplitStep from './steps/SplitStep';
 import EditorStep from './steps/EditorStep';
 import ModuleStep from './steps/ModuleStep';
 import ProjectsStep from './steps/ProjectsStep';
@@ -32,8 +31,6 @@ export default function MainWorkflow() {
         return <PreviewStep />;
       case 'hybrid-split':
         return <HybridSplitStep />;
-      case 'split':
-        return <SplitStep />;
       case 'editor':
         return <EditorStep />;
       case 'module':

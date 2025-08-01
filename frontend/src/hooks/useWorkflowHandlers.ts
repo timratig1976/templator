@@ -13,7 +13,6 @@ export function useWorkflowHandlers() {
     setOriginalFileName,
     setUploadedImageFile,
     setHybridAnalysisResult,
-    setSplittingResult,
     setDownloadInfo,
     projectManager,
     designResult,
@@ -61,21 +60,7 @@ export function useWorkflowHandlers() {
     setCurrentStep('preview');
   }, [setDesignResult, setError, setCurrentStep, setOriginalFileName, setUploadedImageFile, projectManager]);
 
-  const handleTraditionalLayoutAnalysis = useCallback(async (result: PipelineExecutionResult) => {
-    try {
-      aiLogger.logFlowStep('traditional-layout', 'Starting Traditional Layout Analysis', 'start');
-      
-      // Process with traditional layout analysis
-      setDesignResult(result);
-      setCurrentStep('editor');
-      
-      aiLogger.success('processing', 'Traditional Layout Analysis Complete', { sections: result.sections?.length || 0 });
-    } catch (error) {
-      console.error('Traditional layout analysis failed:', error);
-      setError('Traditional layout analysis failed. Please try again.');
-      aiLogger.error('processing', 'Traditional Layout Analysis Failed', { error: String(error) });
-    }
-  }, [setDesignResult, setCurrentStep, setError]);
+
 
   const handleUploadError = useCallback((errorMessage: string) => {
     setError(errorMessage);
@@ -256,7 +241,6 @@ export function useWorkflowHandlers() {
 
   return {
     handleUploadSuccess,
-    handleTraditionalLayoutAnalysis,
     handleUploadError,
     handleHybridLayoutSelection,
     handleCreateModule,
