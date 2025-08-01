@@ -107,13 +107,7 @@ export interface SupportedTypesResponse {
   qualityGuidelines: string[];
 }
 
-export interface PipelineError {
-  code: string;
-  message: string;
-  details?: any;
-  phase?: string;
-  timestamp: string;
-}
+
 
 /**
  * Main Pipeline Service Class

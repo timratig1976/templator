@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, Image, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, Image, FileText, Loader2, CheckCircle, AlertCircle, Zap } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { aiLogger } from '../services/aiLogger';
 import { pipelineService, PipelineExecutionResult, PipelineStatus } from '../services/pipelineService';
@@ -9,15 +9,17 @@ import { pipelineService, PipelineExecutionResult, PipelineStatus } from '../ser
 interface DesignUploadProps {
   onUploadSuccess: (result: PipelineExecutionResult, fileName?: string, imageFile?: File) => void;
   onUploadError: (error: string) => void;
+  onHybridLayoutSelected?: (imageFile: File, fileName: string) => void;
 }
 
-export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignUploadProps) {
+export default function DesignUpload({ onUploadSuccess, onUploadError, onHybridLayoutSelected }: DesignUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [currentPhase, setCurrentPhase] = useState<string>('');
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
+  const [showProcessingOptions, setShowProcessingOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supportedTypes = [
@@ -62,6 +64,7 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
     }
 
     setSelectedFile(file);
+    setShowProcessingOptions(true);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,6 +263,93 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
                 </div>
               )}
             </div>
+          </div>
+        ) : selectedFile && showProcessingOptions ? (
+          <div className="space-y-6">
+            <CheckCircle className="w-12 h-12 mx-auto text-green-600" />
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-gray-900">
+                {selectedFile.name}
+              </p>
+              <p className="text-sm text-gray-600">
+                {formatFileSize(selectedFile.size)} • Choose processing method
+              </p>
+            </div>
+            
+            {/* Processing Options */}
+            <div className="grid gap-4">
+              <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50 hover:bg-blue-100 transition-colors">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900 mb-1">🎯 Hybrid AI + User Layout Splitting</h4>
+                    <p className="text-sm text-blue-800 mb-3">
+                      AI analyzes your design and suggests section boundaries. You can then interactively adjust, add, or remove sections using a visual canvas before generating HTML.
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-xs text-blue-700 mb-3">
+                      <span className="bg-blue-200 px-2 py-1 rounded">✨ AI Section Detection</span>
+                      <span className="bg-blue-200 px-2 py-1 rounded">🖱️ Interactive Canvas</span>
+                      <span className="bg-blue-200 px-2 py-1 rounded">🎨 Visual Editing</span>
+                      <span className="bg-blue-200 px-2 py-1 rounded">🎯 Higher Accuracy</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onHybridLayoutSelected) {
+                          onHybridLayoutSelected(selectedFile, selectedFile.name);
+                        }
+                      }}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      <Zap className="w-4 h-4 mr-2 inline" />
+                      Use Hybrid Layout Splitting
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border-2 border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Upload className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-900 mb-1">⚡ Traditional AI Pipeline</h4>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Direct AI processing through the 5-phase pipeline. Fast and automated with quality assurance and enhancement phases.
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-600 mb-3">
+                      <span className="bg-gray-200 px-2 py-1 rounded">🚀 5-Phase Processing</span>
+                      <span className="bg-gray-200 px-2 py-1 rounded">⚡ Fast & Automated</span>
+                      <span className="bg-gray-200 px-2 py-1 rounded">🔍 Quality Assurance</span>
+                      <span className="bg-gray-200 px-2 py-1 rounded">📦 HubSpot Ready</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        uploadFile();
+                      }}
+                      className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                    >
+                      <Upload className="w-4 h-4 mr-2 inline" />
+                      Use Traditional Pipeline
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => {
+                setSelectedFile(null);
+                setShowProcessingOptions(false);
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              ← Choose different file
+            </button>
           </div>
         ) : selectedFile ? (
           <div className="space-y-4">
