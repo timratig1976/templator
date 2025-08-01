@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import { createLogger } from '../utils/logger';
 import openaiService from '../services/ai/openaiService';
+import enhancedLayoutDetectionService from '../services/ai/EnhancedLayoutDetectionService';
 import { createError } from '../middleware/errorHandler';
 
 const router = Router();
@@ -101,42 +102,43 @@ router.post('/analyze', (req: Request, res: Response, next: any) => {
     const imageBase64 = req.file.buffer.toString('base64');
     const dataUri = `data:${req.file.mimetype};base64,${imageBase64}`;
 
-    // Use existing OpenAI Vision integration
-    const analysis = await openaiService.convertDesignToHTML(dataUri, req.file.originalname);
+    // Use enhanced AI layout detection service
+    const detectionOptions = {
+      includeAdvancedAnalysis: true,
+      useHistoricalFeedback: true,
+      targetSectionCount: 6
+    };
+    
+    const enhancedResult = await enhancedLayoutDetectionService.detectLayoutSections(
+      imageBase64, 
+      req.file.originalname,
+      detectionOptions
+    );
 
-    // Transform the analysis into the format expected by the hybrid component
-    const hybridSections = analysis.sections.map((section, index) => ({
-      id: section.id,
-      name: section.name,
-      type: section.type,
-      bounds: {
-        // Generate reasonable bounds based on section order and type
-        x: getDefaultX(section.type, index),
-        y: getDefaultY(section.type, index),
-        width: getDefaultWidth(section.type),
-        height: getDefaultHeight(section.type)
-      },
-      html: section.html,
-      editableFields: section.editableFields,
-      aiConfidence: calculateAIConfidence(section) // Calculate confidence based on section complexity
-    }));
+    // Transform the enhanced result into the format expected by the hybrid component
+    const hybridSections = enhancedResult.sections;
 
     const response = {
       success: true,
       data: {
-        originalAnalysis: analysis,
+        enhancedAnalysis: enhancedResult,
         hybridSections,
         imageMetadata: {
           fileName: req.file.originalname,
           fileSize: req.file.size,
           mimeType: req.file.mimetype,
-          dimensions: await getImageDimensions(req.file.buffer)
+          dimensions: enhancedResult.imageMetadata
+        },
+        aiAnalysis: {
+          sectionsDetected: enhancedResult.sections.length,
+          processingTime: enhancedResult.detectionMetrics.processingTime,
+          confidence: enhancedResult.detectionMetrics.averageConfidence,
+          qualityScore: enhancedResult.recommendations.qualityScore
         }
       },
       meta: {
         requestId,
-        timestamp: new Date().toISOString(),
-        processingTime: Date.now() - parseInt(requestId.split('_')[2])
+        timestamp: new Date().toISOString()
       }
     };
 
@@ -441,5 +443,81 @@ function calculateQualityScore(analysis: any): number {
   
   return Math.min(100, score);
 }
+
+/**
+ * POST /api/hybrid-layout/feedback
+ * Record user feedback for AI improvement
+ */
+router.post('/feedback', async (req: Request, res: Response) => {
+  const requestId = `hybrid_feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  try {
+    const { originalSections, finalSections, satisfactionScore, comments } = req.body;
+
+    if (!originalSections || !finalSections || !satisfactionScore) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required feedback data: originalSections, finalSections, satisfactionScore',
+        code: 'INPUT_INVALID',
+        requestId
+      });
+    }
+
+    logger.info('Recording user feedback for hybrid layout', {
+      requestId,
+      originalSectionsCount: originalSections.length,
+      finalSectionsCount: finalSections.length,
+      satisfactionScore,
+      hasComments: !!comments
+    });
+
+    // Record feedback using enhanced detection service
+    await enhancedLayoutDetectionService.recordUserFeedback({
+      originalSections,
+      finalSections,
+      userAdjustments: {
+        sectionsAdded: 0, // Will be calculated by the service
+        sectionsRemoved: 0,
+        sectionsModified: 0,
+        positionsChanged: 0,
+        typesChanged: 0
+      },
+      satisfactionScore,
+      comments
+    });
+
+    const response = {
+      success: true,
+      message: 'Feedback recorded successfully',
+      data: {
+        feedbackProcessed: true,
+        improvementImpact: 'Your feedback will help improve AI section detection accuracy'
+      },
+      meta: {
+        requestId,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    logger.info('User feedback recorded successfully', {
+      requestId,
+      satisfactionScore
+    });
+
+    res.json(response);
+
+  } catch (error) {
+    logger.error('Failed to record user feedback', {
+      requestId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to record feedback',
+      requestId
+    });
+  }
+});
 
 export default router;

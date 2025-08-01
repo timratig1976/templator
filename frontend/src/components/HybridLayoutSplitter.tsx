@@ -23,6 +23,17 @@ interface HybridLayoutSplitterProps {
   aiDetectedSections: Section[];
   onSectionsConfirmed: (sections: Section[]) => void;
   onBack: () => void;
+  enhancedAnalysis?: {
+    recommendations: {
+      suggestedAdjustments: string[];
+      qualityScore: number;
+      improvementTips: string[];
+    };
+    detectionMetrics: {
+      averageConfidence: number;
+      processingTime: number;
+    };
+  };
 }
 
 export default function HybridLayoutSplitter({ 

@@ -7,7 +7,7 @@ import { aiLogger } from '../services/aiLogger';
 import { pipelineService, PipelineExecutionResult, PipelineStatus } from '../services/pipelineService';
 
 interface DesignUploadProps {
-  onUploadSuccess: (result: PipelineExecutionResult) => void;
+  onUploadSuccess: (result: PipelineExecutionResult, fileName?: string, imageFile?: File) => void;
   onUploadError: (error: string) => void;
 }
 
@@ -125,8 +125,8 @@ export default function DesignUpload({ onUploadSuccess, onUploadError }: DesignU
         validationStatus: result.validationPassed ? 'passed' : 'failed'
       }, requestId);
 
-      // Call success callback with pipeline result
-      onUploadSuccess(result);
+      // Call success callback with pipeline result and image file for hybrid layout analysis
+      onUploadSuccess(result, selectedFile.name, selectedFile);
 
     } catch (error) {
       const processingTime = Date.now() - startTime;

@@ -1,252 +1,225 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Tab } from '@mui/material';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { fetchPromptAndResultData } from '../services/apiService';
-import LoadingSpinner from './LoadingSpinner';
-import ErrorMessage from './ErrorMessage';
 
 interface PromptData {
   content: string;
-  model: string;
-  temperature: number;
-  tokenCount: number;
-  createdAt: string;
-  promptType: string;
-}
-
-interface GeneratedHTML {
-  content: string;
-  generationTime: number;
-  qualityScore: number;
-  section: string;
-}
-
-interface PromptAndResultData {
-  prompt: PromptData | null;
-  result: GeneratedHTML | null;
-  metrics?: {
-    semanticsScore: number;
-    tailwindScore: number;
-    accessibilityScore: number;
-    responsiveScore: number;
+  metadata: {
+    model: string;
+    temperature: number;
+    maxTokens: number;
+    timestamp: string;
   };
-  issues?: Array<{
-    severity: string;
-    category: string;
-    message: string;
-  }>;
+}
+
+interface ResultData {
+  content: string;
+  metadata: {
+    tokensUsed: number;
+    processingTime: number;
+    timestamp: string;
+  };
+}
+
+interface QualityMetrics {
+  score: number;
+  breakdown: {
+    semanticQuality: number;
+    responsiveness: number;
+    accessibility: number;
+    codeQuality: number;
+  };
+  suggestions: string[];
 }
 
 interface PromptViewerProps {
-  pipelineId: string;
-  sectionId?: string;
+  promptId?: string;
+  resultId?: string;
+  onClose?: () => void;
 }
 
-export const PromptViewer: React.FC<PromptViewerProps> = ({ pipelineId, sectionId }) => {
-  const [tabValue, setTabValue] = useState(0);
+const PromptViewer: React.FC<PromptViewerProps> = ({ promptId, resultId, onClose }) => {
+  const [activeTab, setActiveTab] = useState<'prompt' | 'result' | 'metrics'>('prompt');
+  const [promptData, setPromptData] = useState<PromptData | null>(null);
+  const [resultData, setResultData] = useState<ResultData | null>(null);
+  const [qualityMetrics, setQualityMetrics] = useState<QualityMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<PromptAndResultData>({
-    prompt: null,
-    result: null,
-  });
-  
+
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
+    const fetchData = async () => {
+      if (!promptId && !resultId) {
+        setError('No prompt or result ID provided');
+        setLoading(false);
+        return;
+      }
+
       try {
-        const resultData = await fetchPromptAndResultData(pipelineId, sectionId);
-        setData(resultData);
+        setLoading(true);
+        const data = await fetchPromptAndResultData(promptId, resultId);
+        
+        if (data.prompt) setPromptData(data.prompt);
+        if (data.result) setResultData(data.result);
+        if (data.qualityMetrics) setQualityMetrics(data.qualityMetrics);
+        
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load prompt data');
+        setError(err instanceof Error ? err.message : 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
-    
-    loadData();
-  }, [pipelineId, sectionId]);
-  
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
+
+    fetchData();
+  }, [promptId, resultId]);
 
   if (loading) {
-    return <LoadingSpinner message="Loading prompt data..." />;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-gray-600">Loading...</span>
+      </div>
+    );
   }
 
   if (error) {
-    return <ErrorMessage message={error} />;
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-800">{error}</p>
+      </div>
+    );
   }
 
   return (
-    <div className="prompt-viewer bg-white rounded-lg shadow-lg overflow-hidden">
-      <Tabs 
-        value={tabValue} 
-        onChange={handleTabChange}
-        variant="fullWidth"
-        className="border-b border-gray-200"
-      >
-        <Tab label="Prompt" />
-        <Tab label="Generated HTML" />
-        <Tab label="Quality Metrics" />
-      </Tabs>
-      
-      <div className="p-4">
-        {tabValue === 0 && (
-          <div className="prompt-tab">
-            <div className="prompt-metadata mb-4 grid grid-cols-2 gap-4 text-sm">
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Model:</span> {data.prompt?.model || 'N/A'}
-              </div>
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Temperature:</span> {data.prompt?.temperature || 'N/A'}
-              </div>
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Token Count:</span> {data.prompt?.tokenCount || 'N/A'}
-              </div>
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Created:</span> {
-                  data.prompt?.createdAt 
-                    ? new Date(data.prompt.createdAt).toLocaleString() 
-                    : 'N/A'
-                }
+    <div className="bg-white rounded-lg shadow-lg">
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8 px-6">
+          {['prompt', 'result', 'metrics'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`py-4 px-1 border-b-2 font-medium text-sm capitalize transition-colors ${
+                activeTab === tab
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab === 'prompt' ? 'Prompt' : tab === 'result' ? 'Generated HTML' : 'Quality Metrics'}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="p-6">
+        {activeTab === 'prompt' && promptData && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Prompt Content</h3>
+              <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+                <pre className="whitespace-pre-wrap text-sm">{promptData.content}</pre>
               </div>
             </div>
-            
-            <div className="prompt-content overflow-auto max-h-[500px]">
-              <SyntaxHighlighter 
-                language="markdown" 
-                style={atomOneDark}
-                showLineNumbers
-                customStyle={{ borderRadius: '4px' }}
-              >
-                {data.prompt?.content || 'No prompt data available'}
-              </SyntaxHighlighter>
-            </div>
-          </div>
-        )}
-        
-        {tabValue === 1 && (
-          <div className="result-tab">
-            <div className="result-metadata mb-4 grid grid-cols-3 gap-4 text-sm">
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Generation Time:</span> {data.result?.generationTime || 'N/A'}ms
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Model:</span>
+                <p className="text-gray-900">{promptData.metadata.model}</p>
               </div>
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Quality Score:</span> {data.result?.qualityScore || 'N/A'}/100
+              <div>
+                <span className="font-medium text-gray-700">Temperature:</span>
+                <p className="text-gray-900">{promptData.metadata.temperature}</p>
               </div>
-              <div className="p-2 bg-gray-50 rounded">
-                <span className="font-semibold">Section:</span> {data.result?.section || 'N/A'}
+              <div>
+                <span className="font-medium text-gray-700">Max Tokens:</span>
+                <p className="text-gray-900">{promptData.metadata.maxTokens}</p>
               </div>
-            </div>
-            
-            <div className="result-content overflow-auto max-h-[500px]">
-              <SyntaxHighlighter 
-                language="html" 
-                style={atomOneDark}
-                showLineNumbers
-                customStyle={{ borderRadius: '4px' }}
-              >
-                {data.result?.content || 'No HTML result available'}
-              </SyntaxHighlighter>
+              <div>
+                <span className="font-medium text-gray-700">Timestamp:</span>
+                <p className="text-gray-900">{new Date(promptData.metadata.timestamp).toLocaleString()}</p>
+              </div>
             </div>
           </div>
         )}
-        
-        {tabValue === 2 && (
-          <div className="metrics-tab">
-            <div className="metrics-overview mb-6">
-              <h3 className="text-lg font-semibold mb-3">Quality Metrics</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {data.metrics ? (
-                  <>
-                    <MetricCard 
-                      title="Semantics" 
-                      score={data.metrics.semanticsScore} 
-                      description="HTML structure and semantic elements"
-                    />
-                    <MetricCard 
-                      title="Tailwind" 
-                      score={data.metrics.tailwindScore} 
-                      description="Tailwind CSS implementation quality"
-                    />
-                    <MetricCard 
-                      title="Accessibility" 
-                      score={data.metrics.accessibilityScore} 
-                      description="Screen reader and keyboard accessibility"
-                    />
-                    <MetricCard 
-                      title="Responsive" 
-                      score={data.metrics.responsiveScore} 
-                      description="Behavior across device sizes"
-                    />
-                  </>
-                ) : (
-                  <div className="col-span-4 text-center py-4 bg-gray-50 rounded">
-                    No quality metrics available for this generation
+
+        {activeTab === 'result' && resultData && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Generated HTML</h3>
+              <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+                <pre className="whitespace-pre-wrap text-sm">{resultData.content}</pre>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Tokens Used:</span>
+                <p className="text-gray-900">{resultData.metadata.tokensUsed}</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Processing Time:</span>
+                <p className="text-gray-900">{resultData.metadata.processingTime}ms</p>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Generated:</span>
+                <p className="text-gray-900">{new Date(resultData.metadata.timestamp).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'metrics' && qualityMetrics && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Quality Score</h3>
+              <div className="flex items-center space-x-4">
+                <div className="text-3xl font-bold text-green-600">{qualityMetrics.score}%</div>
+                <div className="flex-1">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${qualityMetrics.score}%` }}
+                    ></div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
             
-            <div className="issues-list">
-              <h3 className="text-lg font-semibold mb-3">Identified Issues</h3>
-              
-              {data.issues && data.issues.length > 0 ? (
-                <div className="divide-y divide-gray-200">
-                  {data.issues.map((issue, index) => (
-                    <div key={index} className={`py-3 ${getIssueSeverityClass(issue.severity)}`}>
-                      <div className="flex items-start">
-                        <span className={`inline-block w-2 h-2 rounded-full mt-1.5 mr-2 ${getIssueDotClass(issue.severity)}`}></span>
-                        <div>
-                          <p className="font-medium">{issue.message}</p>
-                          <p className="text-sm text-gray-600">
-                            <span className="capitalize">{issue.category}</span>
-                            {' • '}
-                            <span className="capitalize">{issue.severity}</span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 bg-gray-50 rounded">
-                  No issues detected
-                </div>
-              )}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Quality Breakdown</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(qualityMetrics.breakdown).map(([key, value]) => (
+                  <div key={key} className="flex justify-between items-center">
+                    <span className="text-gray-700 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
+                    <span className="font-medium">{value}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
+            
+            {qualityMetrics.suggestions.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Improvement Suggestions</h4>
+                <ul className="space-y-1">
+                  {qualityMetrics.suggestions.map((suggestion, index) => (
+                    <li key={index} className="text-sm text-gray-700">• {suggestion}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
-    </div>
-  );
-};
 
-interface MetricCardProps {
-  title: string;
-  score: number;
-  description: string;
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ title, score, description }) => {
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-  
-  return (
-    <div className="bg-gray-50 p-3 rounded">
-      <div className="flex justify-between items-center mb-1">
-        <h4 className="font-medium">{title}</h4>
-        <span className={`text-lg font-bold ${getScoreColor(score)}`}>{score}</span>
-      </div>
-      <p className="text-xs text-gray-600">{description}</p>
+      {/* Close Button */}
+      {onClose && (
+        <div className="border-t border-gray-200 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 };

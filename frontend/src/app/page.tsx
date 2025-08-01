@@ -9,6 +9,7 @@ import AILogViewer from '@/components/AILogViewer';
 import HubSpotModuleEditor from '@/components/HubSpotModuleEditor';
 import LayoutSplittingManager from '@/components/LayoutSplittingManager';
 import SectionStackEditor from '@/components/SectionStackEditor';
+import HybridLayoutSplitter from '@/components/HybridLayoutSplitter';
 import SaveStatusIndicator from '@/components/SaveStatusIndicator';
 import ProjectManager from '@/components/ProjectManager';
 import { aiLogger } from '@/services/aiLogger';
@@ -44,7 +45,7 @@ interface Component {
   defaultValue: string;
 }
 
-type WorkflowStep = 'upload' | 'preview' | 'split' | 'editor' | 'module' | 'projects';
+type WorkflowStep = 'upload' | 'preview' | 'hybrid-split' | 'split' | 'editor' | 'module' | 'projects';
 
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
@@ -56,6 +57,8 @@ export default function Home() {
   const [shouldUseSplitting, setShouldUseSplitting] = useState<boolean | null>(null);
   const [splittingResult, setSplittingResult] = useState<any>(null);
   const [originalFileName, setOriginalFileName] = useState<string>('');
+  const [hybridAnalysisResult, setHybridAnalysisResult] = useState<any>(null);
+  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
 
   // Project management
   const projectManager = useProjectManager();
@@ -79,13 +82,16 @@ export default function Home() {
     };
   }, []);
 
-  const handleUploadSuccess = async (result: PipelineExecutionResult, fileName?: string) => {
+  const handleUploadSuccess = async (result: PipelineExecutionResult, fileName?: string, imageFile?: File) => {
     setDesignResult(result);
     setError(null);
     
-    // Store original filename for auto-save
+    // Store original filename and image file for hybrid layout analysis
     if (fileName) {
       setOriginalFileName(fileName);
+    }
+    if (imageFile) {
+      setUploadedImageFile(imageFile);
     }
     
     // Auto-save the project if enabled
@@ -105,7 +111,49 @@ export default function Home() {
       }
     }
     
-    // Analyze if layout should be split based on size
+    // Start with AI-supported hybrid layout splitting
+    if (imageFile) {
+      try {
+        aiLogger.logFlowStep('hybrid-analysis', 'Starting AI Layout Analysis', 'start');
+        
+        // Call hybrid layout analysis API
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        
+        const response = await fetch('/api/hybrid-layout/analyze', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const analysisResult = await response.json();
+          setHybridAnalysisResult(analysisResult);
+          
+          aiLogger.logFlowStep('hybrid-analysis', 'AI Layout Analysis Complete', 'complete', {
+            sectionsDetected: analysisResult.sections?.length || 0,
+            averageConfidence: analysisResult.enhancedAnalysis?.detectionMetrics?.averageConfidence || 0
+          });
+          
+          // Move to hybrid layout splitting step
+          setCurrentStep('hybrid-split');
+        } else {
+          throw new Error('Hybrid layout analysis failed');
+        }
+      } catch (error) {
+        console.warn('Hybrid layout analysis failed, falling back to traditional flow:', error);
+        aiLogger.logFlowStep('hybrid-analysis', 'Analysis Failed - Fallback', 'error', { error: error.message });
+        
+        // Fallback to traditional layout analysis
+        await handleTraditionalLayoutAnalysis(result);
+      }
+    } else {
+      // No image file, use traditional flow
+      await handleTraditionalLayoutAnalysis(result);
+    }
+  };
+  
+  // Traditional layout analysis fallback
+  const handleTraditionalLayoutAnalysis = async (result: PipelineExecutionResult) => {
     try {
       // Extract HTML from the pipeline result sections
       const combinedHtml = result.sections.map(section => section.html).join('\n');
@@ -298,6 +346,94 @@ export default function Home() {
     }
   };
 
+  // Handle hybrid layout sections confirmation
+  const handleHybridSectionsConfirmed = async (confirmedSections: any[]) => {
+    try {
+      aiLogger.logFlowStep('hybrid-generate', 'Generating HTML from Confirmed Sections', 'start', {
+        sectionsCount: confirmedSections.length
+      });
+      
+      // Call hybrid layout generate API
+      const response = await fetch('/api/hybrid-layout/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sections: confirmedSections,
+          originalAnalysis: hybridAnalysisResult
+        })
+      });
+      
+      if (response.ok) {
+        const generateResult = await response.json();
+        
+        // Convert hybrid result to PipelineExecutionResult format
+        const hybridPipelineResult: PipelineExecutionResult = {
+          id: `hybrid-${Date.now()}`,
+          sections: generateResult.sections || [],
+          qualityScore: generateResult.qualityScore || 0,
+          processingTime: generateResult.processingTime || 0,
+          validationPassed: true,
+          enhancementsApplied: ['AI Layout Analysis', 'User Section Refinement'],
+          packagedModule: generateResult.packagedModule || {
+            name: 'Hybrid Generated Module',
+            files: {},
+            metadata: {}
+          },
+          metadata: {
+            phaseTimes: { 'hybrid-analysis': generateResult.processingTime || 0 },
+            totalSections: generateResult.sections?.length || 0,
+            averageQuality: generateResult.qualityScore || 0,
+            timestamp: new Date().toISOString(),
+            aiModelsUsed: ['gpt-4-vision-preview'],
+            processingSteps: ['AI Layout Analysis', 'User Section Refinement', 'HTML Generation']
+          }
+        };
+        
+        setDesignResult(hybridPipelineResult);
+        
+        aiLogger.logFlowStep('hybrid-generate', 'HTML Generation Complete', 'complete', {
+          sectionsGenerated: generateResult.sections?.length || 0,
+          qualityScore: generateResult.qualityScore || 0
+        });
+        
+        // Submit feedback to improve AI
+        if (hybridAnalysisResult?.sections) {
+          await submitHybridFeedback(hybridAnalysisResult.sections, confirmedSections);
+        }
+        
+        setCurrentStep('preview');
+      } else {
+        throw new Error('Failed to generate HTML from sections');
+      }
+    } catch (error) {
+      console.error('Hybrid HTML generation failed:', error);
+      aiLogger.logFlowStep('hybrid-generate', 'Generation Failed', 'error', { error: error.message });
+      setError('Failed to generate HTML from sections. Please try again.');
+    }
+  };
+  
+  // Submit feedback for AI improvement
+  const submitHybridFeedback = async (originalSections: any[], finalSections: any[]) => {
+    try {
+      await fetch('/api/hybrid-layout/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          originalSections,
+          finalSections,
+          satisfactionScore: 4, // Default good score
+          comments: 'User refined AI suggestions'
+        })
+      });
+    } catch (error) {
+      console.warn('Failed to submit feedback:', error);
+    }
+  };
+  
   const resetWorkflow = () => {
     setCurrentStep('upload');
     setDesignResult(null);
@@ -305,10 +441,13 @@ export default function Home() {
     setDownloadInfo(null);
     setShouldUseSplitting(null);
     setSplittingResult(null);
+    setHybridAnalysisResult(null);
+    setUploadedImageFile(null);
   };
 
   const steps = [
     { id: 'upload', title: 'Upload Design', description: 'Upload your design image', icon: Upload },
+    ...(hybridAnalysisResult ? [{ id: 'hybrid-split', title: 'AI Layout Analysis', description: 'Review and refine AI-detected sections', icon: Zap }] : []),
     ...(shouldUseSplitting ? [{ id: 'split', title: 'Split Layout', description: 'Process large layout in sections', icon: ArrowRight }] : []),
     { id: 'preview', title: 'Preview & Refine', description: 'Review generated HTML', icon: Eye },
     { id: 'editor', title: 'Edit Module', description: 'Customize HubSpot module parts', icon: Code },
@@ -436,6 +575,36 @@ export default function Home() {
               <DesignUpload
                 onUploadSuccess={handleUploadSuccess}
                 onUploadError={handleUploadError}
+              />
+            </div>
+          )}
+
+          {currentStep === 'hybrid-split' && hybridAnalysisResult && uploadedImageFile && (
+            <div className="space-y-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  🧠 AI Layout Analysis Complete
+                </h2>
+                <p className="text-gray-600">
+                  Our AI has detected {hybridAnalysisResult.sections?.length || 0} sections in your design. 
+                  Review and adjust the sections below, then confirm to generate HTML.
+                </p>
+                {hybridAnalysisResult.enhancedAnalysis && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-sm text-blue-800">
+                      <strong>AI Confidence:</strong> {Math.round((hybridAnalysisResult.enhancedAnalysis.detectionMetrics?.averageConfidence || 0) * 100)}% • 
+                      <strong>Quality Score:</strong> {Math.round((hybridAnalysisResult.enhancedAnalysis.recommendations?.qualityScore || 0) * 100)}%
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <HybridLayoutSplitter
+                imageFile={uploadedImageFile}
+                aiDetectedSections={hybridAnalysisResult.sections || []}
+                onSectionsConfirmed={handleHybridSectionsConfirmed}
+                onBack={() => setCurrentStep('upload')}
+                enhancedAnalysis={hybridAnalysisResult.enhancedAnalysis}
               />
             </div>
           )}
