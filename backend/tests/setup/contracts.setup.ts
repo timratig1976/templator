@@ -7,9 +7,12 @@
 import './jest.setup';
 
 // Contract test environment variables
-process.env.NODE_ENV = 'test';
-process.env.PORT = '3002'; // Different port for contract tests
-process.env.JWT_SECRET = 'contract-test-jwt-secret';
+// Use Object.assign to properly set environment variables in tests
+Object.assign(process.env, {
+  NODE_ENV: 'test',
+  PORT: '3002', // Different port for contract tests
+  JWT_SECRET: 'contract-test-jwt-secret'
+});
 
 // Mock external APIs for contract testing
 jest.mock('openai', () => ({
