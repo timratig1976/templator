@@ -168,6 +168,20 @@ class SocketClientService {
       aiLogger.warning('system', 'Cannot emit event - socket not connected', { event, data });
     }
   }
+
+  // Add event listener to socket
+  public on(event: string, listener: (...args: any[]) => void): void {
+    if (this.socket) {
+      this.socket.on(event, listener);
+    }
+  }
+
+  // Remove event listener from socket
+  public off(event: string, listener?: (...args: any[]) => void): void {
+    if (this.socket) {
+      this.socket.off(event, listener);
+    }
+  }
 }
 
 export const socketClient = SocketClientService.getInstance();

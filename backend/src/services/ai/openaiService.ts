@@ -94,19 +94,102 @@ export class OpenAIService {
       messages: messages.length
     }, requestId);
 
-    // Skip verbose logging - using compact approach
-
     try {
       if (!openai) {
-        throw new Error('OpenAI client not available in test environment');
+        const error = 'OpenAI client not available in test environment';
+        logToFrontend('error', 'openai', '❌ OpenAI Client Error', {
+          error,
+          requestId
+        }, requestId);
+        throw new Error(error);
       }
 
-      const response = await openai.chat.completions.create(requestData);
+      // Step 1: Log API call initiation
+      logToFrontend('info', 'openai', '🔄 Initiating OpenAI API call', {
+        requestId,
+        model,
+        maxTokens,
+        temperature,
+        messageCount: messages.length,
+        imageCount,
+        promptLength: typeof prompt === 'string' ? prompt.length : JSON.stringify(prompt).length
+      }, requestId);
+
+      // Step 2: Log request payload details
+      logToFrontend('info', 'openai', '📋 Request payload prepared', {
+        requestId,
+        payloadSize: JSON.stringify(requestData).length,
+        hasImages: imageCount > 0,
+        messageStructure: messages.map((msg, i) => ({
+          index: i,
+          role: msg.role,
+          contentType: Array.isArray(msg.content) ? 'multipart' : 'text',
+          contentItems: Array.isArray(msg.content) ? msg.content.length : 1
+        }))
+      }, requestId);
+
+      // Step 3: Add timeout wrapper for OpenAI API call (120 seconds)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          const timeoutError = new Error('OpenAI API request timed out after 120 seconds');
+          logToFrontend('error', 'openai', '⏰ OpenAI API Timeout', {
+            requestId,
+            timeout: '120 seconds',
+            duration: Date.now() - startTime
+          }, requestId);
+          reject(timeoutError);
+        }, 120000);
+      });
+
+      // Step 4: Log API call start
+      logToFrontend('info', 'openai', '🚀 Sending request to OpenAI API', {
+        requestId,
+        endpoint: 'chat/completions',
+        startTime: new Date(startTime).toISOString()
+      }, requestId);
+
+      const apiPromise = openai.chat.completions.create(requestData);
+      
+      // Step 5: Race between API call and timeout
+      logToFrontend('info', 'openai', '⏳ Waiting for OpenAI response...', {
+        requestId,
+        status: 'pending'
+      }, requestId);
+      
+      const response = await Promise.race([apiPromise, timeoutPromise]) as any;
+      
+      // Step 6: Log successful response receipt
+      logToFrontend('success', 'openai', '📨 Received OpenAI response', {
+        requestId,
+        responseId: response.id,
+        model: response.model,
+        created: response.created,
+        duration: Date.now() - startTime
+      }, requestId);
+
       const duration = Date.now() - startTime;
       const responseContent = response.choices?.[0]?.message?.content || '';
 
+      // Step 7: Log response analysis
+      logToFrontend('info', 'openai', '🔍 Analyzing OpenAI response', {
+        requestId,
+        responseLength: responseContent.length,
+        choicesCount: response.choices?.length || 0,
+        finishReason: response.choices?.[0]?.finish_reason,
+        usage: response.usage
+      }, requestId);
+
       // Calculate estimated cost
       const estimatedCost = this.estimateOpenAICost(response.usage, response.model);
+      
+      // Step 8: Log cost calculation
+      logToFrontend('info', 'openai', '💰 Cost calculation completed', {
+        requestId,
+        estimatedCost,
+        promptTokens: response.usage?.prompt_tokens,
+        completionTokens: response.usage?.completion_tokens,
+        totalTokens: response.usage?.total_tokens
+      }, requestId);
 
       // Log successful response to backend
       logger.info('OpenAI API Response', {
@@ -169,8 +252,17 @@ export class OpenAIService {
     } catch (error: any) {
       const duration = Date.now() - startTime;
       
-      // Log error to backend
-      logger.error('OpenAI API Error', {
+      // Step 9: Log error occurrence
+      logToFrontend('error', 'openai', '🚨 OpenAI API Error Detected', {
+        requestId,
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString()
+      }, requestId);
+
+      // Step 10: Analyze error details
+      const errorDetails = {
         requestId,
         duration: `${duration}ms`,
         error: error.message,
@@ -178,20 +270,42 @@ export class OpenAIService {
         status: error.status,
         type: error.type,
         param: error.param,
-        response: error.response?.data
-      });
-
-      // Broadcast enhanced error to frontend via SSE
-      logToFrontend('error', 'openai', `❌ OpenAI API request failed`, {
-        requestId,
-        error: error.message || error,
-        code: error.code,
-        status: error.status,
-        type: error.type,
-        param: error.param,
         response: error.response?.data,
         headers: error.response?.headers,
-        duration: `${duration}ms`
+        stack: error.stack?.split('\n').slice(0, 5) // First 5 lines of stack trace
+      };
+
+      // Step 11: Categorize error type
+      let errorCategory = 'unknown';
+      if (error.message?.includes('timeout')) {
+        errorCategory = 'timeout';
+      } else if (error.status === 401) {
+        errorCategory = 'authentication';
+      } else if (error.status === 429) {
+        errorCategory = 'rate_limit';
+      } else if (error.status >= 500) {
+        errorCategory = 'server_error';
+      } else if (error.status >= 400) {
+        errorCategory = 'client_error';
+      } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        errorCategory = 'network';
+      }
+
+      logToFrontend('error', 'openai', `🔍 Error Analysis Complete`, {
+        requestId,
+        category: errorCategory,
+        severity: error.status >= 500 ? 'high' : error.status >= 400 ? 'medium' : 'low',
+        retryable: errorCategory === 'rate_limit' || errorCategory === 'server_error' || errorCategory === 'network'
+      }, requestId);
+
+      // Log error to backend
+      logger.error('OpenAI API Error', errorDetails);
+
+      // Step 12: Broadcast comprehensive error to frontend
+      logToFrontend('error', 'openai', `❌ OpenAI API request failed [${errorCategory}]`, {
+        ...errorDetails,
+        category: errorCategory,
+        troubleshooting: this.getErrorTroubleshooting(errorCategory, error)
       }, requestId, duration);
 
       throw error;
@@ -246,6 +360,163 @@ export class OpenAIService {
     };
     const rate = pricing[model] || pricing['gpt-4'];
     return `$${((tokens / 1000) * rate).toFixed(4)}`;
+  }
+
+  /**
+   * Extract and parse JSON from OpenAI response with improved error handling
+   */
+  private extractJSON(content: string, requestId?: string): any {
+    // Step 1: Log JSON extraction start
+    logToFrontend('info', 'openai', '🔍 Starting JSON extraction', {
+      requestId,
+      contentLength: content?.length || 0,
+      contentPreview: content?.substring(0, 200) + (content?.length > 200 ? '...' : '')
+    }, requestId);
+
+    if (!content) {
+      logToFrontend('error', 'openai', '❌ Empty response content', {
+        requestId,
+        error: 'No content to extract JSON from'
+      }, requestId);
+      throw new Error('Empty response content');
+    }
+
+    // Step 2: Try multiple extraction patterns (improved for OpenAI responses)
+    const patterns = [
+      { regex: /```json\s*([\s\S]*?)\s*```/gi, name: 'markdown_json_block' },
+      { regex: /```([\s\S]*?)```/gi, name: 'generic_markdown_block' },
+      { regex: /\{[\s\S]*?\}/g, name: 'json_object_pattern' },
+      { regex: /^\s*\{[\s\S]*\}\s*$/g, name: 'full_json_object' }
+    ];
+
+    let jsonStr = '';
+    let extractedWith = '';
+
+    logToFrontend('info', 'openai', '🔎 Trying extraction patterns', {
+      requestId,
+      patternCount: patterns.length,
+      patterns: patterns.map(p => p.name)
+    }, requestId);
+
+    for (const [index, pattern] of patterns.entries()) {
+      // Reset regex lastIndex for global patterns
+      pattern.regex.lastIndex = 0;
+      
+      const match = content.match(pattern.regex);
+      if (match) {
+        // For markdown blocks, use captured group; for object patterns, use full match
+        jsonStr = match[1] || match[0];
+        extractedWith = pattern.name;
+        
+        // Clean up any remaining backticks or markdown artifacts
+        jsonStr = jsonStr.replace(/^```json\s*/gi, '').replace(/\s*```$/gi, '').trim();
+        
+        logToFrontend('success', 'openai', `✅ Pattern match found: ${pattern.name}`, {
+          requestId,
+          patternIndex: index + 1,
+          extractedLength: jsonStr.length,
+          extractedPreview: jsonStr.substring(0, 200) + (jsonStr.length > 200 ? '...' : ''),
+          cleanedUp: jsonStr !== (match[1] || match[0])
+        }, requestId);
+        break;
+      }
+    }
+
+    if (!jsonStr) {
+      // If no pattern matches, try the entire content
+      jsonStr = content.trim();
+      extractedWith = 'full_content';
+      
+      logToFrontend('warning', 'openai', '⚠️ No pattern matched, using full content', {
+        requestId,
+        fallbackMethod: 'full_content',
+        contentLength: jsonStr.length
+      }, requestId);
+    }
+
+    // Step 2.5: Aggressive cleanup of any remaining markdown artifacts
+    const originalJsonStr = jsonStr;
+    jsonStr = jsonStr
+      .replace(/^```json\s*/gi, '')  // Remove opening ```json
+      .replace(/^```\s*/gi, '')      // Remove opening ```
+      .replace(/\s*```$/gi, '')      // Remove closing ```
+      .replace(/^`+/g, '')           // Remove leading backticks
+      .replace(/`+$/g, '')           // Remove trailing backticks
+      .trim();
+    
+    if (jsonStr !== originalJsonStr) {
+      logToFrontend('info', 'openai', '🧹 Applied aggressive cleanup', {
+        requestId,
+        originalLength: originalJsonStr.length,
+        cleanedLength: jsonStr.length,
+        removedArtifacts: true
+      }, requestId);
+    }
+
+    // Step 3: Attempt JSON parsing
+    logToFrontend('info', 'openai', '🔧 Attempting JSON parse', {
+      requestId,
+      extractionMethod: extractedWith,
+      jsonLength: jsonStr.length,
+      startsWithBrace: jsonStr.trim().startsWith('{'),
+      endsWithBrace: jsonStr.trim().endsWith('}')
+    }, requestId);
+
+    try {
+      const parsed = JSON.parse(jsonStr);
+      
+      // Step 4: Log successful parsing
+      logToFrontend('success', 'openai', '✅ JSON parsing successful', {
+        requestId,
+        extractionMethod: extractedWith,
+        objectKeys: Object.keys(parsed || {}),
+        objectType: Array.isArray(parsed) ? 'array' : typeof parsed
+      }, requestId);
+      
+      return parsed;
+    } catch (parseError: any) {
+      // Step 5: Enhanced error logging for parse failures
+      const errorDetails = {
+        requestId,
+        error: parseError.message,
+        extractedWith,
+        contentLength: content.length,
+        jsonStrLength: jsonStr.length,
+        contentPreview: content.substring(0, 500),
+        jsonStrPreview: jsonStr.substring(0, 500),
+        parseErrorPosition: parseError.message.match(/position (\d+)/)?.[1],
+        jsonStructureAnalysis: {
+          startsWithBrace: jsonStr.trim().startsWith('{'),
+          endsWithBrace: jsonStr.trim().endsWith('}'),
+          braceCount: (jsonStr.match(/\{/g) || []).length,
+          closeBraceCount: (jsonStr.match(/\}/g) || []).length,
+          hasNewlines: jsonStr.includes('\n'),
+          hasBackticks: jsonStr.includes('`'),
+          firstChars: jsonStr.substring(0, 50),
+          lastChars: jsonStr.substring(Math.max(0, jsonStr.length - 50))
+        },
+        debugInfo: {
+          originalContent: content.substring(0, 1000),
+          finalJsonStr: jsonStr.substring(0, 1000),
+          cleanupApplied: jsonStr !== originalJsonStr
+        }
+      };
+
+      // Enhanced error logging
+      logger.error('JSON Parse Error', errorDetails);
+      
+      logToFrontend('error', 'openai', '❌ JSON parsing failed', {
+        ...errorDetails,
+        troubleshooting: [
+          'OpenAI response may not be in valid JSON format',
+          'Response might be wrapped in unexpected markdown',
+          'Check if response contains syntax errors',
+          'Verify OpenAI model is returning structured data'
+        ]
+      }, requestId);
+
+      throw new Error(`Failed to parse JSON response: ${parseError.message}`);
+    }
   }
 
   /**
@@ -376,7 +647,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
             {
               type: "image_url",
               image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`,
+                url: imageBase64, // Use the original base64 data URL with correct MIME type
                 detail: "high"
               }
             }
@@ -419,24 +690,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
         responseLength: content.length
       }, requestId);
 
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        logger.error(`❌ [${requestId}] Invalid response format from OpenAI`, {
-          contentPreview: content.substring(0, 200),
-          requestId,
-          timestamp: new Date().toISOString()
-        });
-        throw createError('Invalid response format from AI', 500, 'INTERNAL_ERROR');
-      }
-
-      const jsonString = jsonMatch[0].replace(/```json\n?|\n?```/g, '');
-      logger.info(`📋 [${requestId}] Extracted JSON from response`, {
-        jsonLength: jsonString.length,
-        requestId,
-        timestamp: new Date().toISOString()
-      });
-
-      const analysisData = JSON.parse(jsonString);
+      const analysisData = this.extractJSON(content, requestId);
       
       // Clean up HTML formatting
       if (analysisData.html) {
@@ -713,6 +967,63 @@ Return only the improved HTML code.
         error: (error as Error)?.message
       }, requestId, totalDuration);
       return html; // Return original if refinement fails
+    }
+  }
+
+  /**
+   * Get troubleshooting information for different error categories
+   */
+  private getErrorTroubleshooting(category: string, error: any): string[] {
+    switch (category) {
+      case 'timeout':
+        return [
+          'The OpenAI API request took longer than 120 seconds',
+          'Try reducing image size or complexity',
+          'Check your internet connection',
+          'OpenAI servers may be experiencing high load'
+        ];
+      case 'authentication':
+        return [
+          'Invalid or missing OpenAI API key',
+          'Check your .env file contains OPENAI_API_KEY',
+          'Verify your API key is active and has sufficient credits',
+          'Ensure no extra spaces in the API key'
+        ];
+      case 'rate_limit':
+        return [
+          'OpenAI API rate limit exceeded',
+          'Wait a few minutes before retrying',
+          'Consider upgrading your OpenAI plan',
+          'Implement request queuing for high-volume usage'
+        ];
+      case 'server_error':
+        return [
+          'OpenAI servers are experiencing issues',
+          'This is usually temporary - try again in a few minutes',
+          'Check OpenAI status page for known issues',
+          'Consider implementing retry logic with exponential backoff'
+        ];
+      case 'client_error':
+        return [
+          'Invalid request format or parameters',
+          'Check image format is supported (JPEG, PNG, GIF, WebP)',
+          'Verify image size is under OpenAI limits',
+          'Review request payload structure'
+        ];
+      case 'network':
+        return [
+          'Network connectivity issue',
+          'Check your internet connection',
+          'Verify firewall/proxy settings allow OpenAI API access',
+          'Try again in a few moments'
+        ];
+      default:
+        return [
+          'Unknown error occurred',
+          'Check the error details above for more information',
+          'Try refreshing the page and uploading again',
+          'Contact support if the issue persists'
+        ];
     }
   }
 }

@@ -164,7 +164,33 @@ class AIEnhancedPipelineService {
       });
 
       if (!response.ok) {
-        throw new Error(`AI analysis failed: ${response.statusText}`);
+        // Try to get detailed error information from the response
+        let errorMessage = `AI analysis failed: ${response.statusText}`;
+        let errorDetails = '';
+        let errorCode = '';
+        
+        try {
+          const errorResponse = await response.json();
+          if (errorResponse.error) {
+            errorMessage = errorResponse.error;
+          }
+          if (errorResponse.details) {
+            errorDetails = errorResponse.details;
+          }
+          if (errorResponse.code) {
+            errorCode = errorResponse.code;
+          }
+          
+          // Create a more informative error message
+          const fullErrorMessage = errorDetails 
+            ? `${errorMessage}: ${errorDetails}`
+            : errorMessage;
+            
+          throw new Error(fullErrorMessage);
+        } catch (parseError) {
+          // If we can't parse the error response, fall back to generic message
+          throw new Error(errorMessage);
+        }
       }
 
       const result = await response.json();

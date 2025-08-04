@@ -676,16 +676,32 @@ router.post('/analyze-layout', async (req, res) => {
       });
     }
     
+    // Extract image format from base64 data
+    let imageFormat = 'png'; // default fallback
+    let filename = 'uploaded-design.png';
+    
+    if (image.startsWith('data:image/')) {
+      const mimeMatch = image.match(/data:image\/(\w+);base64,/);
+      if (mimeMatch && mimeMatch[1]) {
+        imageFormat = mimeMatch[1].toLowerCase();
+        // Handle common format variations
+        if (imageFormat === 'jpeg') imageFormat = 'jpg';
+        filename = `uploaded-design.${imageFormat}`;
+      }
+    }
+    
     // Log the start of the analysis process
     logger.info(`[${requestId}] Starting layout analysis`, { 
       requestId, 
       analysisType,
-      imageSize: image.length
+      imageSize: image.length,
+      imageFormat,
+      filename
     });
-    logToFrontend('info', 'processing', `Starting AI vision analysis of design layout...`, { imageSize: image.length }, requestId);
+    logToFrontend('info', 'processing', `Starting AI vision analysis of ${imageFormat.toUpperCase()} design layout...`, { imageSize: image.length, format: imageFormat }, requestId);
     
-    // Call the OpenAI service to analyze the layout
-    const designAnalysis = await openaiService.convertDesignToHTML(image, 'uploaded-design.png');
+    // Call the OpenAI service to analyze the layout with correct filename
+    const designAnalysis = await openaiService.convertDesignToHTML(image, filename);
     
     // Calculate the processing time
     const duration = Date.now() - startTime;
