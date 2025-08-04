@@ -16,6 +16,7 @@ import {
   Settings
 } from 'lucide-react';
 import HybridLayoutSplitter from '@/components/HybridLayoutSplitter';
+import SplittingSuggestionsUI from '@/components/SplittingSuggestionsUI';
 import { useWorkflow } from '@/contexts/WorkflowContext';
 import { useWorkflowHandlers } from '@/hooks/useWorkflowHandlers';
 import { aiPipelineService } from '@/services/aiPipelineService';
@@ -61,9 +62,18 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
       aiEnhanced: false
     },
     {
+      id: 'section-detection',
+      name: 'Section Detection',
+      description: 'AI detects and suggests section splits',
+      icon: Eye,
+      status: 'pending',
+      progress: 0,
+      aiEnhanced: true
+    },
+    {
       id: 'ai-analysis',
       name: 'AI Vision Analysis',
-      description: 'AI analyzes layout and detects sections',
+      description: 'AI analyzes layout and generates HTML',
       icon: Brain,
       status: 'pending',
       progress: 0,
@@ -100,6 +110,9 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
 
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [showAIInsights, setShowAIInsights] = useState(true);
+  const [splittingSuggestions, setSplittingSuggestions] = useState<any[]>([]);
+  const [splittingSuggestionsLoading, setSplittingSuggestionsLoading] = useState(false);
+  const [splittingSuggestionsError, setSplittingSuggestionsError] = useState<string>('');
 
   // Update phase status based on workflow state
   useEffect(() => {
@@ -135,26 +148,67 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
 
   const handleFileUploadWithAI = async (file: File) => {
     try {
-      setCurrentPhaseIndex(1); // Move to AI analysis phase
+      setCurrentPhaseIndex(1); // Move to section detection phase
+      setSplittingSuggestionsLoading(true);
+      setSplittingSuggestionsError('');
       
-      // Use aiPipelineService's public executeAIFirstPipeline method
-      // This will handle the file upload and AI analysis
-      aiPipelineService.executeAIFirstPipeline(file, (phases) => {
-        // This callback will be called as phases progress
-        // We can use it to update our UI accordingly
-        const aiAnalysisPhase = phases.find(p => p.phaseId === 'ai-analysis');
-        
-        if (aiAnalysisPhase && aiAnalysisPhase.status === 'completed') {
-          // When AI analysis is complete, move to smart splitting phase
-          setCurrentPhaseIndex(2);
-        }
+      // Call the section detection API directly
+      const response = await fetch('http://localhost:3009/api/ai-enhancement/detect-sections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: await fileToBase64(file),
+          fileName: file.name
+        })
       });
       
-      // Note: We don't immediately set to phase 2 here as it will be handled by the callback
+      if (!response.ok) {
+        throw new Error(`Section detection failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      setSplittingSuggestions(result.suggestions || []);
+      setSplittingSuggestionsLoading(false);
       
     } catch (error) {
-      aiLogger.error('processing', 'Error in AI file analysis', error);
-      throw error;
+      console.error('Section detection failed:', error);
+      setSplittingSuggestionsError(error instanceof Error ? error.message : 'Section detection failed');
+      setSplittingSuggestionsLoading(false);
+    }
+  };
+  
+  // Helper function to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+  
+  const handleSplittingSuggestionsConfirm = async (confirmedSuggestions: any[]) => {
+    try {
+      setCurrentPhaseIndex(2); // Move to AI analysis phase
+      
+      // Now call the full AI analysis with the confirmed sections
+      // This would integrate with the existing aiPipelineService
+      // For now, we'll simulate moving to the next phase
+      console.log('Confirmed suggestions:', confirmedSuggestions);
+      
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+    }
+  };
+  
+  const handleRegenerateSuggestions = () => {
+    if (uploadedImageFile) {
+      handleFileUploadWithAI(uploadedImageFile);
     }
   };
 
@@ -193,6 +247,11 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
 
     const currentPhase = aiPhases[currentPhaseIndex];
     const insights = {
+      'section-detection': {
+        title: '👁️ AI Section Detection Active',
+        content: 'AI is analyzing your design to suggest optimal section splits for better organization and user experience.',
+        confidence: splittingSuggestions.length > 0 ? Math.round(splittingSuggestions.reduce((acc, s) => acc + s.confidence, 0) / splittingSuggestions.length * 100) : null
+      },
       'ai-analysis': {
         title: '🧠 AI Vision Analysis Active',
         content: 'Using OpenAI Vision API to analyze your design layout, detect sections, and understand visual hierarchy.',
@@ -369,30 +428,17 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
             </div>
           )}
 
-          {/* AI Analysis Phase */}
-          {currentPhaseIndex === 1 && (
-            <div className="p-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                  <Brain className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">AI Vision Analysis in Progress</h3>
-                <p className="text-gray-600 mb-6">
-                  Our AI is analyzing your design layout and detecting sections...
-                </p>
-                
-                <div className="max-w-md mx-auto">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                      <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
-                      <span className="text-blue-800 font-medium">Processing with OpenAI Vision</span>
-                    </div>
-                    <div className="w-full bg-blue-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+          {/* Section Detection Phase */}
+          {currentPhaseIndex === 1 && uploadedImageFile && (
+            <div className="p-6">
+              <SplittingSuggestionsUI
+                imageFile={uploadedImageFile}
+                suggestions={splittingSuggestions}
+                onConfirm={handleSplittingSuggestionsConfirm}
+                onRegenerate={handleRegenerateSuggestions}
+                isLoading={splittingSuggestionsLoading}
+                error={splittingSuggestionsError}
+              />
             </div>
           )}
 

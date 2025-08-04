@@ -1,5 +1,257 @@
 [
   {
+    "timestamp": "2025-08-04T17:24:10.533Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.243Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.232Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.228Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.224Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.210Z",
+    "pipelineId": "pipeline_4",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.170Z",
+    "pipelineId": "pipeline_3",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.102Z",
+    "pipelineId": "pipeline_2",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.098Z",
+    "pipelineId": "pipeline_1",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:10.015Z",
+    "pipelineId": "pipeline_0",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:09.994Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 80,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:09.994Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:09.994Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 90,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
+    "timestamp": "2025-08-04T17:24:09.981Z",
+    "pipelineId": "test_pipeline_123",
+    "metrics": {
+      "codeQuality": 85,
+      "testCoverage": 78,
+      "performance": 92,
+      "security": 88,
+      "accessibility": 78,
+      "hubspotCompliance": 82
+    },
+    "metadata": {
+      "sectionsProcessed": 5,
+      "processingTime": 15000,
+      "aiModel": "gpt-4o",
+      "version": "v2.1.0"
+    }
+  },
+  {
     "timestamp": "2025-08-01T16:34:38.331Z",
     "pipelineId": "test_pipeline_123",
     "metrics": {

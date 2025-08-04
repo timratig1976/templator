@@ -40,9 +40,17 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body parsing middleware
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// Body parsing middleware with larger limits for base64 images
+app.use(express.json({ 
+  limit: '50mb',
+  verify: (req, res, buf, encoding) => {
+    // Add request body validation
+    if (buf.length === 0) {
+      throw new Error('Empty request body');
+    }
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Logging middleware
 app.use(morgan('combined', {

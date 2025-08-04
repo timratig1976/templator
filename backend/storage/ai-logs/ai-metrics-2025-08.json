@@ -1,5 +1,4601 @@
 [
   {
+    "id": "test_ai_1754328251119_cpe3ig45v",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_3xgj0sz8g",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_brqdzvrqy",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_q6s5oiff4",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_7r2i3io1h",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_wohldwcz6",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_vk0tt12lg",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_fylm05uyq",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_ul0dfnk7l",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_9hfbut5eo",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_qjc4vg82j",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_jkwta3jrw",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_seg7jk9fl",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_qjsxiutnv",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_bytr6cpc8",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_hkf9y65xv",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_o4oco5gwj",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_2j1xnfmdg",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_ecglp4v1t",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_7cccumwpq",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_48r1xv3zs",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_t2s7hppcp",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_xnu1f7nl4",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_ln385tebj",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_q3o0hzt48",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_xs12o1tmq",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_kugwcssxw",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_pi2sqrzpu",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_youvgj6ik",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_r4gg7tj38",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_6bxl7402d",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_5jm5cakao",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_m6d9bdv36",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_5cl18829p",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_u8n6l4ecz",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_37ar46xlt",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_tu0e0ub1z",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_jf2offl8h",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_zgtlhrwx9",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_iw4y5wpij",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_gjc3tyu4p",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_x8p4vepka",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_pgd0wnqwi",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_ya8u2c4xy",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_6d6avix4d",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_z637i948p",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_zz2y3838i",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_8fjkchcb3",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_zxcsdp27j",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328251119_zv8vhxnvy",
+    "timestamp": "2025-08-04T17:24:11.119Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328250964_hn3fat3zt",
+    "timestamp": "2025-08-04T17:24:10.964Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328250933_s7khapqs5",
+    "timestamp": "2025-08-04T17:24:10.933Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0,
+      "userRating": {
+        "score": 8,
+        "feedback": "Great work!",
+        "ratingTimestamp": "2025-08-04T17:24:10.957Z",
+        "ratingCriteria": [
+          "quality"
+        ]
+      }
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      },
+      "userQuality": {
+        "userScore": 8,
+        "userFeedback": "Great work!",
+        "acceptedOutput": true,
+        "requestedChanges": []
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328250737_uyuytydkm",
+    "timestamp": "2025-08-04T17:24:10.737Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": null
+  },
+  {
+    "id": "test_ai_1754328250533_74b29y3bg",
+    "timestamp": "2025-08-04T17:24:10.533Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328250243_w8kzpt29v",
+    "timestamp": "2025-08-04T17:24:10.243Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249947_dp44mgkqz",
+    "timestamp": "2025-08-04T17:24:09.947Z",
+    "pipelineId": "pipeline_1",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249947_s6imtltbz",
+    "timestamp": "2025-08-04T17:24:09.947Z",
+    "pipelineId": "pipeline_2",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249893_yep91zpgf",
+    "timestamp": "2025-08-04T17:24:09.893Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "user_modified",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": true,
+        "userModifications": "Added interactive elements",
+        "regenerationReason": "Needed more interactivity"
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": true,
+      "regenerationCount": 1,
+      "userPromptChanges": "Added interactive elements",
+      "userRating": {
+        "score": 9,
+        "feedback": "Much better!",
+        "ratingTimestamp": "2025-08-04T17:24:09.893Z",
+        "ratingCriteria": [
+          "quality"
+        ]
+      }
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249892_kfxizatlg",
+    "timestamp": "2025-08-04T17:24:09.892Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0,
+      "userRating": {
+        "score": 7,
+        "feedback": "Good",
+        "ratingTimestamp": "2025-08-04T17:24:09.892Z",
+        "ratingCriteria": [
+          "quality"
+        ]
+      }
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249541_upqw92ets",
+    "timestamp": "2025-08-04T17:24:09.541Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.01,
+      "outputCost": 0.02,
+      "totalCost": 0.03
+    }
+  },
+  {
+    "id": "test_ai_1754328249541_tjfrrjil0",
+    "timestamp": "2025-08-04T17:24:09.541Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.015,
+      "outputCost": 0.025,
+      "totalCost": 0.04
+    }
+  },
+  {
+    "id": "test_ai_1754328249541_8clpftwnh",
+    "timestamp": "2025-08-04T17:24:09.541Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.02,
+      "outputCost": 0.03,
+      "totalCost": 0.05
+    }
+  },
+  {
+    "id": "test_ai_1754328249463_i5nn7i7yz",
+    "timestamp": "2025-08-04T17:24:09.463Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0,
+      "userRating": {
+        "score": 8,
+        "feedback": "Great output! Love the responsive design.",
+        "ratingTimestamp": "2025-08-04T17:24:09.471Z",
+        "ratingCriteria": [
+          "visual_appeal",
+          "functionality"
+        ]
+      }
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      },
+      "userQuality": {
+        "userScore": 8,
+        "userFeedback": "Great output! Love the responsive design.",
+        "acceptedOutput": true,
+        "requestedChanges": [
+          "Add hover animations"
+        ]
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249435_uaxbpkyam",
+    "timestamp": "2025-08-04T17:24:09.435Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
+    "id": "test_ai_1754328249271_5fc0n1chv",
+    "timestamp": "2025-08-04T17:24:09.272Z",
+    "pipelineId": "test_pipeline_123",
+    "phase": "ai_generation",
+    "input": {
+      "type": "image",
+      "size": 1024000,
+      "contentHash": "sha256_test_image_hash",
+      "metadata": {
+        "fileName": "test_design.png",
+        "imageResolution": "1920x1080"
+      }
+    },
+    "ai": {
+      "model": "gpt-4o",
+      "promptVersion": "v2.1.0",
+      "prompt": {
+        "systemPrompt": "You are an expert web developer specializing in HubSpot module creation.",
+        "userPrompt": "Create a responsive landing page from this design.",
+        "ragContext": "HubSpot field types: text, rich_text, image, url, color",
+        "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEA...[truncated]",
+        "modifiedByUser": false
+      },
+      "promptTokens": 1200,
+      "completionTokens": 2400,
+      "totalTokens": 3600,
+      "processingTime": 15000,
+      "temperature": 0.1,
+      "maxTokens": 4000
+    },
+    "userInteraction": {
+      "isManualRegeneration": false,
+      "regenerationCount": 0
+    },
+    "output": {
+      "type": "html",
+      "size": 12000,
+      "contentHash": "sha256_test_html_hash",
+      "content": "<section class=\"hero\"><h1>{{ module.headline }}</h1></section>",
+      "quality": {
+        "score": 85,
+        "confidence": 0.9,
+        "issues": [
+          "Missing alt attribute"
+        ],
+        "improvements": [
+          "Add schema markup"
+        ],
+        "metrics": {
+          "htmlValidity": 90,
+          "hubspotCompatibility": 88,
+          "accessibility": 82,
+          "responsiveness": 87,
+          "codeQuality": 85
+        }
+      }
+    },
+    "performance": {
+      "responseTime": 15200,
+      "retryCount": 0,
+      "errorCount": 0,
+      "cacheHit": false
+    },
+    "cost": {
+      "inputCost": 0.012,
+      "outputCost": 0.024,
+      "totalCost": 0.036
+    }
+  },
+  {
     "id": "test_ai_1754066078355_29en10bpx",
     "timestamp": "2025-08-01T16:34:38.355Z",
     "pipelineId": "test_pipeline_123",

@@ -128,17 +128,17 @@ export class OpenAIService {
         }))
       }, requestId);
 
-      // Step 3: Add timeout wrapper for OpenAI API call (120 seconds)
+      // Step 3: Add timeout wrapper for OpenAI API call (180 seconds to match frontend)
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
-          const timeoutError = new Error('OpenAI API request timed out after 120 seconds');
+          const timeoutError = new Error('OpenAI API request timed out after 180 seconds');
           logToFrontend('error', 'openai', '⏰ OpenAI API Timeout', {
             requestId,
-            timeout: '120 seconds',
+            timeout: '180 seconds',
             duration: Date.now() - startTime
           }, requestId);
           reject(timeoutError);
-        }, 120000);
+        }, 180000); // Increased to 3 minutes to match frontend timeout
       });
 
       // Step 4: Log API call start

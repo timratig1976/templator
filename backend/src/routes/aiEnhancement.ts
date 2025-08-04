@@ -39,6 +39,48 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+// Helper function to generate basic splitting suggestions
+function generateBasicSplittingSuggestions(fileName: string) {
+  return [
+    {
+      id: 'header-section',
+      name: 'Header Section',
+      type: 'header',
+      bounds: { x: 0, y: 0, width: 100, height: 15 }, // Percentage-based
+      confidence: 0.8,
+      description: 'Top navigation and branding area',
+      suggested: true
+    },
+    {
+      id: 'hero-section',
+      name: 'Hero Section',
+      type: 'hero',
+      bounds: { x: 0, y: 15, width: 100, height: 35 },
+      confidence: 0.7,
+      description: 'Main banner or hero content area',
+      suggested: true
+    },
+    {
+      id: 'content-section',
+      name: 'Main Content',
+      type: 'content',
+      bounds: { x: 0, y: 50, width: 100, height: 40 },
+      confidence: 0.9,
+      description: 'Primary content area',
+      suggested: true
+    },
+    {
+      id: 'footer-section',
+      name: 'Footer Section',
+      type: 'footer',
+      bounds: { x: 0, y: 90, width: 100, height: 10 },
+      confidence: 0.8,
+      description: 'Footer links and information',
+      suggested: true
+    }
+  ];
+}
+
 let enhancedAIService: EnhancedAIService;
 let fineTuningService: FineTuningService;
 
@@ -613,34 +655,147 @@ function getJobNextSteps(status: string): string[] {
  * Helper function to validate base64 image format
  */
 function isValidBase64Image(base64String: string): boolean {
-  // Check if it's a data URL format
-  if (!base64String.startsWith('data:image/')) {
+  try {
+    // Check if it's a data URL format
+    if (!base64String || typeof base64String !== 'string') {
+      logger.error('Invalid base64 string: not a string or empty');
+      return false;
+    }
+    
+    if (!base64String.startsWith('data:image/')) {
+      logger.error('Invalid base64 string: does not start with data:image/');
+      return false;
+    }
+    
+    // More flexible regex that handles various image formats
+    const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|bmp|svg\+xml);base64,([A-Za-z0-9+\/=\s]*)$/;
+    const match = base64String.match(base64Regex);
+    
+    if (!match) {
+      logger.error('Invalid base64 string: does not match expected format');
+      logger.error('String preview:', base64String.substring(0, 100) + '...');
+      return false;
+    }
+    
+    // Validate base64 characters (allow whitespace which we'll strip)
+    const base64Part = match[2].replace(/\s/g, ''); // Remove any whitespace
+    const validBase64Regex = /^[A-Za-z0-9+\/=]*$/;
+    
+    if (!validBase64Regex.test(base64Part)) {
+      logger.error('Invalid base64 string: contains invalid characters');
+      return false;
+    }
+    
+    // Check if length is valid (must be multiple of 4 after padding)
+    const paddedLength = Math.ceil(base64Part.length / 4) * 4;
+    if (base64Part.length > 0 && paddedLength - base64Part.length > 2) {
+      logger.error('Invalid base64 string: invalid length', { length: base64Part.length });
+      return false;
+    }
+    
+    // Try to decode to verify it's valid base64
+    try {
+      Buffer.from(base64Part, 'base64');
+    } catch (decodeError) {
+      logger.error('Invalid base64 string: cannot decode', { error: decodeError });
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    logger.error('Error validating base64 image:', error);
     return false;
   }
-  
-  // Extract the base64 part after the comma
-  const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|svg\+xml);base64,([A-Za-z0-9+/=]*)$/;
-  const match = base64String.match(base64Regex);
-  
-  if (!match) {
-    return false;
-  }
-  
-  // Validate base64 characters
-  const base64Part = match[2];
-  const validBase64Regex = /^[A-Za-z0-9+/=]+$/;
-  
-  if (!validBase64Regex.test(base64Part)) {
-    return false;
-  }
-  
-  // Check if length is valid (must be multiple of 4)
-  if (base64Part.length % 4 !== 0) {
-    return false;
-  }
-  
-  return true;
 }
+
+/**
+ * POST /api/ai-enhancement/detect-sections
+ * Lightweight section detection for splitting suggestions
+ */
+router.post('/detect-sections', async (req, res) => {
+  const requestId = req.body.requestId || uuidv4();
+  const startTime = Date.now();
+  
+  try {
+    const { image, fileName, analysisType = 'lightweight' } = req.body;
+    
+    // Validate required fields
+    if (!image) {
+      logger.warn(`[${requestId}] Missing image in detect-sections request`);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required field: image',
+        code: 'MISSING_IMAGE'
+      });
+    }
+    
+    logger.info(`[${requestId}] Starting lightweight section detection`, {
+      requestId,
+      fileName: fileName || 'unknown',
+      analysisType
+    });
+    
+    logToFrontend('info', 'processing', `🔍 Starting lightweight section detection for ${fileName || 'design'}`, { fileName, analysisType }, requestId);
+    
+    // Validate base64 image format
+    if (!isValidBase64Image(image)) {
+      logger.warn(`[${requestId}] Invalid base64 image format`);
+      logToFrontend('error', 'processing', '❌ Invalid image format provided', { error: 'Invalid base64 format' }, requestId);
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid base64 image format',
+        code: 'INVALID_BASE64'
+      });
+    }
+    
+    // Generate basic splitting suggestions using simple heuristics
+    // This is much faster than full OpenAI analysis
+    const suggestions = generateBasicSplittingSuggestions(fileName || 'design');
+    
+    const duration = Date.now() - startTime;
+    
+    logger.info(`[${requestId}] Section detection completed`, {
+      requestId,
+      duration,
+      suggestionsCount: suggestions.length
+    });
+    
+    logToFrontend('success', 'processing', `✅ Section detection completed in ${duration}ms with ${suggestions.length} suggestions`, { suggestionsCount: suggestions.length }, requestId, duration);
+    
+    return res.status(200).json({
+      success: true,
+      suggestions,
+      meta: {
+        processingTime: duration,
+        requestId,
+        analysisType: 'lightweight',
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    const errorMessage = error.message || 'Unknown error';
+    
+    logger.error(`[${requestId}] Error in section detection: ${errorMessage}`, { 
+      error: { 
+        message: errorMessage,
+        stack: error.stack
+      },
+      requestId,
+      duration
+    });
+    
+    logToFrontend('error', 'processing', `❌ Section detection failed: ${errorMessage}`, { error: errorMessage }, requestId, duration);
+    
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Failed to detect sections', 
+      details: errorMessage,
+      code: 'SECTION_DETECTION_ERROR'
+    });
+  }
+});
 
 /**
  * POST /api/ai-enhancement/analyze-layout

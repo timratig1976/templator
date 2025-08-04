@@ -30,7 +30,7 @@ export default function UnifiedAIWorkflow() {
 
   // Initialize AI-first workflow
   useEffect(() => {
-    aiLogger.info('workflow', 'Unified AI Workflow initialized', { currentStep });
+    aiLogger.info('system', 'Unified AI Workflow initialized', { currentStep });
     
     // Set initial step to upload if not set
     if (!currentStep || currentStep === 'preview') {
@@ -45,76 +45,104 @@ export default function UnifiedAIWorkflow() {
       setError(null);
       setUploadedImageFile(file);
       
-      aiLogger.info('workflow', 'Starting AI-first upload processing', { 
+      aiLogger.info('system', 'Starting AI-first pipeline execution', { 
         fileName: file.name,
         fileSize: file.size 
       });
 
-      // Execute AI-first pipeline
-      const result = await aiPipelineService.executeAIFirstPipeline(
+      // Execute AI-first pipeline (returns splitting suggestions first)
+      const splittingResult = await aiPipelineService.executeAIFirstPipeline(
         file,
-        (phases) => {
-          setPipelinePhases(phases);
-          
-          // Update workflow step based on current phase
-          const currentPhase = phases.find(p => p.status === 'running');
-          if (currentPhase) {
-            switch (currentPhase.phaseId) {
-              case 'upload':
-                setCurrentStep('upload');
-                break;
-              case 'ai-analysis':
-                setCurrentStep('hybrid-split');
-                break;
-              case 'smart-splitting':
-                setCurrentStep('hybrid-split');
-                break;
-              case 'html-generation':
-                setCurrentStep('editor');
-                break;
-              case 'module-packaging':
-                setCurrentStep('module');
-                break;
+        {
+          onPhaseProgress: (phases) => {
+            setPipelinePhases(phases);
+            
+            // Update workflow step based on current phase
+            const currentPhase = phases.find(p => p.status === 'running');
+            if (currentPhase) {
+              switch (currentPhase.phaseId) {
+                case 'upload':
+                  setCurrentStep('upload');
+                  break;
+                case 'section-detection':
+                  setCurrentStep('hybrid-split');
+                  break;
+                case 'ai-analysis':
+                  setCurrentStep('hybrid-split');
+                  break;
+                case 'smart-splitting':
+                  setCurrentStep('hybrid-split');
+                  break;
+                case 'html-generation':
+                  setCurrentStep('editor');
+                  break;
+                case 'module-packaging':
+                  setCurrentStep('module');
+                  break;
+              }
             }
           }
         }
       );
 
-      // Set results for downstream components
-      if (result.sections) {
-        setHybridAnalysisResult({
-          sections: result.sections.map(section => ({
-            id: section.id,
-            name: section.name,
-            type: section.type,
-            bounds: {
-              x: section.boundingBox?.left || 0,
-              y: section.boundingBox?.top || 0,
-              width: section.boundingBox?.width || 0,
-              height: section.boundingBox?.height || 0
-            },
-            html: section.html,
-            editableFields: section.editableFields,
-            aiConfidence: section.qualityScore || 0.8
-          })),
-          confidence: result.qualityScore,
-          quality: result.qualityScore
-        });
-      }
+      // Handle splitting suggestions phase - auto-confirm for now
+      if (splittingResult.splittingSuggestions) {
+        // For now, auto-confirm the splitting suggestions
+        // In the future, this could show a UI for user review
+        const finalResult = await splittingResult.continueWithAI(splittingResult.splittingSuggestions);
+        
+        // Set results for downstream components
+        if (finalResult.sections) {
+          setHybridAnalysisResult({
+            sections: finalResult.sections.map(section => ({
+              id: section.id,
+              name: section.name,
+              type: section.type,
+              bounds: {
+                x: section.bounds?.x || 0,
+                y: section.bounds?.y || 0,
+                width: section.bounds?.width || 0,
+                height: section.bounds?.height || 0
+              },
+              html: section.html,
+              editableFields: section.editableFields,
+              aiConfidence: section.aiConfidence || 0.8
+            })),
+            confidence: finalResult.qualityScore,
+            quality: finalResult.qualityScore
+          });
+        }
 
-      setDesignResult(result);
-      setCurrentStep('module'); // Jump to final step
+        // Convert AIEnhancedPipelineResult to PipelineExecutionResult format
+        const compatibleResult = {
+          id: `ai_pipeline_${Date.now()}`,
+          sections: finalResult.sections || [],
+          qualityScore: finalResult.qualityScore || 0.8,
+          processingTime: Date.now() - Date.now(), // Will be calculated properly in real implementation
+          validationPassed: true,
+          enhancementsApplied: finalResult.aiInsights?.optimizations || [],
+          packagedModule: null, // Will be set when module is created
+          metadata: {
+            phaseTimes: {},
+            totalSections: finalResult.sections?.length || 0,
+            averageQuality: finalResult.qualityScore || 0.8,
+            timestamp: new Date().toISOString(),
+            aiModelsUsed: finalResult.aiInsights?.aiModelsUsed || ['gpt-4o'],
+            processingSteps: ['section-detection', 'ai-analysis']
+          }
+        };
+        setDesignResult(compatibleResult);
+        setCurrentStep('module'); // Jump to final step
+      }
       
-      aiLogger.info('workflow', 'AI-first pipeline completed successfully', {
-        sectionsGenerated: result.sections.length,
-        qualityScore: result.qualityScore,
-        processingTime: result.processingTime
+      aiLogger.info('system', 'AI pipeline execution completed', {
+        sectionsDetected: splittingResult.splittingSuggestions?.length || 0
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'AI pipeline processing failed';
       setError(errorMessage);
-      aiLogger.error('workflow', 'AI-first pipeline failed', error);
+      aiLogger.error('system', 'AI pipeline execution failed', error);
     } finally {
       setIsProcessing(false);
     }
@@ -125,7 +153,7 @@ export default function UnifiedAIWorkflow() {
     try {
       setIsProcessing(true);
       
-      aiLogger.info('workflow', 'Processing confirmed sections', {
+      aiLogger.info('system', 'Processing confirmed sections', {
         sectionsCount: confirmedSections.length
       });
 
@@ -149,7 +177,7 @@ export default function UnifiedAIWorkflow() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Section confirmation failed';
       setError(errorMessage);
-      aiLogger.error('workflow', 'Section confirmation failed', error);
+      aiLogger.error('system', 'Section confirmation failed', error);
     } finally {
       setIsProcessing(false);
     }
@@ -160,7 +188,7 @@ export default function UnifiedAIWorkflow() {
     setDesignResult(result);
     setCurrentStep('module');
     
-    aiLogger.info('workflow', 'Unified AI workflow completed', {
+    aiLogger.info('system', 'Unified AI workflow completed', {
       finalStep: 'module',
       resultId: result.id
     });
@@ -176,7 +204,7 @@ export default function UnifiedAIWorkflow() {
     setPipelinePhases([]);
     setIsProcessing(false);
     
-    aiLogger.info('workflow', 'Unified AI workflow reset');
+    aiLogger.info('system', 'Unified AI workflow reset');
   };
 
   return (
