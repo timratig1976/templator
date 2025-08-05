@@ -39,7 +39,18 @@ project-name/                       # Monorepo root
 │   │   │   │   ├── 📁 cache/      # Redis/caching
 │   │   │   │   ├── 📁 queue/      # Message queues
 │   │   │   │   ├── 📁 storage/    # File storage
+│   │   │   │   ├── 📁 websocket/  # Socket.IO configuration
 │   │   │   │   └── 📁 external/   # External APIs
+│   │   │   ├── 📁 services/       # Business services (organized by domain)
+│   │   │   │   ├── 📁 ai/         # AI processing services
+│   │   │   │   ├── 📁 analysis/   # Data analysis services
+│   │   │   │   ├── 📁 quality/    # Quality assurance services
+│   │   │   │   ├── 📁 testing/    # Testing and validation services
+│   │   │   │   ├── 📁 logging/    # Comprehensive logging services
+│   │   │   │   ├── 📁 security/   # Security services
+│   │   │   │   ├── 📁 websocket/  # Real-time communication
+│   │   │   │   ├── 📁 deployment/ # Deployment services
+│   │   │   │   └── 📁 storage/    # Storage services
 │   │   │   ├── 📁 shared/         # Shared application code
 │   │   │   │   ├── 📁 middleware/ # Express middleware
 │   │   │   │   ├── 📁 guards/     # Auth guards
@@ -284,6 +295,203 @@ describe('Users API', () => {
 
 ---
 
+## 🤖 **AI Pipeline Architecture**
+
+### Modular AI Service Structure
+
+```typescript
+// services/ai/aiPipelineService.ts
+export class AIPipelineService {
+  private phases: AIPhase[] = [
+    new SectionDetectionPhase(),
+    new AIAnalysisPhase(),
+    new SmartSplittingPhase(),
+    new HTMLGenerationPhase(),
+    new ModulePackagingPhase()
+  ];
+
+  async executeAIFirstPipeline(file: File): Promise<AIEnhancedPipelineResult> {
+    // Phase 1: Lightweight section detection (fast, 30s timeout)
+    const suggestions = await this.performLightweightSectionDetection(file);
+    
+    return {
+      phase: 'section-detection',
+      suggestions,
+      continuePipeline: async (confirmedSections) => {
+        // Continue with full AI analysis using confirmed sections
+        return this.continueWithAIAnalysis(file, confirmedSections);
+      }
+    };
+  }
+
+  private async performLightweightSectionDetection(file: File): Promise<SplittingSuggestion[]> {
+    try {
+      const response = await fetch('/api/ai-enhancement/detect-sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: await this.convertToBase64(file) })
+      });
+      
+      if (!response.ok) {
+        return this.generateBasicSplittingSuggestions();
+      }
+      
+      return await response.json();
+    } catch (error) {
+      logger.warn('Lightweight detection failed, using fallback', error);
+      return this.generateBasicSplittingSuggestions();
+    }
+  }
+}
+```
+
+### Progressive Enhancement Pattern
+
+```typescript
+// Progressive enhancement with user confirmation
+export interface SplittingSuggestion {
+  bounds: {
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  };
+  confidence: number;
+  type: 'header' | 'hero' | 'content' | 'footer' | 'sidebar';
+  description: string;
+}
+
+// Legacy compatibility layer
+export const legacyAIPipelineService = {
+  // Maintain backward compatibility
+  executeAIFirstPipeline: aiPipelineService.executeAIFirstPipeline.bind(aiPipelineService),
+  // ... other legacy methods
+};
+```
+
+---
+
+## 📡 **Real-time Communication**
+
+### Socket.IO Integration
+
+```typescript
+// infrastructure/websocket/socketConfig.ts
+import { Server as SocketIOServer } from 'socket.io';
+import { createServer } from 'http';
+
+export function setupSocketIO(app: Express): SocketIOServer {
+  const server = createServer(app);
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: process.env.NODE_ENV === 'production' 
+        ? ['https://your-domain.com'] 
+        : ['http://localhost:3000'],
+      methods: ['GET', 'POST']
+    }
+  });
+
+  io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+    
+    socket.on('subscribe-to-logs', (data) => {
+      socket.join(`logs-${data.sessionId}`);
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('Client disconnected:', socket.id);
+    });
+  });
+
+  return io;
+}
+```
+
+### Real-time Logging Service
+
+```typescript
+// services/logging/ComprehensiveLogger.ts
+export class ComprehensiveLogger {
+  private io?: SocketIOServer;
+
+  constructor(io?: SocketIOServer) {
+    this.io = io;
+  }
+
+  logAIProcessing(sessionId: string, phase: string, data: any) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      level: 'info',
+      phase,
+      data,
+      requestId: sessionId
+    };
+
+    // Log to console/file
+    console.log(JSON.stringify(logEntry));
+    
+    // Broadcast to connected clients
+    if (this.io) {
+      this.io.to(`logs-${sessionId}`).emit('ai-log', logEntry);
+    }
+  }
+
+  logError(sessionId: string, error: Error, context?: any) {
+    const errorLog = {
+      timestamp: new Date().toISOString(),
+      level: 'error',
+      message: error.message,
+      stack: error.stack,
+      context,
+      requestId: sessionId
+    };
+
+    console.error(JSON.stringify(errorLog));
+    
+    if (this.io) {
+      this.io.to(`logs-${sessionId}`).emit('ai-error', errorLog);
+    }
+  }
+}
+```
+
+### Frontend Real-time Integration
+
+```typescript
+// services/frontendLogger.ts
+import { io, Socket } from 'socket.io-client';
+
+class FrontendLoggerService {
+  private socket?: Socket;
+  private subscribers: Map<string, (log: any) => void> = new Map();
+
+  connect() {
+    this.socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3009');
+    
+    this.socket.on('ai-log', (log) => {
+      this.subscribers.forEach(callback => callback(log));
+    });
+    
+    this.socket.on('ai-error', (error) => {
+      this.subscribers.forEach(callback => callback({ ...error, type: 'error' }));
+    });
+  }
+
+  subscribeToLogs(sessionId: string, callback: (log: any) => void) {
+    this.subscribers.set(sessionId, callback);
+    this.socket?.emit('subscribe-to-logs', { sessionId });
+  }
+
+  unsubscribe(sessionId: string) {
+    this.subscribers.delete(sessionId);
+  }
+}
+
+export const frontendLogger = new FrontendLoggerService();
+```
+
+---
+
 ## 🔒 **Security Implementation**
 
 ### Security Middleware
@@ -295,8 +503,27 @@ export const securityMiddleware = [
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"]
+        styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
+        scriptSrc: ["'self'", "https://cdn.tailwindcss.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+  }),
+  
+  // Environment-specific CORS configuration
+  cors({
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://your-domain.com'] 
+      : ['http://localhost:3000'],
+    credentials: true,
+  }),
+  
+  // Body parsing with size limits and validation
+  express.json({ 
+    limit: '50mb',
+    verify: (req, res, buf, encoding) => {
+      if (buf.length === 0) {
+        throw new Error('Empty request body');
       }
     }
   }),
