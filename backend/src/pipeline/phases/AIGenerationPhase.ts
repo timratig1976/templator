@@ -20,15 +20,12 @@ export class AIGenerationPhase extends PhaseHandler<ProcessedInput, GeneratedSec
 
   protected async execute(input: ProcessedInput, context: PipelineContext): Promise<GeneratedSections> {
     const startTime = Date.now();
-    const generatedSections: GeneratedSection[] = [];
     let totalQuality = 0;
 
-    // Process each section individually for better quality
-    for (const section of input.sections) {
+    // Process all sections in parallel for better performance
+    const sectionPromises = input.sections.map(async (section) => {
       try {
         const generatedSection = await this.generateSectionHTML(section, input, context);
-        generatedSections.push(generatedSection);
-        totalQuality += generatedSection.qualityScore;
         
         logger.info(`Generated section: ${section.name}`, {
           pipelineId: context.pipelineId,
@@ -36,6 +33,8 @@ export class AIGenerationPhase extends PhaseHandler<ProcessedInput, GeneratedSec
           quality: generatedSection.qualityScore,
           fieldsCount: generatedSection.editableFields.length
         });
+        
+        return generatedSection;
       } catch (error) {
         logger.error(`Failed to generate section: ${section.name}`, {
           pipelineId: context.pipelineId,
@@ -44,12 +43,13 @@ export class AIGenerationPhase extends PhaseHandler<ProcessedInput, GeneratedSec
         });
         
         // Create fallback section
-        const fallbackSection = this.createFallbackSection(section, input);
-        generatedSections.push(fallbackSection);
-        totalQuality += fallbackSection.qualityScore;
+        return this.createFallbackSection(section, input);
       }
-    }
+    });
 
+    const generatedSections = await Promise.all(sectionPromises);
+    
+    totalQuality = generatedSections.reduce((sum, section) => sum + section.qualityScore, 0);
     const overallQuality = generatedSections.length > 0 ? totalQuality / generatedSections.length : 0;
     const totalProcessingTime = Date.now() - startTime;
 

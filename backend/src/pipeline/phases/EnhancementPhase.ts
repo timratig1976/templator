@@ -22,15 +22,12 @@ export class EnhancementPhase extends PhaseHandler<ValidatedSections, EnhancedSe
 
   protected async execute(input: ValidatedSections, context: PipelineContext): Promise<EnhancedSections> {
     const startTime = Date.now();
-    const enhancedSections: EnhancedSection[] = [];
-    const enhancementSummaries: EnhancementSummary[] = [];
     let totalIterations = 0;
 
-    // Process each section for enhancement
-    for (const section of input.sections) {
+    // Process all sections in parallel for better performance
+    const enhancementPromises = input.sections.map(async (section) => {
       try {
         const enhancedSection = await this.enhanceSection(section, context);
-        enhancedSections.push(enhancedSection);
         
         // Create enhancement summary
         const summary: EnhancementSummary = {
@@ -40,8 +37,6 @@ export class EnhancementPhase extends PhaseHandler<ValidatedSections, EnhancedSe
           qualityAfter: enhancedSection.finalQuality,
           totalImprovement: enhancedSection.finalQuality - section.qualityScore
         };
-        enhancementSummaries.push(summary);
-        totalIterations += enhancedSection.enhancements.iterationsUsed;
 
         logger.info(`Enhanced section: ${section.name}`, {
           pipelineId: context.pipelineId,
@@ -50,6 +45,8 @@ export class EnhancementPhase extends PhaseHandler<ValidatedSections, EnhancedSe
           enhancementsApplied: summary.enhancementsApplied.length,
           iterations: enhancedSection.enhancements.iterationsUsed
         });
+
+        return { enhancedSection, summary };
       } catch (error) {
         logger.error(`Failed to enhance section: ${section.name}`, {
           pipelineId: context.pipelineId,
@@ -59,7 +56,6 @@ export class EnhancementPhase extends PhaseHandler<ValidatedSections, EnhancedSe
 
         // Create fallback enhanced section
         const fallbackSection = this.createFallbackEnhancement(section);
-        enhancedSections.push(fallbackSection);
         
         const fallbackSummary: EnhancementSummary = {
           sectionId: section.id,
@@ -68,9 +64,17 @@ export class EnhancementPhase extends PhaseHandler<ValidatedSections, EnhancedSe
           qualityAfter: section.qualityScore,
           totalImprovement: 0
         };
-        enhancementSummaries.push(fallbackSummary);
+
+        return { enhancedSection: fallbackSection, summary: fallbackSummary };
       }
-    }
+    });
+
+    const results = await Promise.all(enhancementPromises);
+    const enhancedSections = results.map(r => r.enhancedSection);
+    const enhancementSummaries = results.map(r => r.summary);
+    
+    // Calculate totals
+    totalIterations = enhancedSections.reduce((sum, section) => sum + section.enhancements.iterationsUsed, 0);
 
     // Calculate final quality score
     const finalQuality = enhancedSections.length > 0 
