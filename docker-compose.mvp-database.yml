@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Primary Database - PostgreSQL (MVP)
+  postgres:
+    image: postgres:15-alpine
+    container_name: templator-postgres-mvp
+    environment:
+      POSTGRES_DB: templator
+      POSTGRES_USER: ${DB_USER:-templator_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    command: >
+      postgres
+      -c max_connections=100
+      -c shared_buffers=128MB
+      -c effective_cache_size=512MB
+      -c maintenance_work_mem=32MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-templator_user} -d templator"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - templator-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  templator-network:
+    driver: bridge

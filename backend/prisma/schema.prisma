@@ -1,0 +1,126 @@
+// Templator MVP Database Schema
+// Simplified schema for core storage services migration
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Template Library Models (replaces TemplateLibraryService Map storage)
+model ModuleTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // TemplateCategory enum as string
+  complexity  String   // TemplateComplexity enum as string
+  
+  // Template content
+  htmlContent String
+  cssContent  String?
+  jsContent   String?
+  
+  // Metadata
+  tags        String[]
+  version     String   @default("1.0.0")
+  usageCount  Int      @default(0)
+  rating      Float?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("module_templates")
+}
+
+// Prompt Storage Models (replaces PromptStorageService JSON files)
+model PromptData {
+  id          String   @id @default(cuid())
+  pipelineId  String
+  sectionId   String?
+  
+  // Prompt content
+  prompt      String
+  context     Json?    // Flexible JSON for context data
+  metadata    Json?    // Additional metadata
+  
+  // Results
+  results     PromptResult[]
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([pipelineId, sectionId])
+  @@map("prompt_data")
+}
+
+model PromptResult {
+  id           String     @id @default(cuid())
+  promptDataId String
+  
+  // Result content
+  result       String
+  qualityScore Float?
+  metrics      Json?      // Quality metrics as JSON
+  
+  // Relationships
+  promptData   PromptData @relation(fields: [promptDataId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt    DateTime   @default(now())
+  
+  @@map("prompt_results")
+}
+
+// Interactive Prompt Models (replaces InteractivePromptService JSON files)
+model PromptTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String
+  
+  // Template content
+  basePrompt  String
+  contexts    Json     // Array of PromptContext objects
+  
+  // Metadata
+  tags        String[]
+  rating      Float?
+  usageCount  Int      @default(0)
+  
+  // Relationships
+  generations PromptGeneration[]
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("prompt_templates")
+}
+
+model PromptGeneration {
+  id               String         @id @default(cuid())
+  templateId       String
+  
+  // Generation data
+  enhancedPrompt   String
+  result           String?
+  rating           Float?
+  feedback         String?
+  
+  // Context used
+  contextData      Json           // Context data used for generation
+  
+  // Relationships
+  template         PromptTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  
+  @@map("prompt_generations")
+}

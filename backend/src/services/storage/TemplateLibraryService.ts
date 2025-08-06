@@ -2,6 +2,8 @@ import { createLogger } from '../../utils/logger';
 import { logToFrontend } from '../../routes/logs';
 import { HubSpotValidationService, ValidationResult } from '../quality/HubSpotValidationService';
 import { GeneratedModule } from '../deployment/HubSpotPromptService';
+import { DatabaseService } from '../database/DatabaseService';
+import { TemplateRepository } from '../database/TemplateRepository';
 
 const logger = createLogger();
 
@@ -100,10 +102,93 @@ export class TemplateLibraryService {
   private categoryIndex: Map<TemplateCategory, string[]> = new Map();
   private tagIndex: Map<string, string[]> = new Map();
   private validationService: HubSpotValidationService;
+  private templateRepository: TemplateRepository;
+  private databaseInitialized: boolean = false;
 
   constructor() {
     this.validationService = HubSpotValidationService.getInstance();
-    this.initializeDefaultTemplates();
+    this.templateRepository = new TemplateRepository();
+    this.initializeService();
+  }
+
+  private async initializeService(): Promise<void> {
+    try {
+      const dbService = DatabaseService.getInstance();
+      await dbService.connect();
+      
+      await this.loadTemplatesFromDatabase();
+      this.databaseInitialized = true;
+      
+      logger.info('TemplateLibraryService initialized with database backend');
+    } catch (error) {
+      logger.error('Failed to initialize database, falling back to in-memory storage', { error });
+      this.initializeDefaultTemplates();
+    }
+  }
+
+  private async loadTemplatesFromDatabase(): Promise<void> {
+    try {
+      const dbTemplates = await this.templateRepository.findAll();
+      
+      for (const dbTemplate of dbTemplates) {
+        const moduleTemplate: ModuleTemplate = {
+          id: dbTemplate.id,
+          name: dbTemplate.name,
+          description: dbTemplate.description || '',
+          category: dbTemplate.category as TemplateCategory,
+          complexity: dbTemplate.complexity as TemplateComplexity,
+          tags: dbTemplate.tags,
+          version: dbTemplate.version,
+          created_at: dbTemplate.createdAt,
+          updated_at: dbTemplate.updatedAt,
+          author: 'Templator Team',
+          usage_count: dbTemplate.usageCount,
+          rating: dbTemplate.rating || 0,
+          validation_score: 95,
+          template_data: {
+            fields: [],
+            meta: {
+              label: dbTemplate.name,
+              css_assets: [],
+              js_assets: [],
+              other_assets: [],
+              content_types: ['page']
+            },
+            template: dbTemplate.htmlContent,
+            css: dbTemplate.cssContent || '',
+            js: dbTemplate.jsContent || '',
+            documentation: `Template: ${dbTemplate.name}`,
+            demo_data: {}
+          },
+          extension_points: [],
+          dependencies: [],
+          compatibility: {
+            min_version: '2024.1',
+            content_types: ['page'],
+            required_features: [],
+            deprecated_features: []
+          }
+        };
+        
+        this.templates.set(moduleTemplate.id, moduleTemplate);
+      }
+      
+      this.rebuildIndexes();
+      
+      logger.info(`Loaded ${dbTemplates.length} templates from database`);
+    } catch (error) {
+      logger.error('Failed to load templates from database', { error });
+      throw error;
+    }
+  }
+
+  private rebuildIndexes(): void {
+    this.categoryIndex.clear();
+    this.tagIndex.clear();
+    
+    for (const template of this.templates.values()) {
+      this.updateIndexes(template);
+    }
   }
 
   public static getInstance(): TemplateLibraryService {
@@ -152,6 +237,30 @@ export class TemplateLibraryService {
 
     this.templates.set(template.id, template);
     this.updateIndexes(template);
+
+    if (this.databaseInitialized) {
+      try {
+        const dbTemplate = {
+          id: template.id,
+          name: template.name,
+          description: template.description || '',
+          category: template.category,
+          complexity: template.complexity,
+          htmlContent: template.template_data?.template || '',
+          cssContent: template.template_data?.css || '',
+          jsContent: template.template_data?.js || '',
+          tags: template.tags,
+          version: template.version,
+          usageCount: template.usage_count || 0,
+          rating: template.rating || null,
+        };
+        
+        await this.templateRepository.create(dbTemplate);
+        logger.debug('Template persisted to database', { templateId: template.id });
+      } catch (error) {
+        logger.error('Failed to persist template to database', { error, templateId: template.id });
+      }
+    }
 
     logger.info('Added template to library', {
       templateId: template.id,
