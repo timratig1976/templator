@@ -684,31 +684,102 @@ ${this.getSectionTypeGuidelines(section.type)}
   }
 
   /**
-   * Build AI prompt for section processing
+   * Build AI prompt for individual section processing after splitting and user refinement
    */
-  private buildSectionPrompt(section: LayoutSection, enhancedHTML?: string): string {
+  private buildSectionPrompt(section: LayoutSection, sectionImageBase64?: string, enhancedHTML?: string): string {
     return `
-Generate a high-quality HubSpot module for this ${section.type} section.
+Analyze this individual ${section.type} section image and convert it to clean, semantic HTML with Tailwind CSS.
 
-Section Details:
+Section Context:
 - Type: ${section.type}
 - Complexity: ${section.complexity}
 - Estimated Fields: ${section.estimatedFields}
 - Title: ${section.title}
 - Description: ${section.description}
-${enhancedHTML ? `- Enhanced HTML: ${enhancedHTML.substring(0, 500)}...` : ''}
+- Position: Priority ${section.priority || 'unknown'}
+${enhancedHTML ? `- Previous HTML: ${enhancedHTML.substring(0, 300)}...` : ''}
 
-Requirements:
-1. Create clean, semantic HTML structure
-2. Generate appropriate field definitions for all editable content
-3. Ensure accessibility compliance (WCAG 2.1 AA)
-4. Use modern HubL syntax and best practices
-5. Follow HubSpot 2024 standards with content_types property
-6. Optimize for performance and maintainability
+**SECTION-SPECIFIC REQUIREMENTS**:
 
-Focus on quality over quantity. Each field should be purposeful and well-defined.
-Ensure the module is production-ready and follows HubSpot best practices.
-    `.trim();
+1. **HTML Structure**: Create semantic HTML5 appropriate for a ${section.type} section
+   - Use proper semantic elements: ${this.getSectionSemanticElements(section.type)}
+   - Include proper ARIA labels and accessibility attributes
+   - Structure should be self-contained and reusable
+
+2. **Tailwind CSS Excellence**: 
+   - Use ONLY Tailwind utility classes - NO custom CSS
+   - Mobile-first responsive design: base styles, then sm:, md:, lg:, xl:
+   - Consistent spacing: p-4, m-8, space-y-6, gap-4
+   - Proper color palette: bg-blue-500, text-gray-900, border-gray-200
+   - Layout utilities: flex, grid, container mx-auto px-4
+   - Hover states: hover:bg-blue-600, transition-all duration-300
+
+3. **${section.type.toUpperCase()} Section Best Practices**:
+${this.getSectionSpecificGuidelines(section.type)}
+
+4. **HubSpot Module Integration**:
+   - Generate HubL field definitions for all editable content
+   - Use modern HubL syntax with content_types property
+   - Follow HubSpot 2024 standards
+   - Optimize for HubSpot's module system
+
+5. **Image Handling**: Include appropriate placeholder images using these patterns:
+${this.getImagePlaceholders(section.type)}
+
+**Output Format**: Return a JSON object with this structure:
+{
+  "html": "Complete clean HTML code with Tailwind classes for this section only",
+  "hubspot_module": {
+    "meta": {
+      "label": "${section.title || section.type.charAt(0).toUpperCase() + section.type.slice(1)} Module",
+      "css_assets": [],
+      "js_assets": [],
+      "tags": ["${section.type}", "responsive", "tailwind"]
+    },
+    "fields": [
+      {
+        "name": "field_name",
+        "label": "Field Label",
+        "type": "text|rich_text|image|url|boolean|choice",
+        "required": true|false,
+        "default": "default_value",
+        "help_text": "Description for content editors"
+      }
+    ]
+  },
+  "editable_fields": [
+    {
+      "id": "field-id",
+      "name": "Field Name",
+      "type": "text|rich_text|image|url|boolean",
+      "selector": "CSS selector for this element",
+      "default_value": "Default content",
+      "required": true|false,
+      "hubspot_field": "corresponding_hubspot_field_name"
+    }
+  ],
+  "components": [
+    {
+      "id": "component-id",
+      "name": "Component Name", 
+      "type": "text|image|button|link|form|list",
+      "selector": "CSS selector",
+      "default_value": "Default value"
+    }
+  ],
+  "description": "Brief description of this ${section.type} section",
+  "accessibility_features": ["List of accessibility features implemented"],
+  "responsive_breakpoints": ["List of responsive considerations"]
+}
+
+**Critical Requirements**: 
+- Focus ONLY on this individual section, not the entire page
+- Generate production-ready, clean HTML without excessive newlines
+- Ensure the section works independently and can be integrated into larger layouts
+- Include comprehensive HubSpot field definitions for content management
+- Optimize for performance and maintainability
+- Follow ${section.type} section best practices and conventions
+  `.trim();
   }
 
   /**
@@ -829,6 +900,60 @@ Ensure the module is production-ready and follows HubSpot best practices.
     // This would typically query a database or cache
     // For now, return null as this is a stateless implementation
     return null;
+  }
+
+  /**
+   * Get semantic elements for section type
+   */
+  private getSectionSemanticElements(sectionType: string): string {
+    const elementMap: { [key: string]: string } = {
+      'header': '<header>, <nav>, <h1>-<h6>',
+      'hero': '<section>, <div>, <h1>, <p>',
+      'content': '<main>, <section>, <article>, <p>, <div>',
+      'footer': '<footer>, <nav>, <address>',
+      'sidebar': '<aside>, <nav>, <section>',
+      'navigation': '<nav>, <ul>, <li>, <a>',
+      'feature': '<section>, <div>, <h2>, <h3>',
+      'testimonial': '<section>, <blockquote>, <cite>',
+      'contact': '<section>, <form>, <fieldset>, <input>',
+      'gallery': '<section>, <figure>, <img>, <figcaption>'
+    };
+    return elementMap[sectionType] || '<section>, <div>';
+  }
+
+  /**
+   * Get section-specific guidelines
+   */
+  private getSectionSpecificGuidelines(sectionType: string): string {
+    const guidelines: { [key: string]: string } = {
+      'header': '   - Include logo, navigation, and branding elements\n   - Use sticky positioning if needed: sticky top-0\n   - Ensure mobile hamburger menu functionality\n   - Include proper heading hierarchy',
+      'hero': '   - Large, impactful headline with clear value proposition\n   - Call-to-action buttons with proper contrast\n   - Background image or gradient with overlay\n   - Responsive typography scaling',
+      'content': '   - Clear content hierarchy with proper headings\n   - Readable typography with sufficient line height\n   - Proper spacing between content blocks\n   - Support for rich text and media elements',
+      'footer': '   - Contact information and legal links\n   - Social media links with proper icons\n   - Newsletter signup or additional CTAs\n   - Copyright and compliance information',
+      'sidebar': '   - Complementary content to main section\n   - Navigation aids or related links\n   - Proper responsive behavior (stack on mobile)\n   - Clear visual separation from main content',
+      'navigation': '   - Clear, accessible menu structure\n   - Active state indicators\n   - Mobile-responsive design\n   - Keyboard navigation support',
+      'feature': '   - Grid or card-based layout\n   - Consistent spacing and alignment\n   - Icon or image support\n   - Clear feature descriptions',
+      'testimonial': '   - Customer quotes with attribution\n   - Profile images or company logos\n   - Star ratings or credibility indicators\n   - Carousel or grid layout options',
+      'contact': '   - Form validation and accessibility\n   - Clear field labels and instructions\n   - Contact information display\n   - Map integration if applicable',
+      'gallery': '   - Responsive image grid\n   - Lightbox or modal functionality\n   - Image optimization and lazy loading\n   - Proper alt text for accessibility'
+    };
+    return guidelines[sectionType] || '   - Follow general section best practices\n   - Ensure responsive design\n   - Maintain accessibility standards';
+  }
+
+  /**
+   * Get image placeholders for section type
+   */
+  private getImagePlaceholders(sectionType: string): string {
+    const placeholders: { [key: string]: string } = {
+      'header': '* Logo: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjgwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMxZjI5MzciLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuMzVlbSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZmZmZiI+TE9HTzwvdGV4dD48L3N2Zz4=" alt="Company Logo" class="h-10 w-auto">',
+      'hero': '* Hero Image: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjNjM2NmYxIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiNmZmZmZmYiPkhFUk88L3RleHQ+PC9zdmc+" alt="Hero Image" class="w-full h-96 object-cover">',
+      'content': '* Content Image: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZTVlN2ViIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiM2Yjc0ODAiPkNPTlRFTlQ8L3RleHQ+PC9zdmc+" alt="Content Image" class="w-full h-64 object-cover rounded-lg">',
+      'footer': '* Footer Logo: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiM0YjU1NjMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuMzVlbSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iI2ZmZmZmZiI+Rk9PVEVSPC90ZXh0Pjwvc3ZnPg==" alt="Footer Logo" class="h-8 w-auto">',
+      'feature': '* Feature Icon: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiMzYjgyZjYiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9IjAuMzVlbSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZmZmZiI+4pyTPC90ZXh0Pjwvc3ZnPg==" alt="Feature Icon" class="w-16 h-16">',
+      'testimonial': '* Profile Image: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzlmYTZiMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iMC4zNWVtIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCAtYXBwbGUtc3lzdGVtLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjM2IiBmaWxsPSIjZmZmZmZmIj7wn5GMPC90ZXh0Pjwvc3ZnPg==" alt="Customer Photo" class="w-16 h-16 rounded-full">',
+      'gallery': '* Gallery Image: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM2Yjc0ODAiPklNQUdFPC90ZXh0Pjwvc3ZnPg==" alt="Gallery Image" class="w-full h-48 object-cover rounded-lg">'
+    };
+    return placeholders[sectionType] || '* Placeholder: <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjNmNGY2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIwLjM1ZW0iIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM2Yjc0ODAiPklNQUdFPC90ZXh0Pjwvc3ZnPg==" alt="Section Image" class="w-full h-auto">';
   }
 
   /**

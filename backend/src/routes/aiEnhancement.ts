@@ -39,7 +39,7 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-// Helper function to generate basic splitting suggestions
+// Helper function to generate basic splitting suggestions (fallback)
 function generateBasicSplittingSuggestions(fileName: string) {
   return [
     {
@@ -79,6 +79,310 @@ function generateBasicSplittingSuggestions(fileName: string) {
       suggested: true
     }
   ];
+}
+
+// Cost calculation for OpenAI API usage
+function calculateOpenAICost(totalTokens: number, model: string): number {
+  // GPT-4o pricing (as of 2024)
+  const pricing = {
+    'gpt-4o': {
+      input: 0.005 / 1000,  // $0.005 per 1K input tokens
+      output: 0.015 / 1000  // $0.015 per 1K output tokens
+    },
+    'gpt-4': {
+      input: 0.03 / 1000,
+      output: 0.06 / 1000
+    }
+  };
+  
+  const modelPricing = pricing[model as keyof typeof pricing] || pricing['gpt-4o'];
+  // Simplified calculation - using average pricing
+  const avgPrice = (modelPricing.input + modelPricing.output) / 2;
+  return totalTokens * avgPrice;
+}
+
+// AI-powered splitting suggestions using OpenAI Vision
+async function generateAISplittingSuggestions(imageBase64: string, fileName: string, requestId: string) {
+  try {
+    logger.info(`[${requestId}] Starting AI-powered section detection`, {
+      requestId,
+      fileName,
+      imageSize: Math.round(imageBase64.length / 1024)
+    });
+
+    logToFrontend('info', 'openai', '🤖 Analyzing design with AI Vision', {
+      fileName,
+      model: 'gpt-4o'
+    }, requestId);
+
+    const DESIGN_SPLITTING_PROMPT = `
+Analyze this design image and identify logical sections that should be split for modular development.
+
+**Your Task**: 
+Identify distinct visual sections in this design and suggest optimal splitting boundaries. DO NOT generate any HTML or CSS code.
+
+**Analysis Requirements**:
+
+1. **Visual Section Detection**:
+   - Identify clear visual boundaries between different content areas
+   - Look for natural breaks in layout (whitespace, borders, color changes)
+   - Detect repeating patterns that could be componentized
+   - Consider responsive behavior and how sections might stack
+
+2. **Section Classification**:
+   - header: Top navigation, branding, global elements
+   - hero: Main banner, primary call-to-action area
+   - navigation: Menu systems, breadcrumbs
+   - content: Main body content, articles, text blocks
+   - feature: Feature highlights, service listings, benefits
+   - testimonial: Customer reviews, quotes, social proof
+   - gallery: Image collections, portfolios, media grids
+   - contact: Forms, contact information, maps
+   - sidebar: Secondary content, widgets, related links
+   - footer: Bottom navigation, legal, contact info
+
+3. **Complexity Assessment**:
+   - low: Simple text/image layouts, minimal interactivity
+   - medium: Multiple elements, some dynamic content
+   - high: Complex layouts, heavy interactivity, data-driven
+
+4. **Splitting Strategy**:
+   - Prioritize reusability and maintainability
+   - Consider content editor needs
+   - Balance granularity (not too many tiny sections)
+   - Ensure sections can work independently
+
+**Output Format**: Return a JSON object with this structure:
+{
+  "analysis": {
+    "design_type": "landing_page|website|blog|ecommerce|portfolio",
+    "layout_style": "single_column|multi_column|grid|sidebar|full_width",
+    "complexity_overall": "low|medium|high",
+    "responsive_considerations": ["mobile_first", "tablet_adjustments", "desktop_enhancements"]
+  },
+  "suggested_sections": [
+    {
+      "id": "section_1",
+      "name": "Header Section",
+      "type": "header|hero|navigation|content|feature|testimonial|gallery|contact|sidebar|footer",
+      "bounds": {
+        "x": 0,
+        "y": 0, 
+        "width": 100,
+        "height": 15
+      },
+      "confidence": 0.9,
+      "complexity": "low|medium|high",
+      "description": "Brief description of what this section contains",
+      "estimated_fields": 3,
+      "splitting_rationale": "Why this should be a separate section",
+      "dependencies": ["section_ids that this section depends on"],
+      "reusability": "high|medium|low"
+    }
+  ],
+  "splitting_recommendations": {
+    "total_sections": 4,
+    "recommended_batch_size": 2,
+    "processing_order": ["section_1", "section_2", "section_3", "section_4"],
+    "alternative_approaches": [
+      {
+        "approach": "more_granular",
+        "description": "Split into 6 smaller sections for maximum flexibility",
+        "trade_offs": "More sections to manage but higher reusability"
+      }
+    ]
+  },
+  "technical_considerations": {
+    "responsive_breakpoints": ["mobile: 320px", "tablet: 768px", "desktop: 1024px"],
+    "accessibility_notes": ["Ensure proper heading hierarchy", "Include skip navigation"],
+    "performance_notes": ["Consider lazy loading for images", "Optimize above-fold content"]
+  }
+}
+
+**Critical Instructions**:
+- Focus ONLY on identifying sections and boundaries
+- DO NOT generate any HTML, CSS, or code
+- Provide percentage-based coordinates for section bounds
+- Consider how sections will work on mobile devices
+- Suggest realistic field counts for content management
+- Explain your splitting rationale for each section
+- Consider both visual and functional boundaries
+- Think about content editor workflow and ease of use
+`;
+
+    // Prepare OpenAI request data
+    const requestData = {
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: DESIGN_SPLITTING_PROMPT
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${imageBase64}`
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 2000, // Smaller since we're not generating code
+      temperature: 0.2  // Lower for more consistent analysis
+    };
+
+    logToFrontend('info', 'openai', '📋 Sending design analysis request', {
+      model: 'gpt-4o',
+      maxTokens: 2000,
+      temperature: 0.2,
+      promptLength: DESIGN_SPLITTING_PROMPT.length,
+      imageSize: `${Math.round(imageBase64.length / 1024)}KB`
+    }, requestId);
+
+    // Make direct OpenAI API call with timing
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    const apiStartTime = Date.now();
+    const response = await openai.chat.completions.create({
+      model: requestData.model,
+      messages: requestData.messages as any[], // Type assertion for vision messages
+      max_tokens: requestData.max_tokens,
+      temperature: requestData.temperature
+    });
+    const apiDuration = Date.now() - apiStartTime;
+
+    const aiContent = response.choices[0]?.message?.content;
+    if (!aiContent) {
+      throw new Error('No content received from OpenAI');
+    }
+
+    // Calculate cost estimation
+    const tokensUsed = response.usage?.total_tokens || 0;
+    const promptTokens = response.usage?.prompt_tokens || 0;
+    const completionTokens = response.usage?.completion_tokens || 0;
+    const estimatedCost = calculateOpenAICost(tokensUsed, 'gpt-4o');
+
+    logToFrontend('info', 'openai', '🔍 Parsing AI analysis results', {
+      responseLength: aiContent.length,
+      tokensUsed,
+      promptTokens,
+      completionTokens,
+      apiDuration: `${apiDuration}ms`,
+      estimatedCost: `$${estimatedCost.toFixed(4)}`
+    }, requestId);
+
+    // Parse the AI response JSON
+    let aiAnalysis;
+    try {
+      // Try to extract JSON from markdown code blocks first
+      const jsonMatch = aiContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const jsonString = jsonMatch ? jsonMatch[1].trim() : aiContent.trim();
+      aiAnalysis = JSON.parse(jsonString);
+    } catch (parseError) {
+      // Fallback: try parsing the entire content
+      try {
+        aiAnalysis = JSON.parse(aiContent);
+      } catch (fallbackError) {
+        logger.error(`[${requestId}] Failed to parse AI response as JSON`, {
+          content: aiContent.substring(0, 500),
+          parseError: (parseError as Error).message,
+          fallbackError: (fallbackError as Error).message
+        });
+        throw new Error('Invalid JSON response from AI');
+      }
+    }
+    
+    if (!aiAnalysis || !aiAnalysis.suggested_sections) {
+      throw new Error('Invalid AI response format');
+    }
+
+    // Convert AI analysis to frontend format
+    const suggestions = aiAnalysis.suggested_sections.map((section: any, index: number) => ({
+      id: section.id || `ai_section_${index + 1}`,
+      name: section.name || `${section.type.charAt(0).toUpperCase() + section.type.slice(1)} Section`,
+      type: section.type,
+      bounds: {
+        x: section.bounds.x || 0,
+        y: section.bounds.y || 0,
+        width: section.bounds.width || 100,
+        height: section.bounds.height || 20
+      },
+      confidence: section.confidence || 0.8,
+      description: section.description || `AI-detected ${section.type} section`,
+      suggested: true,
+      // Additional AI metadata
+      complexity: section.complexity,
+      estimatedFields: section.estimated_fields,
+      splittingRationale: section.splitting_rationale,
+      reusability: section.reusability
+    }));
+
+    // Collect section-level metrics
+    const sectionMetrics = suggestions.map((s: any) => ({
+      type: s.type,
+      confidence: s.confidence,
+      complexity: s.complexity,
+      reusability: s.reusability
+    }));
+
+    const sectionTypeDistribution = suggestions.reduce((acc: Record<string, number>, s: any) => {
+      acc[s.type] = (acc[s.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const avgConfidence = suggestions.reduce((sum: number, s: any) => sum + s.confidence, 0) / suggestions.length;
+
+    logger.info(`[${requestId}] AI section detection completed`, {
+      requestId,
+      sectionsDetected: suggestions.length,
+      designType: aiAnalysis.analysis?.design_type,
+      layoutStyle: aiAnalysis.analysis?.layout_style,
+      overallComplexity: aiAnalysis.analysis?.complexity_overall,
+      tokensUsed,
+      promptTokens,
+      completionTokens,
+      apiDuration,
+      estimatedCost,
+      avgConfidence: Math.round(avgConfidence * 100) / 100,
+      sectionTypeDistribution,
+      sectionMetrics,
+      responsiveConsiderations: aiAnalysis.analysis?.responsive_considerations,
+      technicalConsiderations: aiAnalysis.technical_considerations
+    });
+
+    logToFrontend('success', 'openai', `✅ AI detected ${suggestions.length} sections`, {
+      sectionsCount: suggestions.length,
+      designType: aiAnalysis.analysis?.design_type,
+      layoutStyle: aiAnalysis.analysis?.layout_style,
+      overallComplexity: aiAnalysis.analysis?.complexity_overall,
+      tokensUsed,
+      apiDuration: `${apiDuration}ms`,
+      estimatedCost: `$${estimatedCost.toFixed(4)}`,
+      avgConfidence: `${Math.round(avgConfidence * 100)}%`,
+      sectionTypes: Object.keys(sectionTypeDistribution).join(', '),
+      processingTime: `${Date.now() - Date.parse(new Date().toISOString())}ms`
+    }, requestId);
+
+    return suggestions;
+
+  } catch (error: any) {
+    logger.error(`[${requestId}] Error in AI section detection: ${error.message}`, {
+      requestId,
+      error: error.message,
+      stack: error.stack
+    });
+
+    logToFrontend('error', 'openai', '❌ AI section detection failed, using fallback', {
+      error: error.message
+    }, requestId);
+
+    // Fallback to basic suggestions if AI fails
+    return generateBasicSplittingSuggestions(fileName);
+  }
 }
 
 let enhancedAIService: EnhancedAIService;
@@ -748,9 +1052,8 @@ router.post('/detect-sections', async (req, res) => {
       });
     }
     
-    // Generate basic splitting suggestions using simple heuristics
-    // This is much faster than full OpenAI analysis
-    const suggestions = generateBasicSplittingSuggestions(fileName || 'design');
+    // Use AI to analyze the design and suggest intelligent section splits
+    const suggestions = await generateAISplittingSuggestions(image, fileName || 'design', requestId);
     
     const duration = Date.now() - startTime;
     
