@@ -1,6 +1,6 @@
 import { OpenAIService } from './openaiService';
 import { QualityMetricsDashboard } from '../quality/QualityMetricsDashboard';
-import { PipelineProgressTracker } from '../pipeline/PipelineProgressTracker';
+import PipelineProgressTracker from '../pipeline/PipelineProgressTracker';
 import { createLogger } from '../../utils/logger';
 
 const logger = createLogger();

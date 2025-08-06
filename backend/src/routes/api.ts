@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { validateRequest, parseRequestSchema, moduleRequestSchema, previewRequestSchema } from '../middleware/validation';
+import { validateRequest, parseRequestSchema, moduleRequestSchema, previewRequestSchema } from '../middleware/unifiedValidation';
 import { ParserService } from '../services/input/ParserService';
 import { FieldMapperService } from '../services/input/FieldMapperService';
 import { HubSpotModuleBuilder } from '../services/module/HubSpotModuleBuilder';
@@ -49,7 +49,7 @@ router.use('/pipeline', pipelineRoutes);
 router.use('/html-validation', htmlValidationRoutes);
 
 // Prompt management routes
-router.use('/prompts', promptsRoutes);
+router.use('/pipeline-prompts', promptsRoutes);
 
 // Export and deployment routes
 router.use('/export', exportRoutes);

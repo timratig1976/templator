@@ -48,6 +48,15 @@ const SECTION_COLORS = {
   other: 'bg-gray-400/20 border-gray-400'
 };
 
+// Common design width suggestions
+const DESIGN_WIDTH_SUGGESTIONS = [
+  { name: 'Mobile', width: 375, height: 812 },
+  { name: 'Tablet', width: 768, height: 1024 },
+  { name: 'Desktop HD', width: 1366, height: 768 },
+  { name: 'Desktop FHD', width: 1920, height: 1080 },
+  { name: 'Desktop 4K', width: 3840, height: 2160 }
+];
+
 export default function SplittingSuggestionsUI({
   imageFile,
   suggestions,
@@ -58,17 +67,28 @@ export default function SplittingSuggestionsUI({
 }: SplittingSuggestionsUIProps) {
   const [editableSuggestions, setEditableSuggestions] = useState<SplittingSuggestion[]>(suggestions);
   const [selectedSuggestion, setSelectedSuggestion] = useState<number | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [displayDimensions, setDisplayDimensions] = useState({ width: 0, height: 0 });
+  const [scaleFactor, setScaleFactor] = useState(1);
+  const [draggedCutLine, setDraggedCutLine] = useState<number | null>(null);
+  const [cutLines, setCutLines] = useState<number[]>([]);
   const imageRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Create image URL for display
   useEffect(() => {
     if (imageFile) {
       const url = URL.createObjectURL(imageFile);
       setImageUrl(url);
-      return () => URL.revokeObjectURL(url);
+      
+      // Clean up the URL when component unmounts or imageFile changes
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      // Clear the image URL if no file
+      setImageUrl(null);
     }
   }, [imageFile]);
 
@@ -77,13 +97,50 @@ export default function SplittingSuggestionsUI({
     setEditableSuggestions(suggestions);
   }, [suggestions]);
 
-  // Handle image load to get dimensions
+  // Handle image load to get dimensions and calculate optimal display size
   const handleImageLoad = () => {
-    if (imageRef.current) {
-      setImageDimensions({
-        width: imageRef.current.naturalWidth,
-        height: imageRef.current.naturalHeight
-      });
+    if (imageRef.current && containerRef.current) {
+      const naturalWidth = imageRef.current.naturalWidth;
+      const naturalHeight = imageRef.current.naturalHeight;
+      
+      setImageDimensions({ width: naturalWidth, height: naturalHeight });
+      
+      // Calculate optimal display dimensions to fit container while maintaining aspect ratio
+      const containerWidth = containerRef.current.offsetWidth - 48; // Account for padding
+      const containerHeight = Math.min(800, window.innerHeight * 0.6); // Max height
+      
+      const aspectRatio = naturalWidth / naturalHeight;
+      let displayWidth = containerWidth;
+      let displayHeight = displayWidth / aspectRatio;
+      
+      // If height exceeds container, scale by height instead
+      if (displayHeight > containerHeight) {
+        displayHeight = containerHeight;
+        displayWidth = displayHeight * aspectRatio;
+      }
+      
+      // Ensure minimum size for precise editing (upscale small images)
+      const minWidth = 600;
+      const minHeight = 400;
+      
+      if (displayWidth < minWidth) {
+        displayWidth = minWidth;
+        displayHeight = displayWidth / aspectRatio;
+      }
+      
+      if (displayHeight < minHeight) {
+        displayHeight = minHeight;
+        displayWidth = displayHeight * aspectRatio;
+      }
+      
+      setDisplayDimensions({ width: displayWidth, height: displayHeight });
+      setScaleFactor(displayWidth / naturalWidth);
+      
+      // Initialize cut lines from suggestions
+      const initialCutLines = editableSuggestions.map(suggestion => 
+        (suggestion.bounds.y / 100) * displayHeight
+      ).sort((a, b) => a - b);
+      setCutLines(initialCutLines);
     }
   };
 
@@ -98,9 +155,69 @@ export default function SplittingSuggestionsUI({
   };
 
   // Remove a suggestion
-  const removeSuggestion = (index: number) => {
-    setEditableSuggestions(prev => prev.filter((_, i) => i !== index));
-    setSelectedSuggestion(null);
+  const handleRemoveSuggestion = (index: number) => {
+    const newSuggestions = editableSuggestions.filter((_, i) => i !== index);
+    setEditableSuggestions(newSuggestions);
+  };
+
+  // Handle cut line dragging
+  const handleCutLineMouseDown = (index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    setDraggedCutLine(index);
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const clampedY = Math.max(0, Math.min(y, displayDimensions.height));
+        
+        setCutLines(prev => {
+          const newCutLines = [...prev];
+          newCutLines[index] = clampedY;
+          return newCutLines.sort((a, b) => a - b);
+        });
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setDraggedCutLine(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Add new cut line
+  const handleAddCutLine = (y: number) => {
+    const newCutLines = [...cutLines, y].sort((a, b) => a - b);
+    setCutLines(newCutLines);
+  };
+
+  // Remove cut line
+  const handleRemoveCutLine = (index: number) => {
+    setCutLines(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Apply design width suggestion
+  const handleApplyDesignWidth = (suggestion: typeof DESIGN_WIDTH_SUGGESTIONS[0]) => {
+    if (imageRef.current && containerRef.current) {
+      const aspectRatio = suggestion.width / suggestion.height;
+      const containerWidth = containerRef.current.offsetWidth - 48;
+      
+      let newDisplayWidth = containerWidth;
+      let newDisplayHeight = newDisplayWidth / aspectRatio;
+      
+      // Ensure minimum size
+      if (newDisplayWidth < 600) {
+        newDisplayWidth = 600;
+        newDisplayHeight = newDisplayWidth / aspectRatio;
+      }
+      
+      setDisplayDimensions({ width: newDisplayWidth, height: newDisplayHeight });
+      setScaleFactor(newDisplayWidth / imageDimensions.width);
+    }
   };
 
   // Update suggestion type
@@ -166,46 +283,105 @@ export default function SplittingSuggestionsUI({
       </div>
 
       <div className="flex">
-        {/* Image Preview with Overlays */}
+        {/* Design Width Suggestions */}
+        <div className="w-80 p-6 bg-gray-50 border-l border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Design Width Suggestions</h3>
+          <div className="space-y-2 mb-6">
+            {DESIGN_WIDTH_SUGGESTIONS.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleApplyDesignWidth(suggestion)}
+                className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+              >
+                <div className="font-medium text-gray-900">{suggestion.name}</div>
+                <div className="text-sm text-gray-600">{suggestion.width} × {suggestion.height}</div>
+              </button>
+            ))}
+          </div>
+          
+          <div className="border-t border-gray-200 pt-4">
+            <h4 className="font-medium text-gray-900 mb-2">Current Dimensions</h4>
+            <div className="text-sm text-gray-600">
+              <div>Original: {imageDimensions.width} × {imageDimensions.height}</div>
+              <div>Display: {Math.round(displayDimensions.width)} × {Math.round(displayDimensions.height)}</div>
+              <div>Scale: {(scaleFactor * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Image Preview with Cut Lines */}
         <div className="flex-1 p-6">
-          <div className="relative bg-gray-50 rounded-lg overflow-hidden">
+          <div 
+            ref={containerRef}
+            className="relative bg-gray-50 rounded-lg overflow-hidden"
+            style={{ minHeight: '400px' }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                handleAddCutLine(y);
+              }
+            }}
+          >
             <img
               ref={imageRef}
               src={imageUrl}
               alt="Design preview"
-              className="w-full h-auto"
+              style={{
+                width: displayDimensions.width,
+                height: displayDimensions.height,
+                maxWidth: 'none'
+              }}
+              className="block"
               onLoad={handleImageLoad}
             />
             
-            {/* Section Overlays */}
-            {imageRef.current && editableSuggestions.map((suggestion, index) => {
-              const containerRect = imageRef.current!.getBoundingClientRect();
-              const pixelBounds = getPixelBounds(
-                suggestion, 
-                imageRef.current!.offsetWidth, 
-                imageRef.current!.offsetHeight
-              );
-              
-              return (
-                <div
-                  key={index}
-                  className={`absolute border-2 cursor-pointer transition-all ${
-                    SECTION_COLORS[suggestion.type]
-                  } ${selectedSuggestion === index ? 'ring-2 ring-blue-500' : ''}`}
-                  style={{
-                    left: `${pixelBounds.x}px`,
-                    top: `${pixelBounds.y}px`,
-                    width: `${pixelBounds.width}px`,
-                    height: `${pixelBounds.height}px`
-                  }}
-                  onClick={() => setSelectedSuggestion(index)}
-                >
-                  <div className="absolute -top-6 left-0 bg-white rounded px-2 py-1 text-xs font-medium shadow-sm border">
-                    {suggestion.type} ({Math.round(suggestion.confidence * 100)}%)
-                  </div>
+            {/* Horizontal Cut Lines */}
+            {cutLines.map((y, index) => (
+              <div
+                key={index}
+                className="absolute left-0 right-0 group cursor-ns-resize"
+                style={{ top: y - 2 }}
+                onMouseDown={(e) => handleCutLineMouseDown(index, e)}
+              >
+                {/* Cut line */}
+                <div 
+                  className={`w-full h-1 border-t-2 border-dashed transition-colors ${
+                    draggedCutLine === index 
+                      ? 'border-blue-500 bg-blue-100' 
+                      : 'border-red-500 group-hover:border-red-600'
+                  }`}
+                />
+                
+                {/* Cut line label and controls */}
+                <div className="absolute left-2 -top-6 bg-white px-2 py-1 rounded shadow-sm border text-xs font-medium flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span>Section {index + 1}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveCutLine(index);
+                    }}
+                    className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                  >
+                    ×
+                  </button>
                 </div>
-              );
-            })}
+                
+                {/* Drag handle */}
+                <div className="absolute right-2 -top-2 w-4 h-4 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Click instruction overlay */}
+            {cutLines.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-black/70 text-white px-4 py-2 rounded-lg text-sm">
+                  Click anywhere on the image to add horizontal cut lines
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -240,7 +416,7 @@ export default function SplittingSuggestionsUI({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeSuggestion(index);
+                        handleRemoveSuggestion(index);
                       }}
                       className="text-red-500 hover:text-red-700 p-1"
                     >

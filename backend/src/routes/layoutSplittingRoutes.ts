@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { z } from 'zod';
-import { validateZodRequest } from '../middleware/zodValidation';
+import { validateZodRequest } from '../middleware/unifiedValidation';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
 import { layoutSectionSplittingService } from '../services/analysis/LayoutSectionSplittingService';

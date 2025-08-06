@@ -58,10 +58,12 @@ router.post('/execute', upload.single('design'), async (req: Request, res: Respo
 
     // Execute the quality-focused pipeline
     const result = await pipelineController.executePipeline({
-      buffer,
-      originalname,
-      mimetype,
-      size
+      designFile: buffer,
+      options: {
+        filename: originalname,
+        mimetype,
+        size
+      }
     });
 
     logger.info('✅ Pipeline execution completed successfully', {

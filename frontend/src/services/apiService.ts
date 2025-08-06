@@ -16,7 +16,7 @@ const apiClient = axios.create({
  */
 export const fetchPromptAndResultData = async (pipelineId: string, sectionId?: string) => {
   try {
-    const response = await apiClient.get(`/prompts/${pipelineId}`, {
+    const response = await apiClient.get(`/pipeline-prompts/${pipelineId}`, {
       params: { sectionId }
     });
     return response.data;

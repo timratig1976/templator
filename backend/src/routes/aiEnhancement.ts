@@ -2,6 +2,10 @@ import express from 'express';
 import { EnhancedAIService } from '../services/ai/EnhancedAIService';
 import { FineTuningService } from '../services/ai/FineTuningService';
 import openaiService, { OpenAIService, Section, EditableField, Component } from '../services/ai/openaiService';
+import SplittingService from '../services/ai/splitting/SplittingService';
+import { HTMLValidator } from '../services/quality/validation/HTMLValidator';
+import { ComprehensiveLogger } from '../services/core/logging/ComprehensiveLogger';
+import { WebSocketService } from '../services/core/websocket/WebSocketService';
 import { createLogger } from '../utils/logger';
 import { logToFrontend } from '../routes/logs';
 import { v4 as uuidv4 } from 'uuid';
@@ -224,7 +228,7 @@ Identify distinct visual sections in this design and suggest optimal splitting b
             {
               type: 'image_url',
               image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`
+                url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
               }
             }
           ]
@@ -363,23 +367,30 @@ Identify distinct visual sections in this design and suggest optimal splitting b
       apiDuration: `${apiDuration}ms`,
       estimatedCost: `$${estimatedCost.toFixed(4)}`,
       avgConfidence: `${Math.round(avgConfidence * 100)}%`,
-      sectionTypes: Object.keys(sectionTypeDistribution).join(', '),
-      processingTime: `${Date.now() - Date.parse(new Date().toISOString())}ms`
+      sectionTypes: Object.keys(sectionTypeDistribution).join(', ')
     }, requestId);
 
     return suggestions;
 
   } catch (error: any) {
-    logger.error(`[${requestId}] Error in AI section detection: ${error.message}`, {
+    logger.error(`[${requestId}] AI section detection failed`, {
       requestId,
-      error: error.message,
-      stack: error.stack
+      error: getErrorMessage(error),
+      fileName,
+      imageSize: Math.round(imageBase64.length / 1024),
+      errorStack: error?.stack,
+      errorType: error?.constructor?.name
     });
 
-    logToFrontend('error', 'openai', '❌ AI section detection failed, using fallback', {
-      error: error.message
+    logToFrontend('error', 'openai', `❌ AI analysis failed: ${error?.message || 'Unknown error'}. Using fallback suggestions.`, {
+      error: error?.message || 'Unknown error',
+      errorType: error?.constructor?.name || 'Unknown',
+      fallbackUsed: true
     }, requestId);
 
+    // Log that we're using fallback
+    logger.warn(`[${requestId}] Using fallback basic suggestions due to AI failure`);
+    
     // Fallback to basic suggestions if AI fails
     return generateBasicSplittingSuggestions(fileName);
   }
@@ -1053,7 +1064,7 @@ router.post('/detect-sections', async (req, res) => {
     }
     
     // Use AI to analyze the design and suggest intelligent section splits
-    const suggestions = await generateAISplittingSuggestions(image, fileName || 'design', requestId);
+    const suggestions = await SplittingService.generateSplittingSuggestions(image, fileName || 'design', requestId);
     
     const duration = Date.now() - startTime;
     

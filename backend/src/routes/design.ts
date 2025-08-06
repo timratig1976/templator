@@ -1,26 +1,111 @@
-import { Router } from 'express';
-import { 
-  uploadDesign, 
-  convertDesignToHTML, 
-  refineHTML, 
-  getSupportedFileTypes 
-} from '../controllers/designController';
-import { validateRequest } from '../middleware/validation';
-import Joi from 'joi';
+import { Router, Request, Response, NextFunction } from 'express';
+import { PipelineController } from '../controllers/PipelineController';
+import { validateRequest, refineHTMLSchema, createFileUploadValidator } from '../middleware/unifiedValidation';
+import { createError } from '../middleware/errorHandler';
+import multer from 'multer';
 
 const router = Router();
+const pipelineController = new PipelineController();
 
-// Validation schemas
-const refineHTMLSchema = Joi.object({
-  html: Joi.string().required().min(10).max(50000),
-  requirements: Joi.string().optional().max(1000)
+// Configure multer for design uploads (migrated from designController)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(createError(
+        'Invalid file type. Please upload PNG, JPG, GIF, WebP, or PDF files.',
+        400,
+        'INPUT_INVALID'
+      ));
+    }
+  }
 });
 
-// Routes
-router.get('/supported-types', getSupportedFileTypes);
+// Validation schemas are now imported from unifiedValidation
+// No need to redefine refineHTMLSchema here
 
-router.post('/upload', uploadDesign, convertDesignToHTML);
+// ===== MIGRATED ROUTES USING UNIFIED PIPELINECONTROLLER =====
 
-router.post('/refine', validateRequest(refineHTMLSchema), refineHTML);
+/**
+ * GET /api/design/supported-types
+ * Get supported file types (Legacy API - now uses PipelineController)
+ */
+router.get('/supported-types', (req: Request, res: Response) => {
+  const supportedTypes = pipelineController.getSupportedFileTypes();
+  res.json({
+    success: true,
+    data: supportedTypes,
+    message: 'Supported file types retrieved successfully'
+  });
+});
+
+/**
+ * POST /api/design/upload
+ * Convert uploaded design file to HTML (Legacy API - now uses PipelineController)
+ */
+router.post('/upload', upload.single('design'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.file) {
+      throw createError('No file uploaded', 400, 'INPUT_INVALID');
+    }
+
+    const { originalname, mimetype, buffer } = req.file;
+    
+    // Use PipelineController's legacy method
+    const result = await pipelineController.convertDesignToHTML({
+      buffer,
+      originalname,
+      mimetype
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Design successfully converted to HTML'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/design/refine
+ * Refine generated HTML code (Legacy API - now uses PipelineController)
+ */
+router.post('/refine', validateRequest(refineHTMLSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { html, requirements } = req.body;
+    
+    // Use PipelineController's legacy method
+    const result = await pipelineController.refineHTML({
+      html,
+      requirements
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'HTML successfully refined'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

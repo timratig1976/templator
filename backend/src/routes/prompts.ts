@@ -9,7 +9,7 @@ const promptStorageService = new PromptStorageService();
 
 /**
  * Get prompt and result data for a specific pipeline execution
- * GET /api/prompts/:pipelineId
+ * GET /api/pipeline-prompts/:pipelineId
  */
 router.get('/:pipelineId', async (req, res, next) => {
   try {
@@ -44,7 +44,7 @@ router.get('/:pipelineId', async (req, res, next) => {
 
 /**
  * Store prompt data for later retrieval
- * POST /api/prompts
+ * POST /api/pipeline-prompts
  */
 router.post('/', async (req, res, next) => {
   try {
@@ -84,7 +84,7 @@ router.post('/', async (req, res, next) => {
 
 /**
  * Delete prompt data
- * DELETE /api/prompts/:pipelineId
+ * DELETE /api/pipeline-prompts/:pipelineId
  */
 router.delete('/:pipelineId', async (req, res, next) => {
   try {

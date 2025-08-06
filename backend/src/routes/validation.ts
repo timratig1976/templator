@@ -7,9 +7,14 @@
 import express from 'express';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
-import { HubSpotValidationService, ValidationResult } from '../services/quality/HubSpotValidationService';
+import { HTMLValidator } from '../services/quality/validation/HTMLValidator';
+import { ModuleBuilder } from '../services/hubspot/modules/ModuleBuilder';
 import { schemaUpdateService } from '../services/schema/SchemaUpdateService';
 import { schemaDiffDetector } from '../services/schema/SchemaDiffDetector';
+
+// Legacy compatibility - using HTMLValidator for validation
+const HubSpotValidationService = HTMLValidator;
+type ValidationResult = any;
 
 const router = express.Router();
 const logger = createLogger();

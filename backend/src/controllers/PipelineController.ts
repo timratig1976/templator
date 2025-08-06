@@ -1,32 +1,34 @@
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
-import { PipelineOrchestrator } from '../pipeline/orchestrator/PipelineOrchestrator';
-import { 
-  DesignFile, 
-  PipelineOptions, 
-  PipelineExecutionResult 
-} from '../pipeline/types/PipelineTypes';
+import { PipelineExecutor } from '../services/pipeline/PipelineExecutor';
+import { HTMLGenerator } from '../services/ai/generation/HTMLGenerator';
+import { IterativeRefinement } from '../services/ai/analysis/IterativeRefinement';
+import sharp from 'sharp';
 
 const logger = createLogger();
 
 /**
- * PipelineController - Refactored to use modular phase-based architecture
- * Delegates pipeline execution to PipelineOrchestrator for better maintainability
+ * PipelineController - Unified pipeline controller using domain-driven services
+ * Uses PipelineExecutor as single source of truth for pipeline orchestration
  */
 export class PipelineController {
-  private orchestrator: PipelineOrchestrator;
+  private pipelineExecutor: PipelineExecutor;
+  private htmlGenerator: HTMLGenerator;
+  private iterativeRefinement: IterativeRefinement;
 
   constructor() {
-    this.orchestrator = new PipelineOrchestrator();
+    this.pipelineExecutor = PipelineExecutor.getInstance();
+    this.htmlGenerator = HTMLGenerator.getInstance();
+    this.iterativeRefinement = IterativeRefinement.getInstance();
   }
 
   /**
-   * Main pipeline execution - delegates to PipelineOrchestrator
+   * Main pipeline execution - delegates to PipelineExecutor
    */
   async executePipeline(
-    designFile: DesignFile, 
-    options?: Partial<PipelineOptions>
-  ): Promise<PipelineExecutionResult> {
+    designFile: Express.Multer.File,
+    options: any = {}
+  ): Promise<any> {
     const startTime = Date.now();
     
     logger.info('🚀 Starting modular pipeline execution', {
@@ -37,26 +39,26 @@ export class PipelineController {
     });
 
     try {
-      // Delegate to orchestrator with default options
-      const defaultOptions: PipelineOptions = {
-        enableEnhancement: true,
-        qualityThreshold: 75,
-        maxIterations: 3,
-        fallbackOnError: true,
-        exportFormat: 'hubspot'
+      const pipelineInput = {
+        designFile: designFile.buffer,
+        fileName: designFile.originalname,
+        options: {
+          generateModule: options.generateModule !== false,
+          includeValidation: options.includeValidation !== false,
+          optimizeForPerformance: options.optimizeForPerformance !== false
+        }
       };
-
-      const mergedOptions = { ...defaultOptions, ...options };
-      const result = await this.orchestrator.executePipeline(designFile, mergedOptions);
+      
+      const result = await this.pipelineExecutor.executePipeline(pipelineInput);
 
       const processingTime = Date.now() - startTime;
       
       logger.info('✅ Pipeline execution completed successfully', {
         pipelineId: result.id,
         totalTime: processingTime,
-        finalQuality: result.qualityScore,
-        sectionsGenerated: result.sections.length,
-        validationPassed: result.validationPassed
+        status: result.status,
+        phasesCompleted: result.phases?.filter(p => p.status === 'completed').length || 0,
+        totalDuration: result.totalDuration
       });
 
       return result;
@@ -156,12 +158,24 @@ export class PipelineController {
     });
 
     try {
-      // Use the orchestrator to regenerate HTML for a specific section
-      const regeneratedSection = await this.orchestrator.regenerateSectionHTML({
-        sectionId,
-        originalImage,
-        customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'
+      // Use HTMLGenerator to regenerate HTML for a specific section
+      const generationResult = await this.htmlGenerator.generateHTML({
+        sectionType: 'content',
+        imageBase64: originalImage || '',
+        designDescription: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.',
+        requirements: ['responsive', 'accessible', 'modern'],
+        framework: 'tailwind'
       });
+
+      const regeneratedSection = {
+        id: sectionId,
+        name: `Regenerated Section ${sectionId}`,
+        type: 'content',
+        html: generationResult.html,
+        editableFields: [],
+        qualityScore: generationResult.qualityScore,
+        regeneratedAt: new Date().toISOString()
+      };
 
       logger.info('✅ Section HTML regenerated successfully', {
         sectionId,
@@ -191,5 +205,170 @@ export class PipelineController {
    */
   getSupportedTypes(): string[] {
     return ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+  }
+
+  // ===== LEGACY DESIGN CONTROLLER METHODS (MIGRATED) =====
+
+  /**
+   * Convert uploaded design file to HTML/Tailwind CSS (Legacy API)
+   * Uses new domain-driven services instead of old openaiService
+   */
+  async convertDesignToHTML(designFile: {
+    buffer: Buffer;
+    originalname: string;
+    mimetype: string;
+  }): Promise<{
+    fileName: string;
+    fileSize: number;
+    analysis: {
+      html: string;
+      sections: any[];
+      components: any[];
+      description: string;
+    };
+  }> {
+    const { buffer, originalname, mimetype } = designFile;
+    
+    logger.info(`Processing design file: ${originalname} (${mimetype})`);
+
+    try {
+      // Convert file to base64 image using Sharp (same as legacy)
+      let imageBase64: string;
+      
+      if (mimetype === 'application/pdf') {
+        throw createError(
+          'PDF conversion not yet supported. Please upload an image file (PNG, JPG, etc.)',
+          400,
+          'INPUT_INVALID'
+        );
+      } else {
+        // Process image file with Sharp
+        const processedImage = await sharp(buffer)
+          .resize(1920, null, { 
+            withoutEnlargement: true,
+            fit: 'inside'
+          })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        
+        imageBase64 = processedImage.toString('base64');
+      }
+
+      // Use new HTMLGenerator service instead of old openaiService
+      const analysis = await this.htmlGenerator.generateHTML({
+        sectionType: 'hero', // Use valid section type
+        imageBase64: imageBase64, // Fix: should be string
+        designDescription: `Design file: ${originalname}`,
+        requirements: ['Convert this design to modern HTML with Tailwind CSS'], // Fix: should be array
+        framework: 'tailwind'
+      });
+
+      // Transform to legacy format for API compatibility
+      return {
+        fileName: originalname,
+        fileSize: buffer.length,
+        analysis: {
+          html: analysis.html,
+          sections: [], // Legacy format - sections not provided by new service
+          components: [], // Legacy format - components not provided by new service
+          description: 'Design converted to HTML using AI'
+        }
+      };
+
+    } catch (error) {
+      logger.error('Design conversion failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fileName: originalname
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Refine generated HTML code (Legacy API)
+   * Uses new IterativeRefinement service instead of old openaiService
+   */
+  async refineHTML(params: {
+    html: string;
+    requirements?: string;
+  }): Promise<{
+    originalHTML: string;
+    refinedHTML: string;
+    requirements: string | null;
+  }> {
+    const { html, requirements } = params;
+
+    if (!html) {
+      throw createError('HTML code is required', 400, 'INPUT_INVALID');
+    }
+
+    try {
+      // Use new IterativeRefinement service
+      const refinementResult = await this.iterativeRefinement.refineCode({
+        html,
+        css: '', // Empty CSS for HTML-only refinement
+        feedback: requirements || 'Improve HTML quality, accessibility, and Tailwind CSS styling',
+        maxIterations: 2,
+        targetQualityScore: 85
+      });
+
+      return {
+        originalHTML: html,
+        refinedHTML: refinementResult.html,
+        requirements: requirements || null
+      };
+
+    } catch (error) {
+      logger.error('HTML refinement failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        htmlLength: html.length
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get supported file types with detailed information (Legacy API)
+   */
+  getSupportedFileTypes(): {
+    supportedTypes: Array<{
+      type: string;
+      extensions: string[];
+      description: string;
+    }>;
+    maxFileSize: string;
+    recommendations: string[];
+  } {
+    return {
+      supportedTypes: [
+        {
+          type: 'image/jpeg',
+          extensions: ['.jpg', '.jpeg'],
+          description: 'JPEG images'
+        },
+        {
+          type: 'image/png', 
+          extensions: ['.png'],
+          description: 'PNG images'
+        },
+        {
+          type: 'image/gif',
+          extensions: ['.gif'], 
+          description: 'GIF images'
+        },
+        {
+          type: 'image/webp',
+          extensions: ['.webp'],
+          description: 'WebP images'
+        }
+      ],
+      maxFileSize: '10MB',
+      recommendations: [
+        'Use high-resolution images for better AI analysis',
+        'Ensure design elements are clearly visible',
+        'PNG format recommended for designs with text',
+        'JPEG format recommended for photographs'
+      ]
+    };
   }
 }

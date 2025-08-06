@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { Request, Response } from 'express';
 import HTMLStorageService from '../services/storage/HTMLStorageService';
 import { createLogger } from '../utils/logger';
-import { PipelineExecutionResult } from '../pipeline/types/PipelineTypes';
+import { PipelineExecutionResult } from '../services/pipeline/PipelineExecutor';
 
 const router = Router();
 const logger = createLogger();

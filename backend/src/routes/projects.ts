@@ -3,27 +3,14 @@ import { Request, Response, NextFunction } from 'express';
 import HTMLStorageService from '../services/storage/HTMLStorageService';
 import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
-import { validateRequest } from '../middleware/validation';
-import Joi from 'joi';
+import { validateRequest, saveProjectSchema, updateProjectSchema } from '../middleware/unifiedValidation';
 
 const router = Router();
 const logger = createLogger();
 const htmlStorage = HTMLStorageService.getInstance();
 
-// Validation schemas
-const saveProjectSchema = Joi.object({
-  name: Joi.string().required().min(1).max(100),
-  originalFileName: Joi.string().required().min(1).max(255),
-  pipelineResult: Joi.object().required(),
-  author: Joi.string().optional().max(100)
-});
-
-const updateProjectSchema = Joi.object({
-  changes: Joi.string().required().min(1).max(500),
-  html: Joi.string().optional(),
-  sections: Joi.array().optional(),
-  author: Joi.string().optional().max(100)
-});
+// Validation schemas are now imported from unifiedValidation
+// No need to redefine them here
 
 /**
  * Save a new project with generated HTML

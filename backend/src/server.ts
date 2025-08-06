@@ -11,7 +11,7 @@ import http from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { createLogger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
-import { validateRequest } from './middleware/validation';
+import { validateRequest } from './middleware/unifiedValidation';
 import apiRoutes from './routes/api';
 import { createApp } from './app';
 import { setSocketIO } from './utils/frontendLogger';

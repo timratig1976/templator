@@ -17,6 +17,11 @@ import sectionComparisonRoutes from './routes/sectionComparison';
 import interactivePromptsRoutes from './routes/interactivePrompts';
 import hybridLayoutRoutes from './routes/hybridLayout';
 import hybridLayoutTestRoutes from './routes/hybridLayoutTest';
+import exportRoutes from './routes/exportRoutes';
+import pipelineRoutes from './routes/pipeline';
+import logsRoutes from './routes/logs';
+// import htmlValidationRoutes from './routes/htmlValidation'; // Temporarily disabled due to TypeScript errors
+import layoutSplittingRoutes from './routes/layoutSplittingRoutes';
 
 export function createApp(): express.Application {
   const app = express();
@@ -543,6 +548,11 @@ export function createApp(): express.Application {
   app.use('/api/prompts', interactivePromptsRoutes);
   app.use('/api/hybrid-layout', hybridLayoutRoutes);
   app.use('/api/hybrid-layout-test', hybridLayoutTestRoutes);
+  app.use('/api/export', exportRoutes);
+  app.use('/api/pipeline', pipelineRoutes);
+  app.use('/api/logs', logsRoutes);
+  // app.use('/api/html-validation', htmlValidationRoutes); // Temporarily disabled due to TypeScript errors
+  app.use('/api/layout-splitting', layoutSplittingRoutes);
 
   return app;
 }

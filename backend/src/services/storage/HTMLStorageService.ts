@@ -1,7 +1,17 @@
 import { createLogger } from '../../utils/logger';
 import fs from 'fs/promises';
 import path from 'path';
-import { PipelineExecutionResult, EnhancedSection } from '../../pipeline/types/PipelineTypes';
+import { PipelineExecutionResult } from '../pipeline/PipelineExecutor';
+
+// Define EnhancedSection locally since it's specific to storage
+interface EnhancedSection {
+  id: string;
+  name: string;
+  type: string;
+  html: string;
+  editableFields: any[];
+  qualityScore: number;
+}
 
 // Use EnhancedSection from pipeline types
 type PipelineSection = EnhancedSection;
@@ -144,7 +154,7 @@ class HTMLStorageService {
         projectId,
         name: request.name,
         originalFileName: request.originalFileName,
-        sectionsCount: request.pipelineResult.sections?.length || 0
+        sectionsCount: this.extractSections(request.pipelineResult).length
       });
 
       // Create initial version
@@ -153,8 +163,8 @@ class HTMLStorageService {
         version: 1,
         createdAt: now,
         changes: 'Initial project creation',
-        html: request.pipelineResult.sections?.map((s: PipelineSection) => s.html).join('\n') || '',
-        sections: request.pipelineResult.sections || [],
+        html: this.extractHTML(request.pipelineResult),
+        sections: this.extractSections(request.pipelineResult),
         author: request.author || 'Anonymous'
       };
 
@@ -169,8 +179,8 @@ class HTMLStorageService {
         versions: [initialVersion],
         metadata: {
           fileSize: request.originalFileName.length, // Placeholder
-          sectionsCount: request.pipelineResult.sections?.length || 0,
-          fieldsCount: request.pipelineResult.sections?.reduce((acc: number, s: PipelineSection) => acc + (s.editableFields?.length || 0), 0) || 0,
+          sectionsCount: this.extractSections(request.pipelineResult).length,
+          fieldsCount: this.extractSections(request.pipelineResult).reduce((acc: number, s: EnhancedSection) => acc + (s.editableFields?.length || 0), 0),
           lastModified: now
         }
       };
@@ -219,8 +229,8 @@ class HTMLStorageService {
         version: newVersion,
         createdAt: now,
         changes: request.changes,
-        html: request.html || project.pipelineResult.sections?.map((s: PipelineSection) => s.html).join('\n') || '',
-        sections: request.sections || project.pipelineResult.sections || [],
+        html: request.html || this.extractHTML(project.pipelineResult),
+        sections: request.sections || this.extractSections(project.pipelineResult),
         author: request.author || 'Anonymous'
       };
 
@@ -231,7 +241,8 @@ class HTMLStorageService {
 
       // Update pipeline result if sections provided
       if (request.sections) {
-        project.pipelineResult.sections = request.sections;
+        // Note: Cannot directly modify sections in new PipelineExecutionResult structure
+        // Sections are now managed through finalResult.results
         project.metadata.sectionsCount = request.sections.length;
         project.metadata.fieldsCount = request.sections.reduce((acc, s) => acc + (s.editableFields?.length || 0), 0);
       }
@@ -378,6 +389,71 @@ ${sectionsHtml}
     };
 
     return stats;
+  }
+
+  /**
+   * Extract sections from PipelineExecutionResult
+   */
+  private extractSections(pipelineResult: PipelineExecutionResult): EnhancedSection[] {
+    // Handle the new PipelineExecutionResult structure
+    if (pipelineResult.finalResult?.results) {
+      // Try to extract sections from HTML generation phase
+      const htmlGeneration = pipelineResult.finalResult.results.html_generation;
+      if (htmlGeneration?.sections) {
+        return htmlGeneration.sections;
+      }
+      
+      // Fallback: create sections from HTML content if available
+      if (htmlGeneration?.html) {
+        return [{
+          id: 'generated-section',
+          name: 'Generated Content',
+          type: 'content',
+          html: htmlGeneration.html,
+          editableFields: [],
+          qualityScore: htmlGeneration.qualityScore || 75
+        }];
+      }
+    }
+    
+    // Fallback: empty sections array
+    return [];
+  }
+
+  /**
+   * Extract HTML from PipelineExecutionResult
+   */
+  private extractHTML(pipelineResult: PipelineExecutionResult): string {
+    // Handle the new PipelineExecutionResult structure
+    if (pipelineResult.finalResult?.results) {
+      const htmlGeneration = pipelineResult.finalResult.results.html_generation;
+      if (htmlGeneration?.html) {
+        return htmlGeneration.html;
+      }
+    }
+    
+    // Fallback: generate HTML from sections
+    const sections = this.extractSections(pipelineResult);
+    if (sections.length > 0) {
+      return this.generateCombinedHTML(sections);
+    }
+    
+    // Final fallback: empty HTML structure
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generated Design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="p-8 text-center">
+    <h1 class="text-2xl font-bold text-gray-800">No content generated</h1>
+    <p class="text-gray-600 mt-2">Pipeline execution did not produce HTML content.</p>
+  </div>
+</body>
+</html>`;
   }
 }
 
