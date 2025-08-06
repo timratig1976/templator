@@ -265,15 +265,15 @@ export default function HybridLayoutSplitter({
                 <div
                   key={section.id}
                   className={`
-                    absolute border-2 cursor-move transition-all duration-200
+                    absolute border-4 cursor-move transition-all duration-200 hover:opacity-80
                     ${getSectionTypeColor(section.type)}
-                    ${selectedSection === section.id ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
+                    ${selectedSection === section.id ? 'ring-4 ring-blue-400 ring-offset-2 opacity-60' : 'opacity-40'}
                   `}
                   style={{
-                    left: section.bounds.x,
-                    top: section.bounds.y,
-                    width: section.bounds.width,
-                    height: section.bounds.height,
+                    left: `${section.bounds.x}%`,
+                    top: `${section.bounds.y}%`,
+                    width: `${section.bounds.width}%`,
+                    height: `${section.bounds.height}%`,
                   }}
                   onClick={(e) => handleSectionClick(section.id, e)}
                   onMouseDown={(e) => handleMouseDown(section.id, e)}

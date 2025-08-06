@@ -21,6 +21,7 @@ import { useWorkflow } from '@/contexts/WorkflowContext';
 import { useWorkflowHandlers } from '@/hooks/useWorkflowHandlers';
 import { aiPipelineService } from '@/services/aiPipelineService';
 import { aiLogger } from '@/services/aiLogger';
+import { hybridLayoutService } from '@/services/hybridLayoutService';
 
 interface AIPhase {
   id: string;
@@ -41,6 +42,8 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
     currentStep,
     uploadedImageFile,
     hybridAnalysisResult,
+    setHybridAnalysisResult,
+    setUploadedImageFile,
     designResult,
     setCurrentStep,
     error
@@ -149,28 +152,17 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
   const handleFileUploadWithAI = async (file: File) => {
     try {
       setCurrentPhaseIndex(1); // Move to section detection phase
+      setUploadedImageFile(file); // Set the uploaded file in workflow context
       setSplittingSuggestionsLoading(true);
       setSplittingSuggestionsError('');
       
-      // Call the section detection API directly
-      const response = await fetch('http://localhost:3009/api/ai-enhancement/detect-sections', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image: await fileToBase64(file),
-          fileName: file.name
-        })
-      });
+      const analysisResult = await hybridLayoutService.analyzeLayout(file);
       
-      if (!response.ok) {
-        throw new Error(`Section detection failed: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      setSplittingSuggestions(result.suggestions || []);
+      setHybridAnalysisResult(analysisResult);
+      setSplittingSuggestions(analysisResult.hybridSections || []);
       setSplittingSuggestionsLoading(false);
+      
+      setCurrentPhaseIndex(2);
       
     } catch (error) {
       console.error('Section detection failed:', error);
@@ -216,8 +208,8 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
     setCurrentPhaseIndex(3); // Move to HTML generation phase
     
     // Submit AI feedback for continuous learning
-    if (hybridAnalysisResult?.sections) {
-      await submitHybridFeedback(hybridAnalysisResult.sections, confirmedSections);
+    if (hybridAnalysisResult?.hybridSections) {
+      await submitHybridFeedback(hybridAnalysisResult.hybridSections, confirmedSections);
     }
     
     await handleHybridSectionsConfirmed(confirmedSections);
@@ -451,7 +443,7 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
                   <div>
                     <h3 className="text-xl font-semibold">Smart Section Splitting</h3>
                     <p className="text-blue-100">
-                      AI detected {hybridAnalysisResult.sections?.length || 0} sections. 
+                      AI detected {hybridAnalysisResult.hybridSections?.length || 0} sections. 
                       Review and refine before generating HTML.
                     </p>
                   </div>
@@ -461,7 +453,7 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
               <div className="p-6">
                 <HybridLayoutSplitter
                   imageFile={uploadedImageFile}
-                  aiDetectedSections={hybridAnalysisResult.sections || []}
+                  aiDetectedSections={hybridAnalysisResult.hybridSections || []}
                   onSectionsConfirmed={handleSectionsConfirmedWithAI}
                   onBack={() => setCurrentPhaseIndex(0)}
                   enhancedAnalysis={hybridAnalysisResult.enhancedAnalysis}

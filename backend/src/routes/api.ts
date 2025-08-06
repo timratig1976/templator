@@ -18,6 +18,8 @@ import layoutSplittingRoutes from './layoutSplittingRoutes';
 import testEndpoints from './testEndpoints';
 import testImagesRoutes from './test-images';
 import pipelineMonitoringRoutes from './pipelineMonitoring';
+import hybridLayoutRoutes from './hybridLayout';
+import aiEnhancementRoutes from './aiEnhancement';
 
 const router = Router();
 const logger = createLogger();
@@ -66,6 +68,12 @@ router.use('/test-images', testImagesRoutes);
 
 // Pipeline monitoring and quality metrics routes
 router.use('/monitoring', pipelineMonitoringRoutes);
+
+// Hybrid layout analysis routes
+router.use('/hybrid-layout', hybridLayoutRoutes);
+
+// AI enhancement and section detection routes
+router.use('/ai-enhancement', aiEnhancementRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {
