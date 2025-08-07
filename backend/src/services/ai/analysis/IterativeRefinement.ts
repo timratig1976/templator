@@ -125,7 +125,7 @@ export class IterativeRefinement {
 
         // Get AI refinement
         const response = await this.openaiClient.chatCompletion(
-          prompt,
+          [{ role: 'user', content: prompt }],
           { maxTokens: 3000, temperature: 0.1 }
         );
 
@@ -154,7 +154,7 @@ export class IterativeRefinement {
           improvement,
           aiMetrics: {
             tokens: response.usage?.total_tokens || 0,
-            cost: this.openaiClient.calculateCost('gpt-4o', response.usage?.total_tokens || 0),
+            cost: this.openaiClient.calculateCost(response.usage?.total_tokens || 0, 'gpt-4o'),
             duration: Date.now() - iterationStart
           }
         };

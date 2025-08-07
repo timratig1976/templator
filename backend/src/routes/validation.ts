@@ -150,11 +150,14 @@ router.post('/validate', async (req, res, next) => {
     const targetSchemaVersion = validationRequest.schema_version || currentSchema?.version || 'latest';
 
     // Perform validation
-    const validationResult = await validationService.validateModule({
-      fields: validationRequest.module.fields,
-      meta: validationRequest.module.meta,
-      template: validationRequest.module.template
-    });
+    const validationResult = await validationService.validateHTML(
+      validationRequest.module.template || '',
+      {
+        checkAccessibility: true,
+        checkPerformance: true,
+        checkSEO: true
+      }
+    );
 
     // Check schema compatibility
     const schemaCompatibility = await checkSchemaCompatibility(
@@ -245,7 +248,14 @@ router.post('/validate-batch', async (req, res, next) => {
         };
 
         // Validate module (reuse logic from single validation)
-        const validationResult = await validationService.validateModule(moduleRequest.module);
+        const validationResult = await validationService.validateHTML(
+          moduleRequest.module.template || '',
+          {
+            checkAccessibility: true,
+            checkPerformance: true,
+            checkSEO: true
+          }
+        );
         const currentSchema = schemaUpdateService.getCurrentSchema();
         const schemaCompatibility = await checkSchemaCompatibility(
           moduleRequest.module,
@@ -280,8 +290,8 @@ router.post('/validate-batch', async (req, res, next) => {
         else warningCount++;
 
         // Collect issues for batch summary
-        allIssues.push(...validationResult.errors.map(e => e.message));
-        allIssues.push(...validationResult.warnings.map(w => w.message));
+        allIssues.push(...validationResult.errors.map((e: any) => e.message));
+        allIssues.push(...validationResult.warnings.map((w: any) => w.message));
         totalFixTime += estimatedFixTime;
 
         // Fail fast if enabled and module failed
@@ -517,16 +527,16 @@ function calculateEstimatedFixTime(validationResult: ValidationResult): number {
   let estimatedHours = 0;
 
   // Critical errors: 2 hours each
-  estimatedHours += validationResult.errors.filter(e => e.type === 'CRITICAL').length * 2;
+  estimatedHours += validationResult.errors.filter((e: any) => e.type === 'CRITICAL').length * 2;
   
   // High priority errors: 1 hour each
-  estimatedHours += validationResult.errors.filter(e => e.type === 'HIGH').length * 1;
+  estimatedHours += validationResult.errors.filter((e: any) => e.type === 'HIGH').length * 1;
   
   // Medium warnings: 0.5 hours each
-  estimatedHours += validationResult.warnings.filter(w => w.type === 'MEDIUM').length * 0.5;
+  estimatedHours += validationResult.warnings.filter((w: any) => w.type === 'MEDIUM').length * 0.5;
   
   // Low priority items: 0.25 hours each
-  estimatedHours += validationResult.warnings.filter(w => w.type === 'LOW').length * 0.25;
+  estimatedHours += validationResult.warnings.filter((w: any) => w.type === 'LOW').length * 0.25;
 
   return Math.max(0.5, estimatedHours); // Minimum 30 minutes
 }
