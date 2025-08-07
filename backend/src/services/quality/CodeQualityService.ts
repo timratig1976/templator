@@ -11,6 +11,7 @@ export interface CodeQualityMetrics {
   eslint: number;
   complexity: number;
   documentation: number;
+  grade: 'A+' | 'A' | 'B' | 'C' | 'D';
   trend: 'improving' | 'declining' | 'stable';
   change: string;
   breakdown: {
@@ -81,12 +82,16 @@ export class CodeQualityService {
        documentationMetrics.score * 0.2)
     );
 
+    // Calculate grade based on overall score
+    const grade = this.calculateGrade(overall);
+
     return {
       overall,
       typescript: typeScriptMetrics.score,
       eslint: eslintMetrics.score,
       complexity: complexityMetrics.score,
       documentation: documentationMetrics.score,
+      grade,
       trend: 'stable', // TODO: Implement trend calculation
       change: '+0.0%',
       breakdown: {
@@ -382,13 +387,23 @@ export class CodeQualityService {
     }
   }
 
+  private calculateGrade(score: number): 'A+' | 'A' | 'B' | 'C' | 'D' {
+    if (score >= 95) return 'A+';
+    if (score >= 85) return 'A';
+    if (score >= 75) return 'B';
+    if (score >= 65) return 'C';
+    return 'D';
+  }
+
   private getFallbackMetrics(): CodeQualityMetrics {
+    const overall = 78;
     return {
-      overall: 78,
+      overall,
       typescript: 82,
       eslint: 76,
       complexity: 74,
       documentation: 45,
+      grade: this.calculateGrade(overall),
       trend: 'stable',
       change: '+0.0%',
       breakdown: {
