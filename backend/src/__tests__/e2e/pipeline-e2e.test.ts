@@ -1,11 +1,11 @@
 import request from 'supertest';
-import { Express } from 'express';
+import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createApp } from '../../app';
 
 describe('Pipeline E2E Tests - Complete Workflow', () => {
-  let app: Express;
+  let app: express.Application;
   let pipelineId: string;
   const testImagePath = path.join(__dirname, '../fixtures/test-design-e2e.png');
   
@@ -263,7 +263,7 @@ describe('Pipeline E2E Tests - Complete Workflow', () => {
       console.log('⚡ Testing concurrent pipeline execution performance');
       
       const concurrentRequests = 3;
-      const promises = [];
+      const promises: Promise<any>[] = [];
       
       for (let i = 0; i < concurrentRequests; i++) {
         promises.push(

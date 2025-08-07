@@ -111,7 +111,7 @@ describe('End-to-End Test Scenarios', () => {
         { name: 'footer-design.webp', buffer: Buffer.from('fake-footer-image') }
       ];
 
-      const results = [];
+      const results: any[] = [];
 
       for (const image of mockImages) {
         const response = await request(app)
