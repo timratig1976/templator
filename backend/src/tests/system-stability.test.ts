@@ -308,7 +308,8 @@ describe('System Stability Test Suite', () => {
         expect(stderr).toBe('');
         console.log('✅ TypeScript compilation: No errors');
       } catch (error: any) {
-        fail(`TypeScript compilation failed: ${error.message}`);
+        expect(false).toBeTruthy(); // Will fail the test
+        console.error(`TypeScript compilation failed: ${error.message}`);
       }
     });
 

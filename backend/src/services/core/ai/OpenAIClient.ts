@@ -1,6 +1,7 @@
 import { createLogger } from '../../../utils/logger';
+import { createMockLogger } from './MockLogger';
 
-const logger = createLogger();
+const logger = process.env.NODE_ENV === 'test' ? createMockLogger() : createLogger();
 
 export interface OpenAIConfig {
   apiKey: string;
