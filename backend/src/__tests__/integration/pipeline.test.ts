@@ -18,6 +18,8 @@ describe('Pipeline API Integration Tests', () => {
   const testImagePath = path.join(__dirname, '../fixtures/test-design.png');
   
   beforeAll(async () => {
+    setupDomainServiceMocks();
+    
     app = createApp();
     
     // Create test image fixture if it doesn't exist
