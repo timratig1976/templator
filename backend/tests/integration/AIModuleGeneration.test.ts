@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, jest, afterEach } from '@jest/globals';
-import { HubSpotModuleBuilder } from '../../src/services/HubSpotModuleBuilder';
-import { HubSpotValidationService } from '../../src/services/HubSpotValidationService';
-import { IterativeRefinementService } from '../../src/services/IterativeRefinementService';
-import { AutoErrorCorrectionService } from '../../src/services/AutoErrorCorrectionService';
-import { PromptVersioningService } from '../../src/services/PromptVersioningService';
-import { ModuleGenerationRequest } from '../../src/services/HubSpotPromptService';
+import { HubSpotModuleBuilder } from '../../src/services/module/HubSpotModuleBuilder';
+import { HubSpotValidationService } from '../../src/services/quality/HubSpotValidationService';
+import { IterativeRefinementService } from '../../src/services/analysis/IterativeRefinementService';
+import { AutoErrorCorrectionService } from '../../src/services/quality/AutoErrorCorrectionService';
+import { PromptVersioningService } from '../../src/services/ai/PromptVersioningService';
+import { ModuleGenerationRequest } from '../../src/services/deployment/HubSpotPromptService';
 
 // Mock OpenAI service for testing
-jest.mock('../../src/services/openaiService', () => ({
+jest.mock('../../src/services/ai/openaiService', () => ({
   generateHubSpotModule: jest.fn()
 }));
 
@@ -97,7 +97,7 @@ Here's a complete HubSpot hero module:
 </div>
       `;
 
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(mockOpenAIResponse);
 
       const request: ModuleGenerationRequest = {
@@ -205,7 +205,7 @@ Here's a complete HubSpot hero module:
 \`\`\`
       `;
 
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(mockOpenAIResponse);
 
       const request: ModuleGenerationRequest = {
@@ -237,7 +237,7 @@ Here's a complete HubSpot hero module:
 
       for (const testCase of testCases) {
         // Mock appropriate OpenAI responses for each module type
-        const mockOpenAI = require('../../src/services/openaiService');
+        const mockOpenAI = require('../../src/services/ai/openaiService');
         mockOpenAI.generateHubSpotModule.mockResolvedValue(generateMockResponse(testCase.moduleType));
 
         const request: ModuleGenerationRequest = {
@@ -251,7 +251,7 @@ Here's a complete HubSpot hero module:
         
         expect(result.validation_result?.score).toBeGreaterThanOrEqual(testCase.minScore);
         if (result.validation_result) {
-          expect(result.validation_result.valid).toBe(true);
+          expect(result.validation_result?.valid).toBe(true);
         }
       }
     }, 60000);
@@ -280,7 +280,7 @@ Here's a complete HubSpot hero module:
 \`\`\`
       `;
 
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(mockBadResponse);
 
       const request: ModuleGenerationRequest = {
@@ -300,7 +300,7 @@ Here's a complete HubSpot hero module:
 
   describe('Performance Tests', () => {
     it('should generate modules within acceptable time limits', async () => {
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(generateMockResponse('hero'));
 
       const request: ModuleGenerationRequest = {
@@ -317,7 +317,7 @@ Here's a complete HubSpot hero module:
     }, 20000);
 
     it('should handle concurrent generation requests', async () => {
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(generateMockResponse('hero'));
 
       const requests = Array.from({ length: 3 }, (_, i) => ({
@@ -334,7 +334,7 @@ Here's a complete HubSpot hero module:
       expect(results).toHaveLength(3);
       results.forEach(result => {
         expect(result).toBeDefined();
-        expect(result.validation_result.valid).toBe(true);
+        expect(result.validation_result?.valid).toBe(true);
       });
       expect(duration).toBeLessThan(30000); // All should complete within 30 seconds
     }, 35000);

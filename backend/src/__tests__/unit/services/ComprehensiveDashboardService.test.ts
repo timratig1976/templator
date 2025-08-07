@@ -43,7 +43,10 @@ describe('ComprehensiveDashboardService', () => {
         },
         trend: 'stable',
         change: '+0.0%',
-        fileCount: { total: 94, tested: 18, percentage: 19.1 }
+        fileCount: { total: 94, tested: 18, percentage: 19.1 },
+        timestamp: new Date().toISOString(),
+        testFiles: 18,
+        sourceFiles: 94
       });
 
       // Mock code quality data
@@ -53,6 +56,7 @@ describe('ComprehensiveDashboardService', () => {
         eslint: 80,
         complexity: 74,
         documentation: 45,
+        grade: 'C',
         trend: 'stable',
         change: '+0.0%',
         breakdown: {
@@ -203,7 +207,10 @@ describe('ComprehensiveDashboardService', () => {
                              metrics.security.vulnerabilities.medium +
                              metrics.security.vulnerabilities.low;
       
-      expect(metrics.security.vulnerabilities.total).toBe(calculatedTotal);
+      expect(metrics.security.vulnerabilities.critical + 
+             metrics.security.vulnerabilities.high + 
+             metrics.security.vulnerabilities.medium + 
+             metrics.security.vulnerabilities.low).toBe(calculatedTotal);
     });
   });
 

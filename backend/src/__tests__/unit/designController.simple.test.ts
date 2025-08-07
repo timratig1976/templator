@@ -4,7 +4,7 @@ import { jest } from '@jest/globals';
 const mockConvertDesignToHTML = jest.fn() as jest.MockedFunction<any>;
 const mockRefineHTML = jest.fn() as jest.MockedFunction<any>;
 
-jest.mock('../services/openaiService', () => ({
+jest.mock('../../services/ai/openaiService', () => ({
   default: {
     convertDesignToHTML: mockConvertDesignToHTML,
     refineHTML: mockRefineHTML,
@@ -12,7 +12,7 @@ jest.mock('../services/openaiService', () => ({
 }));
 
 // Mock logger to avoid console output during tests
-jest.mock('../utils/logger', () => ({
+jest.mock('../../utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
     error: jest.fn(),
@@ -21,9 +21,16 @@ jest.mock('../utils/logger', () => ({
   }),
 }));
 
-import { uploadDesign, refineHTML } from '../../controllers/designController';
+import { PipelineController } from '../../controllers/PipelineController';
 
-describe('Design Controller - Simplified Tests', () => {
+describe('Design Controller - Simplified Tests (Legacy)', () => {
+  let pipelineController: PipelineController;
+
+  beforeEach(() => {
+    pipelineController = new PipelineController();
+    jest.clearAllMocks();
+  });
+
   const mockDesignAnalysis = {
     html: '<div class="bg-white p-8"><h1 class="text-4xl font-bold text-gray-900">Welcome</h1><p class="text-gray-600 mt-4">This is a test design conversion.</p></div>',
     sections: [
@@ -59,182 +66,90 @@ describe('Design Controller - Simplified Tests', () => {
     description: 'A clean welcome page design with header and description text.',
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
 
-  describe('uploadDesign', () => {
-    it('should successfully process a design upload', async () => {
-      // Mock successful OpenAI response
-      mockConvertDesignToHTML.mockResolvedValue(mockDesignAnalysis);
+  describe('executePipeline (replaces uploadDesign)', () => {
+    it('should successfully process a design file', async () => {
+      // Mock successful pipeline execution
+      const mockFile = {
+        originalname: 'test-design.png',
+        mimetype: 'image/png',
+        size: 1024,
+        buffer: Buffer.from('fake-image-data'),
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'test-design.png',
+        path: ''
+      } as Express.Multer.File;
 
-      // Mock request and response objects
-      const mockReq = {
-        file: {
-          originalname: 'test-design.png',
-          mimetype: 'image/png',
-          size: 1024,
-          buffer: Buffer.from('fake-image-data'),
-        },
-      } as any;
+      const result = await pipelineController.executePipeline(mockFile);
 
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as any;
-
-      const mockNext = jest.fn();
-
-      // Call the controller function
-      await uploadDesign(mockReq, mockRes, mockNext);
-
-      // Verify OpenAI service was called
-      expect(mockConvertDesignToHTML).toHaveBeenCalledWith(
-        expect.any(String), // base64 image
-        'test-design.png'
-      );
-
-      // Verify successful response
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        data: {
-          fileName: 'test-design.png',
-          fileSize: 1024,
-          analysis: mockDesignAnalysis,
-        },
-      });
+      // Verify pipeline execution returns expected structure
+      expect(result).toHaveProperty('id');
+      expect(result).toHaveProperty('processingTime');
+      expect(result).toHaveProperty('qualityScore');
+      expect(result).toHaveProperty('sections');
+      expect(result.sections).toBeInstanceOf(Array);
     });
 
-    it('should handle missing file upload', async () => {
-      const mockReq = {} as any;
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as any;
-      const mockNext = jest.fn();
+    it('should handle invalid file types gracefully', async () => {
+      const mockFile = {
+        originalname: 'test.txt',
+        mimetype: 'text/plain',
+        size: 100,
+        buffer: Buffer.from('not-an-image'),
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'test.txt',
+        path: ''
+      } as Express.Multer.File;
 
-      await uploadDesign(mockReq, mockRes, mockNext);
+      const result = await pipelineController.executePipeline(mockFile);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'No file uploaded',
-      });
-    });
-
-    it('should handle OpenAI service errors', async () => {
-      mockConvertDesignToHTML.mockRejectedValue(new Error('OpenAI API error'));
-
-      const mockReq = {
-        file: {
-          originalname: 'test-design.png',
-          mimetype: 'image/png',
-          size: 1024,
-          buffer: Buffer.from('fake-image-data'),
-        },
-      } as any;
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as any;
-
-      const mockNext = jest.fn();
-
-      await uploadDesign(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to convert design to HTML',
-      });
+      // Should still process but may have lower quality scores
+      expect(result).toHaveProperty('id');
+      expect(result).toHaveProperty('qualityScore');
     });
   });
 
   describe('refineHTML', () => {
     it('should successfully refine HTML code', async () => {
-      const mockRefinedHTML = '<div class="bg-gradient-to-r from-blue-500 to-purple-600 p-8"><h1 class="text-5xl font-bold text-white">Welcome</h1><p class="text-blue-100 mt-4">This is a refined design with better styling.</p></div>';
+      const mockHTML = '<div><h1>Welcome</h1><p>Test content</p></div>';
+      const mockRequirements = 'Make it more modern with gradients and better typography';
       
-      mockRefineHTML.mockResolvedValue(mockRefinedHTML);
-
-      const mockReq = {
-        body: {
-          html: '<div><h1>Welcome</h1><p>Test content</p></div>',
-          requirements: 'Make it more modern with gradients and better typography',
-        },
-      } as any;
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as any;
-
-      const mockNext = jest.fn();
-
-      await refineHTML(mockReq, mockRes, mockNext);
-
-      expect(mockRefineHTML).toHaveBeenCalledWith(
-        '<div><h1>Welcome</h1><p>Test content</p></div>',
-        'Make it more modern with gradients and better typography'
-      );
-
-      expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: true,
-        data: {
-          originalHTML: '<div><h1>Welcome</h1><p>Test content</p></div>',
-          refinedHTML: mockRefinedHTML,
-          requirements: 'Make it more modern with gradients and better typography',
-        },
+      const result = await pipelineController.refineHTML({
+        html: mockHTML,
+        requirements: mockRequirements
       });
+
+      expect(result).toHaveProperty('refinedHTML');
+      expect(result).toHaveProperty('originalHTML', mockHTML);
+      expect(result).toHaveProperty('requirements', mockRequirements);
+      expect(result.refinedHTML).toBeDefined();
     });
 
-    it('should handle missing HTML input', async () => {
-      const mockReq = {
-        body: {},
-      } as any;
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as any;
-
-      const mockNext = jest.fn();
-
-      await refineHTML(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'HTML code is required',
+    it('should handle missing requirements', async () => {
+      const mockHTML = '<div><h1>Welcome</h1><p>Test content</p></div>';
+      
+      const result = await pipelineController.refineHTML({
+        html: mockHTML
       });
+
+      expect(result).toHaveProperty('refinedHTML');
+      expect(result).toHaveProperty('originalHTML', mockHTML);
+      expect(result.refinedHTML).toBeDefined();
     });
 
-    it('should handle OpenAI service errors during refinement', async () => {
-      mockRefineHTML.mockRejectedValue(new Error('OpenAI refinement error'));
-
-      const mockReq = {
-        body: {
-          html: '<div><h1>Welcome</h1><p>Test content</p></div>',
-          requirements: 'Make it better',
-        },
-      } as any;
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      } as any;
-
-      const mockNext = jest.fn();
-
-      await refineHTML(mockReq, mockRes, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(500);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: 'Failed to refine HTML',
+    it('should handle empty HTML gracefully', async () => {
+      const result = await pipelineController.refineHTML({
+        html: ''
       });
+
+      expect(result).toHaveProperty('refinedHTML');
+      expect(result).toHaveProperty('originalHTML', '');
     });
   });
 });

@@ -554,5 +554,8 @@ export function createApp(): express.Application {
   // app.use('/api/html-validation', htmlValidationRoutes); // Temporarily disabled due to TypeScript errors
   app.use('/api/layout-splitting', layoutSplittingRoutes);
 
+  const { errorHandler } = require('./middleware/errorHandler');
+  app.use(errorHandler);
+
   return app;
 }

@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { HubSpotValidationService } from '../../src/services/HubSpotValidationService';
-import { IterativeRefinementService } from '../../src/services/IterativeRefinementService';
-import { AutoErrorCorrectionService } from '../../src/services/AutoErrorCorrectionService';
-import { PromptVersioningService } from '../../src/services/PromptVersioningService';
-import { HubSpotModuleBuilder } from '../../src/services/HubSpotModuleBuilder';
-import { ModuleGenerationRequest } from '../../src/services/HubSpotPromptService';
+import { HubSpotValidationService } from '../../src/services/quality/HubSpotValidationService';
+import { IterativeRefinementService } from '../../src/services/analysis/IterativeRefinementService';
+import { AutoErrorCorrectionService } from '../../src/services/quality/AutoErrorCorrectionService';
+import { PromptVersioningService } from '../../src/services/ai/PromptVersioningService';
+import { HubSpotModuleBuilder } from '../../src/services/module/HubSpotModuleBuilder';
+import { ModuleGenerationRequest } from '../../src/services/deployment/HubSpotPromptService';
 
 // Mock OpenAI service for performance testing
-jest.mock('../../src/services/openaiService', () => ({
+jest.mock('../../src/services/ai/openaiService', () => ({
   generateHubSpotModule: jest.fn()
 }));
 
@@ -120,7 +120,8 @@ describe('AI Performance and Load Tests', () => {
           label: 'Error Module'
           // Missing content_types
         },
-        template: '<div>{{ module.undefined_field }}</div>'
+        template: '<div>{{ module.undefined_field }}</div>',
+        description: 'Test module with errors for performance testing'
       };
 
       const validationResult = await validationService.validateModule(moduleWithErrors);
@@ -144,7 +145,8 @@ describe('AI Performance and Load Tests', () => {
           { id: `${i}_invalid`, name: `Invalid ${i}`, type: 'invalid_type' }
         ],
         meta: { label: `Error Module ${i}` },
-        template: `<div>{{ module.undefined_${i} }}</div>`
+        template: `<div>{{ module.undefined_${i} }}</div>`,
+        description: `Test module ${i} with errors for batch correction testing`
       }));
 
       const validationResults = await Promise.all(
@@ -289,7 +291,7 @@ describe('AI Performance and Load Tests', () => {
 
     it('should maintain performance under sustained load', async () => {
       const moduleTypes = ['hero', 'feature_grid', 'contact_form', 'testimonial'];
-      const results = [];
+      const results: Array<{ moduleType: string; duration: number; score: number; valid: boolean }> = [];
 
       // Simulate 5 minutes of sustained load
       const testDuration = 30000; // 30 seconds for testing (reduced from 5 minutes)

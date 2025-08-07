@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { HubSpotValidationService, ValidationSeverity, ValidationCategory } from '../../src/services/HubSpotValidationService';
+import { HubSpotValidationService, ValidationSeverity, ValidationCategory } from '../../src/services/quality/HubSpotValidationService';
 
 describe('HubSpotValidationService', () => {
   let validationService: HubSpotValidationService;
@@ -10,188 +10,295 @@ describe('HubSpotValidationService', () => {
 
   describe('Field Validation', () => {
     it('should validate correct field structure', async () => {
-      const validFields = [
-        {
-          id: 'hero_title',
-          name: 'Hero Title',
-          label: 'Hero Title',
-          type: 'text',
-          required: false,
-          default: 'Welcome to our site'
-        }
-      ];
+      const validModule = {
+        fields: [
+          {
+            id: 'hero_title',
+            name: 'Hero Title',
+            label: 'Hero Title',
+            type: 'text',
+            required: false,
+            default: 'Welcome to our site'
+          }
+        ],
+        meta: {
+          label: 'Test Module',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: '<div>{{ module.hero_title }}</div>'
+      };
 
-      const result = await validationService.validateFields(validFields);
+      const result = await validationService.validateModule(validModule);
       expect(result.errors).toHaveLength(0);
       expect(result.warnings).toHaveLength(0);
     });
 
     it('should detect invalid field IDs', async () => {
-      const invalidFields = [
-        {
-          id: '123invalid',
-          name: 'Invalid Field',
-          label: 'Invalid Field',
-          type: 'text'
-        }
-      ];
+      const invalidModule = {
+        fields: [
+          {
+            id: '123invalid',
+            name: 'Invalid Field',
+            label: 'Invalid Field',
+            type: 'text'
+          }
+        ],
+        meta: {
+          label: 'Test Module',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: '<div>{{ module.123invalid }}</div>'
+      };
 
-      const result = await validationService.validateFields(invalidFields);
+      const result = await validationService.validateModule(invalidModule);
       expect(result.errors.length).toBeGreaterThan(0);
       expect(result.errors[0].code).toBe('FIELD_INVALID_ID');
       expect(result.errors[0].type).toBe(ValidationSeverity.CRITICAL);
     });
 
     it('should detect duplicate field IDs', async () => {
-      const duplicateFields = [
-        {
-          id: 'title',
-          name: 'Title 1',
-          label: 'Title 1',
-          type: 'text'
+      const duplicateModule = {
+        fields: [
+          {
+            id: 'title',
+            name: 'Title 1',
+            label: 'Title 1',
+            type: 'text'
+          },
+          {
+            id: 'title',
+            name: 'Title 2',
+            label: 'Title 2',
+            type: 'text'
+          }
+        ],
+        meta: {
+          label: 'Test Module',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
         },
-        {
-          id: 'title',
-          name: 'Title 2',
-          label: 'Title 2',
-          type: 'text'
-        }
-      ];
+        template: '<div>{{ module.title }}</div>'
+      };
 
-      const result = await validationService.validateFields(duplicateFields);
+      const result = await validationService.validateModule(duplicateModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'FIELD_DUPLICATE_ID')).toBe(true);
+      expect(result.errors.some((e: any) => e.code === 'FIELD_DUPLICATE_ID')).toBe(true);
     });
 
     it('should detect reserved field names', async () => {
-      const reservedFields = [
-        {
-          id: 'id',
-          name: 'ID Field',
-          label: 'ID Field',
-          type: 'text'
-        }
-      ];
+      const reservedModule = {
+        fields: [
+          {
+            id: 'id',
+            name: 'ID Field',
+            label: 'ID Field',
+            type: 'text'
+          }
+        ],
+        meta: {
+          label: 'Test Module',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: '<div>{{ module.id }}</div>'
+      };
 
-      const result = await validationService.validateFields(reservedFields);
+      const result = await validationService.validateModule(reservedModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'FIELD_RESERVED_NAME')).toBe(true);
+      expect(result.errors.some((e: any) => e.code === 'FIELD_RESERVED_NAME')).toBe(true);
     });
 
     it('should validate field type constraints', async () => {
-      const invalidTypeFields = [
-        {
-          id: 'invalid_field',
-          name: 'Invalid Field',
-          label: 'Invalid Field',
-          type: 'invalid_type'
-        }
-      ];
+      const invalidTypeModule = {
+        fields: [
+          {
+            id: 'invalid_field',
+            name: 'Invalid Field',
+            label: 'Invalid Field',
+            type: 'invalid_type'
+          }
+        ],
+        meta: {
+          label: 'Test Module',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: '<div>{{ module.invalid_field }}</div>'
+      };
 
-      const result = await validationService.validateFields(invalidTypeFields);
+      const result = await validationService.validateModule(invalidTypeModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'FIELD_INVALID_TYPE')).toBe(true);
+      expect(result.errors.some((e: any) => e.code === 'FIELD_INVALID_TYPE')).toBe(true);
     });
   });
 
   describe('Meta Validation', () => {
     it('should validate correct meta structure', async () => {
-      const validMeta = {
-        label: 'Hero Section',
-        css_assets: [],
-        js_assets: [],
-        other_assets: [],
-        content_types: ['page', 'blog-post'],
-        module_id: 123456789
+      const validModule = {
+        fields: [
+          {
+            id: 'test_field',
+            name: 'Test Field',
+            label: 'Test Field',
+            type: 'text'
+          }
+        ],
+        meta: {
+          label: 'Hero Section',
+          css_assets: [],
+          js_assets: [],
+          other_assets: [],
+          content_types: ['page', 'blog-post'],
+          module_id: 123456789
+        },
+        template: '<div>{{ module.test_field }}</div>'
       };
 
-      const result = await validationService.validateMeta(validMeta);
+      const result = await validationService.validateModule(validModule);
       expect(result.errors).toHaveLength(0);
     });
 
     it('should detect missing content_types', async () => {
-      const invalidMeta = {
-        label: 'Hero Section',
-        css_assets: [],
-        js_assets: [],
-        other_assets: []
+      const invalidModule = {
+        fields: [
+          {
+            id: 'test_field',
+            name: 'Test Field',
+            label: 'Test Field',
+            type: 'text'
+          }
+        ],
+        meta: {
+          label: 'Hero Section',
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: '<div>{{ module.test_field }}</div>'
       };
 
-      const result = await validationService.validateMeta(invalidMeta);
+      const result = await validationService.validateModule(invalidModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'META_MISSING_CONTENT_TYPES')).toBe(true);
+      expect(result.errors.some((e: any) => e.code === 'META_MISSING_CONTENT_TYPES')).toBe(true);
     });
 
     it('should detect invalid content_types values', async () => {
-      const invalidMeta = {
-        label: 'Hero Section',
-        css_assets: [],
-        js_assets: [],
-        other_assets: [],
-        content_types: ['invalid-type']
+      const invalidModule = {
+        fields: [
+          {
+            id: 'test_field',
+            name: 'Test Field',
+            label: 'Test Field',
+            type: 'text'
+          }
+        ],
+        meta: {
+          label: 'Hero Section',
+          css_assets: [],
+          js_assets: [],
+          other_assets: [],
+          content_types: ['invalid-type']
+        },
+        template: '<div>{{ module.test_field }}</div>'
       };
 
-      const result = await validationService.validateMeta(invalidMeta);
+      const result = await validationService.validateModule(invalidModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'META_INVALID_CONTENT_TYPE')).toBe(true);
+      expect(result.errors.some((e: any) => e.code === 'META_INVALID_CONTENT_TYPE')).toBe(true);
     });
   });
 
   describe('Template Validation', () => {
     it('should validate correct HubL template', async () => {
-      const validTemplate = `
-        <div class="hero-section">
-          <h1>{{ module.hero_title }}</h1>
-          <p>{{ module.hero_description }}</p>
-          {% if module.show_button %}
-            <a href="{{ module.button_url }}" class="btn">{{ module.button_text }}</a>
-          {% endif %}
-        </div>
-      `;
+      const validModule = {
+        fields: [
+          { id: 'hero_title', name: 'Hero Title', label: 'Hero Title', type: 'text' },
+          { id: 'hero_description', name: 'Hero Description', label: 'Hero Description', type: 'textarea' },
+          { id: 'show_button', name: 'Show Button', label: 'Show Button', type: 'boolean' },
+          { id: 'button_url', name: 'Button URL', label: 'Button URL', type: 'url' },
+          { id: 'button_text', name: 'Button Text', label: 'Button Text', type: 'text' }
+        ],
+        meta: {
+          label: 'Hero Section',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: `
+          <div class="hero-section">
+            <h1>{{ module.hero_title }}</h1>
+            <p>{{ module.hero_description }}</p>
+            {% if module.show_button %}
+              <a href="{{ module.button_url }}" class="btn">{{ module.button_text }}</a>
+            {% endif %}
+          </div>
+        `
+      };
 
-      const fields = [
-        { id: 'hero_title', type: 'text' },
-        { id: 'hero_description', type: 'textarea' },
-        { id: 'show_button', type: 'boolean' },
-        { id: 'button_url', type: 'url' },
-        { id: 'button_text', type: 'text' }
-      ];
-
-      const result = await validationService.validateTemplate(validTemplate, fields);
+      const result = await validationService.validateModule(validModule);
       expect(result.errors).toHaveLength(0);
     });
 
     it('should detect undefined field references', async () => {
-      const invalidTemplate = `
-        <div class="hero-section">
-          <h1>{{ module.undefined_field }}</h1>
-        </div>
-      `;
+      const invalidModule = {
+        fields: [
+          { id: 'hero_title', name: 'Hero Title', label: 'Hero Title', type: 'text' }
+        ],
+        meta: {
+          label: 'Hero Section',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: `
+          <div class="hero-section">
+            <h1>{{ module.undefined_field }}</h1>
+          </div>
+        `
+      };
 
-      const fields = [
-        { id: 'hero_title', type: 'text' }
-      ];
-
-      const result = await validationService.validateTemplate(invalidTemplate, fields);
+      const result = await validationService.validateModule(invalidModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.code === 'TEMPLATE_UNDEFINED_FIELD')).toBe(true);
+      expect(result.errors.some((e: any) => e.code === 'TEMPLATE_UNDEFINED_FIELD')).toBe(true);
     });
 
     it('should detect accessibility issues', async () => {
-      const inaccessibleTemplate = `
-        <div class="hero-section">
-          <img src="{{ module.hero_image.src }}">
-          <input type="text">
-        </div>
-      `;
+      const inaccessibleModule = {
+        fields: [
+          { id: 'hero_image', name: 'Hero Image', label: 'Hero Image', type: 'image' }
+        ],
+        meta: {
+          label: 'Hero Section',
+          content_types: ['page'],
+          css_assets: [],
+          js_assets: [],
+          other_assets: []
+        },
+        template: `
+          <div class="hero-section">
+            <img src="{{ module.hero_image.src }}">
+            <input type="text">
+          </div>
+        `
+      };
 
-      const fields = [
-        { id: 'hero_image', type: 'image' }
-      ];
-
-      const result = await validationService.validateTemplate(inaccessibleTemplate, fields);
+      const result = await validationService.validateModule(inaccessibleModule);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.category === ValidationCategory.ACCESSIBILITY)).toBe(true);
+      expect(result.errors.some((e: any) => e.category === ValidationCategory.ACCESSIBILITY)).toBe(true);
     });
   });
 

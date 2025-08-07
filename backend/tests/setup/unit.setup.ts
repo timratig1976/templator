@@ -62,12 +62,12 @@ jest.mock('openai', () => ({
   }))
 }));
 
-// Mock database connections
-jest.mock('../../src/config/database', () => ({
-  connectDatabase: jest.fn(),
-  disconnectDatabase: jest.fn(),
-  getDatabase: jest.fn()
-}));
+// Mock database connections (commented out as config/database doesn't exist)
+// jest.mock('../../src/config/database', () => ({
+//   connectDatabase: jest.fn(),
+//   disconnectDatabase: jest.fn(),
+//   getDatabase: jest.fn()
+// }));
 
 // Mock Winston logger
 jest.mock('winston', () => ({

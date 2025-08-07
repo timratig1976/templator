@@ -11,10 +11,16 @@ import { HTMLValidator } from '../services/quality/validation/HTMLValidator';
 import { ModuleBuilder } from '../services/hubspot/modules/ModuleBuilder';
 import { schemaUpdateService } from '../services/schema/SchemaUpdateService';
 import { schemaDiffDetector } from '../services/schema/SchemaDiffDetector';
+import createDOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 
 // Legacy compatibility - using HTMLValidator for validation
 const HubSpotValidationService = HTMLValidator;
 type ValidationResult = any;
+
+// Initialize DOMPurify with JSDOM for server-side sanitization
+const window = new JSDOM('').window;
+const purify = createDOMPurify(window);
 
 const router = express.Router();
 const logger = createLogger();
@@ -149,9 +155,16 @@ router.post('/validate', async (req, res, next) => {
     const currentSchema = schemaUpdateService.getCurrentSchema();
     const targetSchemaVersion = validationRequest.schema_version || currentSchema?.version || 'latest';
 
+    const sanitizedTemplate = purify.sanitize(validationRequest.module.template || '', {
+      FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+    });
+    
+    validationRequest.module.template = sanitizedTemplate;
+    
     // Perform validation
     const validationResult = await validationService.validateHTML(
-      validationRequest.module.template || '',
+      sanitizedTemplate,
       {
         checkAccessibility: true,
         checkPerformance: true,
@@ -247,9 +260,16 @@ router.post('/validate-batch', async (req, res, next) => {
           include_accessibility: batchRequest.validation_options.include_accessibility
         };
 
+        const sanitizedTemplate = purify.sanitize(moduleRequest.module.template || '', {
+          FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+          FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+        });
+        
+        moduleRequest.module.template = sanitizedTemplate;
+        
         // Validate module (reuse logic from single validation)
         const validationResult = await validationService.validateHTML(
-          moduleRequest.module.template || '',
+          sanitizedTemplate,
           {
             checkAccessibility: true,
             checkPerformance: true,
