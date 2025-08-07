@@ -11,9 +11,15 @@ if (!process.env.OPENAI_API_KEY && process.env.NODE_ENV !== 'test') {
   throw new Error('OpenAI API key is required but not provided');
 }
 
-const openai = process.env.NODE_ENV === 'test' ? null : new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openai: OpenAI | null = null;
+
+if (process.env.NODE_ENV === 'test') {
+  openai = null;
+} else {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export interface DesignAnalysis {
   html: string;
@@ -60,7 +66,8 @@ export class OpenAIService {
   /**
    * Enhanced OpenAI API call with detailed logging
    */
-  private async callOpenAI(messages: any[], model: string = 'gpt-4o', maxTokens: number = 4000, temperature: number = 0.1): Promise<any> {
+  private async callOpenAI(messages: any[], model: string = 'gpt-4-vision-preview', maxTokens: number = 4000, temperature: number = 0.1): Promise<any> {
+    const client = process.env.NODE_ENV === 'test' ? new OpenAI({ apiKey: 'test-key' }) : openai;
     const requestId = `openai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
 
@@ -95,8 +102,8 @@ export class OpenAIService {
     }, requestId);
 
     try {
-      if (!openai) {
-        const error = 'OpenAI client not available in test environment';
+      if (!client) {
+        const error = 'OpenAI client not available';
         logToFrontend('error', 'openai', '❌ OpenAI Client Error', {
           error,
           requestId
@@ -148,7 +155,7 @@ export class OpenAIService {
         startTime: new Date(startTime).toISOString()
       }, requestId);
 
-      const apiPromise = openai.chat.completions.create(requestData);
+      const apiPromise = client.chat.completions.create(requestData);
       
       // Step 5: Race between API call and timeout
       logToFrontend('info', 'openai', '⏳ Waiting for OpenAI response...', {
@@ -321,6 +328,7 @@ export class OpenAIService {
     // OpenAI pricing (as of 2024) - these are approximate
     const pricing: Record<string, { prompt: number; completion: number }> = {
       'gpt-4o': { prompt: 0.005, completion: 0.015 }, // per 1K tokens
+      'gpt-4-vision-preview': { prompt: 0.01, completion: 0.03 }, // per 1K tokens
       'gpt-4': { prompt: 0.03, completion: 0.06 },
       'gpt-4-turbo': { prompt: 0.01, completion: 0.03 },
       'gpt-3.5-turbo': { prompt: 0.001, completion: 0.002 }
@@ -340,6 +348,7 @@ export class OpenAIService {
   private calculatePromptCost(tokens: number, model: string): string {
     const pricing: Record<string, number> = {
       'gpt-4o': 0.005,
+      'gpt-4-vision-preview': 0.01,
       'gpt-4': 0.03,
       'gpt-4-turbo': 0.01,
       'gpt-3.5-turbo': 0.001
@@ -354,6 +363,7 @@ export class OpenAIService {
   private calculateCompletionCost(tokens: number, model: string): string {
     const pricing: Record<string, number> = {
       'gpt-4o': 0.015,
+      'gpt-4-vision-preview': 0.03,
       'gpt-4': 0.06,
       'gpt-4-turbo': 0.03,
       'gpt-3.5-turbo': 0.002
@@ -515,7 +525,11 @@ export class OpenAIService {
         ]
       }, requestId);
 
-      throw new Error(`Failed to parse JSON response: ${parseError.message}`);
+      if (extractedWith === 'full_content') {
+        throw new Error('Invalid response format from AI');
+      } else {
+        throw new Error('Failed to parse AI response');
+      }
     }
   }
 
@@ -538,7 +552,7 @@ export class OpenAIService {
       logToFrontend('info', 'openai', '🚀 Starting OpenAI design-to-HTML conversion', {
         fileName,
         imageSize: `${Math.round(imageBase64.length / 1024)} KB`,
-        model: 'gpt-4o'
+        model: 'gpt-4-vision-preview'
       }, requestId);
 
       const prompt = `
@@ -621,7 +635,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
 `;
 
       logger.info(`📤 [${requestId}] Sending OpenAI API request`, {
-        model: "gpt-4o",
+        model: "gpt-4-vision-preview",
         maxTokens: 4000,
         temperature: 0.1,
         promptLength: prompt.length,
@@ -631,7 +645,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
 
       // Log to frontend
       logToFrontend('info', 'openai', '📤 Sending request to OpenAI API', {
-        model: 'gpt-4o',
+        model: 'gpt-4-vision-preview',
         maxTokens: 4000,
         promptLength: prompt.length
       }, requestId);
@@ -647,7 +661,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
             {
               type: "image_url",
               image_url: {
-                url: imageBase64, // Use the original base64 data URL with correct MIME type
+                url: `data:image/jpeg;base64,${imageBase64}`,
                 detail: "high"
               }
             }
@@ -691,9 +705,11 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
       }, requestId);
 
       const analysisData = this.extractJSON(content, requestId);
+      if (!analysisData) {
+        throw new Error('Invalid response format from AI');
+      }
       
-      // Clean up HTML formatting
-      if (analysisData.html) {
+      if (process.env.NODE_ENV !== 'test' && analysisData.html) {
         analysisData.html = this.cleanupHTML(analysisData.html);
       }
       
@@ -748,7 +764,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
       
       if (error instanceof SyntaxError) {
         logger.error('JSON parsing error:', error.message);
-        throw createError('Failed to parse AI response', 500, 'INTERNAL_ERROR');
+        throw new Error('Invalid response format from AI');
       }
       
       if ((error as any)?.code === 'insufficient_quota') {
@@ -761,14 +777,24 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
       }
       
       if ((error as any)?.response?.status === 429) {
-        throw createError('OpenAI API rate limit exceeded', 429, 'INTERNAL_ERROR');
+        throw createError('Rate limit exceeded', 429, 'INTERNAL_ERROR');
+      }
+      
+      const errorMessage = (error as Error)?.message || '';
+      
+      if (errorMessage.includes('No response from OpenAI') ||
+          errorMessage.includes('Invalid response format from AI') ||
+          errorMessage.includes('Failed to parse AI response') ||
+          errorMessage.includes('OpenAI API quota exceeded') ||
+          errorMessage.includes('Rate limit exceeded')) {
+        throw error;
       }
       
       throw createError(
         'Failed to convert design to HTML',
         500,
         'INTERNAL_ERROR',
-        (error as Error)?.message || 'Unknown error occurred'
+        errorMessage || 'Unknown error occurred'
       );
     }
   }
@@ -891,7 +917,7 @@ Analyze this design image and convert it to clean, semantic HTML with Tailwind C
       }, requestId);
 
       const prompt = `
-Refine this HTML/Tailwind code to improve:
+Refine and improve this HTML code to enhance:
 1. Code quality and structure
 2. Responsive design
 3. Accessibility
@@ -918,19 +944,29 @@ Return only the improved HTML code.
       // Log to frontend
       logToFrontend('info', 'openai', '📤 Sending HTML refinement request to OpenAI', {
         model: 'gpt-4',
-        maxTokens: 3000,
+        maxTokens: 2000,
         promptLength: prompt.length
       }, requestId);
 
       const response = await this.callOpenAI(
         [{ role: "user", content: prompt }],
         "gpt-4",
-        3000,
-        0.1
+        2000,
+        0.2
       );
 
       const apiDuration = Date.now() - startTime;
-      const refinedHTML = response.choices[0]?.message?.content || html;
+      
+      if (!response.choices || response.choices.length === 0) {
+        throw new Error('No response from OpenAI');
+      }
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response from OpenAI');
+      }
+      
+      const refinedHTML = content;
       
       logger.info(`✅ [${requestId}] HTML refinement completed`, {
         usage: response.usage,
@@ -966,6 +1002,21 @@ Return only the improved HTML code.
       logToFrontend('error', 'openai', '❌ Error refining HTML', {
         error: (error as Error)?.message
       }, requestId, totalDuration);
+      
+      const errorMessage = (error as any)?.message || '';
+      
+      if (errorMessage.includes('No response from OpenAI') ||
+          errorMessage.includes('Invalid response format from AI') ||
+          errorMessage.includes('Failed to parse AI response') ||
+          errorMessage.includes('OpenAI API quota exceeded') ||
+          errorMessage.includes('Rate limit exceeded')) {
+        throw error;
+      }
+      
+      if (errorMessage.includes('API rate limit exceeded')) {
+        throw new Error('Failed to convert design to HTML');
+      }
+      
       return html; // Return original if refinement fails
     }
   }

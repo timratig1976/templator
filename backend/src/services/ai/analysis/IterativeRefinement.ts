@@ -154,7 +154,7 @@ export class IterativeRefinement {
           improvement,
           aiMetrics: {
             tokens: response.usage?.total_tokens || 0,
-            cost: this.openaiClient.calculateCost(response.usage?.total_tokens || 0, 'gpt-4o'),
+            cost: this.openaiClient.calculateCost(response.usage?.total_tokens || 0, 'gpt-4'),
             duration: Date.now() - iterationStart
           }
         };

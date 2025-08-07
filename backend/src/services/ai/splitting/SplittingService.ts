@@ -55,7 +55,7 @@ export class SplittingService {
 
       logToFrontend('info', 'openai', '🤖 Analyzing design with AI Vision', {
         fileName,
-        model: 'gpt-4o'
+        model: 'gpt-4-vision-preview'
       }, requestId);
 
       const prompt = this.buildSplittingPrompt();
@@ -68,7 +68,7 @@ export class SplittingService {
 
       // Make OpenAI API call
       const requestData = {
-        model: 'gpt-4o',
+        model: 'gpt-4-vision-preview',
         messages: [
           {
             role: 'user',
@@ -332,7 +332,7 @@ Return a JSON object with this exact structure:
    * Calculate estimated cost for OpenAI API call
    */
   private calculateCost(totalTokens: number): number {
-    // GPT-4o pricing (approximate)
+    // GPT-4-vision-preview pricing (approximate)
     const modelPricing = {
       input: 0.005 / 1000,  // $0.005 per 1K input tokens
       output: 0.015 / 1000  // $0.015 per 1K output tokens
