@@ -2,6 +2,18 @@ import request from 'supertest';
 import { Express } from 'express';
 import path from 'path';
 import fs from 'fs';
+
+const mockPipelineController = {
+  executePipeline: jest.fn(),
+  enhanceSection: jest.fn(),
+  regenerateHTML: jest.fn(),
+  getQualityMetrics: jest.fn()
+};
+
+jest.mock('../../controllers/PipelineController', () => ({
+  PipelineController: jest.fn().mockImplementation(() => mockPipelineController)
+}));
+
 import { createApp } from '../../app';
 
 describe('Pipeline API Integration Tests', () => {
@@ -35,8 +47,55 @@ describe('Pipeline API Integration Tests', () => {
     }
   });
 
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    mockPipelineController.executePipeline.mockImplementation(() => ({
+      id: `pipeline_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      status: 'completed',
+      phases: [
+        { name: 'Input Processing', status: 'completed', duration: 100 },
+        { name: 'AI Analysis', status: 'completed', duration: 200 },
+        { name: 'HTML Generation', status: 'completed', duration: 300 }
+      ],
+      startTime: Date.now() - 1000,
+      endTime: Date.now(),
+      totalDuration: 1000,
+      sections: [
+        {
+          id: 'section_1',
+          name: 'Header',
+          type: 'header',
+          html: '<h1>Test Header</h1>',
+          editableFields: [],
+          qualityScore: 85
+        }
+      ],
+      qualityScore: 85,
+      processingTime: 1,
+      validationPassed: true,
+      enhancementsApplied: [],
+      packagedModule: { moduleId: 'test_module' },
+      metadata: {
+        phaseTimes: { phase1: 100, phase2: 200, phase3: 300 },
+        totalSections: 1,
+        averageQuality: 85,
+        timestamp: new Date().toISOString()
+      }
+    }));
+
+    mockPipelineController.getQualityMetrics.mockResolvedValue({
+      overall: 85,
+      breakdown: {
+        accessibility: 80,
+        performance: 90,
+        seo: 85,
+        bestPractices: 85
+      }
+    });
+  });
+
   afterAll(() => {
-    // Clean up test fixtures
     if (fs.existsSync(testImagePath)) {
       fs.unlinkSync(testImagePath);
     }

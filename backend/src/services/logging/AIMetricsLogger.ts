@@ -183,7 +183,7 @@ export class AIMetricsLogger {
         model: entry.ai.model,
         promptVersion: entry.ai.promptVersion,
         totalTokens: entry.ai.totalTokens,
-        cost: entry.cost.totalCost,
+        cost: entry.cost?.totalCost || 0,
         quality: entry.output.quality.score,
         userRating: entry.userInteraction.userRating?.score,
         isManualRegeneration: entry.userInteraction.isManualRegeneration,
@@ -328,9 +328,9 @@ export class AIMetricsLogger {
     }
 
     // Calculate totals and averages
-    const totalCost = entries.reduce((sum, entry) => sum + entry.cost.totalCost, 0);
-    const averageQuality = entries.reduce((sum, entry) => sum + entry.output.quality.score, 0) / entries.length;
-    const averageResponseTime = entries.reduce((sum, entry) => sum + entry.performance.responseTime, 0) / entries.length;
+    const totalCost = entries.reduce((sum, entry) => sum + (entry.cost?.totalCost || 0), 0);
+    const averageQuality = entries.reduce((sum, entry) => sum + (entry.output?.quality?.score || 0), 0) / entries.length;
+    const averageResponseTime = entries.reduce((sum, entry) => sum + (entry.performance?.responseTime || 0), 0) / entries.length;
     
     // Token usage
     const totalTokens = entries.reduce((sum, entry) => sum + entry.ai.totalTokens, 0);
@@ -664,7 +664,7 @@ export class AIMetricsLogger {
         const versionData = promptVersions[version];
         versionData.count++;
         versionData.qualitySum += entry.output.quality.score;
-        versionData.costSum += entry.cost.totalCost;
+        versionData.costSum += (entry.cost?.totalCost || 0);
         
         if (entry.userInteraction.isManualRegeneration) {
           versionData.regenerationCount++;

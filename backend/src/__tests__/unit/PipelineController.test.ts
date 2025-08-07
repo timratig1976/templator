@@ -1,14 +1,44 @@
-import { PipelineController } from '../../controllers/PipelineController';
-import { OpenAIService } from '../../services/ai/openaiService';
-import { PipelineExecutor } from '../../services/pipeline/PipelineExecutor';
-import { createError } from '../../middleware/errorHandler';
+jest.mock('../../services/core/ai/OpenAIClient', () => ({
+  OpenAIClient: {
+    getInstance: jest.fn()
+  }
+}));
 
-// Mock dependencies
-jest.mock('../../services/ai/openaiService');
-jest.mock('../../services/pipeline/PipelineExecutor');
-jest.mock('../../services/ai/generation/HTMLGenerator');
-jest.mock('../../services/ai/analysis/IterativeRefinement');
+jest.mock('../../services/pipeline/PipelineExecutor', () => ({
+  PipelineExecutor: {
+    getInstance: jest.fn()
+  }
+}));
+
+jest.mock('../../services/ai/generation/HTMLGenerator', () => ({
+  HTMLGenerator: {
+    getInstance: jest.fn()
+  }
+}));
+
+jest.mock('../../services/ai/analysis/IterativeRefinement', () => ({
+  IterativeRefinement: {
+    getInstance: jest.fn()
+  }
+}));
+
+jest.mock('../../services/quality/validation/HTMLValidator', () => ({
+  HTMLValidator: {
+    getInstance: jest.fn()
+  }
+}));
+
+jest.mock('../../services/ai/prompts/PromptManager', () => ({
+  PromptManager: {
+    getInstance: jest.fn()
+  }
+}));
+
 jest.mock('../../middleware/errorHandler');
+
+import { PipelineController } from '../../controllers/PipelineController';
+import { createError } from '../../middleware/errorHandler';
+import { setupDomainServiceMocks, mockPipelineExecutor, mockHTMLGenerator, mockIterativeRefinement } from '../setup/domainServiceMocks';
 jest.mock('../../utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
@@ -20,8 +50,6 @@ jest.mock('../../utils/logger', () => ({
 
 describe('PipelineController', () => {
   let pipelineController: PipelineController;
-  let mockOpenAIService: jest.Mocked<OpenAIService>;
-  let mockPipelineExecutor: jest.Mocked<PipelineExecutor>;
 
   const mockDesignFile = {
     buffer: Buffer.from('fake-image-data'),
@@ -59,63 +87,12 @@ describe('PipelineController', () => {
   };
 
   beforeEach(() => {
-    // Reset all mocks
     jest.clearAllMocks();
-    
-    // Create mock OpenAI service
-    mockOpenAIService = {
-      convertDesignToHTML: jest.fn(),
-      getInstance: jest.fn()
-    } as any;
-
-    // Create mock PipelineExecutor
-    mockPipelineExecutor = {
-      executePipeline: jest.fn(),
-      getInstance: jest.fn()
-    } as any;
-
-    // Mock the getInstance methods
-    (OpenAIService.getInstance as jest.Mock).mockReturnValue(mockOpenAIService);
-    (PipelineExecutor.getInstance as jest.Mock).mockReturnValue(mockPipelineExecutor);
-    
-    // Setup default mock behavior for PipelineExecutor
-    mockPipelineExecutor.executePipeline.mockImplementation(() => {
-      const now = Date.now();
-      const duration = Math.floor(Math.random() * 100) + 50; // Random duration 50-150ms
-      const id = `pipeline_${now}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      return Promise.resolve({
-        id,
-        status: 'completed',
-        phases: [
-          { name: 'analysis', status: 'completed', duration: duration / 2 },
-          { name: 'generation', status: 'completed', duration: duration / 2 }
-        ],
-        finalResult: {
-          results: {
-            html: '<div>Generated HTML</div>',
-            sections: mockDesignAnalysis.sections
-          },
-          executionSummary: {
-            totalPhases: 2,
-            successfulPhases: 2,
-            failedPhases: 0
-          }
-        },
-        totalDuration: duration,
-        startTime: now - duration,
-        endTime: now
-      });
-    });
-    
+    setupDomainServiceMocks();
     pipelineController = new PipelineController();
   });
 
   describe('executePipeline', () => {
-
-    beforeEach(() => {
-      mockOpenAIService.convertDesignToHTML.mockResolvedValue(mockDesignAnalysis);
-    });
 
     test('should execute pipeline successfully with valid design file', async () => {
       const result = await pipelineController.executePipeline(mockDesignFile);
@@ -132,7 +109,7 @@ describe('PipelineController', () => {
       const result = await pipelineController.executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
-      expect(result.finalResult).toHaveProperty('results');
+      expect(result.finalResult).toHaveProperty('sections');
       expect(result.status).toBe('completed');
       expect(result.phases).toBeDefined();
     });
@@ -141,7 +118,7 @@ describe('PipelineController', () => {
       const result = await pipelineController.executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
-      expect(result.finalResult).toHaveProperty('results');
+      expect(result.finalResult).toHaveProperty('sections');
       expect(result.status).toBe('completed');
     });
 
@@ -149,7 +126,7 @@ describe('PipelineController', () => {
       const result = await pipelineController.executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
-      expect(result.finalResult).toHaveProperty('results');
+      expect(result.finalResult).toHaveProperty('sections');
       expect(result.status).toBe('completed');
     });
 
@@ -231,7 +208,7 @@ describe('PipelineController', () => {
       const result = await pipelineController.executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
-      expect(result.finalResult).toHaveProperty('results');
+      expect(result.finalResult).toHaveProperty('sections');
       expect(result.status).toBe('completed');
     });
 
