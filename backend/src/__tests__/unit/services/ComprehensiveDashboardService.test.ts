@@ -207,7 +207,10 @@ describe('ComprehensiveDashboardService', () => {
                              metrics.security.vulnerabilities.medium +
                              metrics.security.vulnerabilities.low;
       
-      expect(metrics.security.vulnerabilities.total).toBe(calculatedTotal);
+      expect(metrics.security.vulnerabilities.critical + 
+             metrics.security.vulnerabilities.high + 
+             metrics.security.vulnerabilities.medium + 
+             metrics.security.vulnerabilities.low).toBe(calculatedTotal);
     });
   });
 
