@@ -79,6 +79,14 @@ export const mockHubSpotAPIService = {
   getInstance: jest.fn() as jest.MockedFunction<any>
 };
 
+export const mockPipelineController = {
+  executePipeline: jest.fn() as jest.MockedFunction<any>,
+  convertDesignToHTML: jest.fn() as jest.MockedFunction<any>,
+  refineHTML: jest.fn() as jest.MockedFunction<any>,
+  getSupportedFileTypes: jest.fn() as jest.MockedFunction<any>,
+  regenerateSectionHTML: jest.fn() as jest.MockedFunction<any>
+};
+
 export function setupDomainServiceMocks() {
   mockOpenAIClient.chatCompletion.mockResolvedValue({
     choices: [{ message: { content: '{"html": "<div>Test HTML</div>", "css": "/* Test CSS */"}' } }],
@@ -147,6 +155,10 @@ export function setupDomainServiceMocks() {
       ],
       finalResult: { sections: [], qualityScore: 85 },
       metadata: {
+        processingTime: 1250,
+        sectionsGenerated: 4,
+        totalTokens: 500,
+        totalCost: 0.05,
         phaseTimes: {
           'Input Processing': 100,
           'AI Analysis': 200,
@@ -215,6 +227,57 @@ export function setupDomainServiceMocks() {
   mockHubSpotAPIService.validateModule.mockResolvedValue({
     isValid: true,
     errors: []
+  });
+  
+  mockPipelineController.convertDesignToHTML.mockResolvedValue({
+    fileName: 'test-design.png',
+    fileSize: 1024,
+    analysis: {
+      html: '<div class="container mx-auto p-6"><h1 class="text-3xl font-bold mb-4">Generated HTML</h1></div>',
+      sections: [
+        { id: 'header', type: 'header', html: '<header>Header</header>' },
+        { id: 'hero', type: 'hero', html: '<section>Hero</section>' }
+      ],
+      components: [],
+      description: 'Design converted to HTML'
+    }
+  });
+  
+  mockPipelineController.refineHTML.mockResolvedValue({
+    html: '<div class="refined">Refined HTML</div>',
+    css: '/* Refined CSS */',
+    metadata: { improvements: ['Better structure', 'Improved accessibility'] }
+  });
+  
+  mockPipelineController.getSupportedFileTypes.mockReturnValue({
+    supportedTypes: [
+      { type: 'image/png', extensions: ['.png'] },
+      { type: 'image/jpeg', extensions: ['.jpg', '.jpeg'] },
+      { type: 'image/gif', extensions: ['.gif'] },
+      { type: 'image/webp', extensions: ['.webp'] }
+    ]
+  });
+  
+  mockPipelineController.executePipeline.mockResolvedValue({
+    id: 'pipeline_test_123',
+    status: 'completed',
+    phases: [
+      { name: 'Input Processing', status: 'completed', duration: 100 },
+      { name: 'AI Analysis', status: 'completed', duration: 200 },
+      { name: 'HTML Generation', status: 'completed', duration: 300 }
+    ],
+    startTime: Date.now() - 1250,
+    endTime: Date.now(),
+    totalDuration: 1250,
+    processingTime: 1250,
+    finalResult: { sections: [], qualityScore: 85 },
+    metadata: {
+      processingTime: 1250,
+      sectionsGenerated: 4,
+      qualityScore: 85,
+      totalTokens: 500,
+      totalCost: 0.05
+    }
   });
   
   mockOpenAIClient.getInstance.mockReturnValue(mockOpenAIClient);
