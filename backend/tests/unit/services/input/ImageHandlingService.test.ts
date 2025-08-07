@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from '@jest/globals';
 import ImageHandlingService from '../../../../src/services/input/ImageHandlingService';
 
 describe('ImageHandlingService', () => {
-  let imageService: typeof ImageHandlingService;
+  let imageService: ImageHandlingService;
 
   beforeEach(() => {
     // Get a fresh instance for each test
