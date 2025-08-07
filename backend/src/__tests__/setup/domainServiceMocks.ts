@@ -119,52 +119,76 @@ export function setupDomainServiceMocks() {
     metadata: { totalTime: 2000, totalCost: 0.02, totalTokens: 200, convergenceReached: true }
   });
   
-  mockPipelineExecutor.executePipeline.mockResolvedValue({
-    id: `pipeline_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-    status: 'completed',
-    phases: [
-      { name: 'Input Processing', status: 'completed', duration: 100 },
-      { name: 'AI Analysis', status: 'completed', duration: 200 },
-      { name: 'HTML Generation', status: 'completed', duration: 300 }
-    ],
-    startTime: Date.now() - 1000,
-    endTime: Date.now(),
-    totalDuration: 1000,
-    processingTime: 1000,
-    qualityScore: 85,
-    sections: [
-      { 
-        id: 'section_1', 
-        name: 'Header', 
-        type: 'header', 
-        html: '<header>Test</header>',
-        editableFields: ['title', 'subtitle'],
-        qualityScore: 85
+  mockPipelineExecutor.executePipeline.mockImplementation(() => {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    return Promise.resolve({
+      id: `pipeline_${timestamp}_${randomId}`,
+      status: 'completed',
+      phases: [
+        { name: 'Input Processing', status: 'completed', duration: 100 },
+        { name: 'AI Analysis', status: 'completed', duration: 200 },
+        { name: 'HTML Generation', status: 'completed', duration: 300 }
+      ],
+      startTime: Date.now() - 1000,
+      endTime: Date.now(),
+      totalDuration: 1000,
+      processingTime: 1000,
+      qualityScore: 85,
+      sections: [
+        { 
+          id: 'section_1', 
+          name: 'Header', 
+          type: 'header', 
+          html: '<header>Test</header>',
+          editableFields: ['title', 'subtitle'],
+          qualityScore: 85
+        },
+        { 
+          id: 'section_2', 
+          name: 'Content', 
+          type: 'content', 
+          html: '<main>Test</main>',
+          editableFields: ['content', 'cta'],
+          qualityScore: 90
+        }
+      ],
+      finalResult: { 
+        sections: [
+          { 
+            id: 'section_1', 
+            name: 'Header', 
+            type: 'header', 
+            html: '<header>Test</header>',
+            editableFields: ['title', 'subtitle'],
+            qualityScore: 85
+          },
+          { 
+            id: 'section_2', 
+            name: 'Content', 
+            type: 'content', 
+            html: '<main>Test</main>',
+            editableFields: ['content', 'cta'],
+            qualityScore: 90
+          }
+        ], 
+        qualityScore: 85 
       },
-      { 
-        id: 'section_2', 
-        name: 'Content', 
-        type: 'content', 
-        html: '<main>Test</main>',
-        editableFields: ['content', 'cta'],
-        qualityScore: 90
+      metadata: {
+        processingTime: 1250,
+        sectionsGenerated: 4,
+        totalTokens: 500,
+        totalCost: 0.05,
+        phaseTimes: {
+          'Input Processing': 100,
+          'AI Analysis': 200,
+          'HTML Generation': 300
+        },
+        totalPhases: 3,
+        successfulPhases: 3,
+        failedPhases: 0
       }
-    ],
-    finalResult: { sections: [], qualityScore: 85 },
-    metadata: {
-      processingTime: 1250,
-      sectionsGenerated: 4,
-      totalTokens: 500,
-      totalCost: 0.05,
-      phaseTimes: {
-        'Input Processing': 100,
-        'AI Analysis': 200,
-        'HTML Generation': 300
-      },
-      totalPhases: 3,
-      successfulPhases: 3,
-      failedPhases: 0
-    }
+    });
   });
   
   mockHTMLValidator.validateHTML.mockResolvedValue({
@@ -241,6 +265,7 @@ export function setupDomainServiceMocks() {
   
   mockPipelineController.refineHTML.mockResolvedValue({
     html: '<div class="refined">Refined HTML</div>',
+    refinedHTML: '<div class="refined">Refined HTML with improved structure and accessibility</div>',
     css: '/* Refined CSS */',
     metadata: { improvements: ['Better structure', 'Improved accessibility'] }
   });
@@ -254,26 +279,49 @@ export function setupDomainServiceMocks() {
     ]
   });
   
-  mockPipelineController.executePipeline.mockResolvedValue({
-    id: 'pipeline_test_123',
-    status: 'completed',
-    phases: [
-      { name: 'Input Processing', status: 'completed', duration: 100 },
-      { name: 'AI Analysis', status: 'completed', duration: 200 },
-      { name: 'HTML Generation', status: 'completed', duration: 300 }
-    ],
-    startTime: Date.now() - 1250,
-    endTime: Date.now(),
-    totalDuration: 1250,
-    processingTime: 1250,
-    finalResult: { sections: [], qualityScore: 85 },
-    metadata: {
+  mockPipelineController.executePipeline.mockImplementation(() => {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    return Promise.resolve({
+      id: `pipeline_${timestamp}_${randomId}`,
+      status: 'completed',
+      phases: [
+        { name: 'Input Processing', status: 'completed', duration: 100 },
+        { name: 'AI Analysis', status: 'completed', duration: 200 },
+        { name: 'HTML Generation', status: 'completed', duration: 300 }
+      ],
+      startTime: Date.now() - 1250,
+      endTime: Date.now(),
+      totalDuration: 1250,
       processingTime: 1250,
-      sectionsGenerated: 4,
+      sections: [
+        { 
+          id: 'section_1', 
+          name: 'Header', 
+          type: 'header', 
+          html: '<header>Test</header>',
+          editableFields: ['title', 'subtitle'],
+          qualityScore: 85
+        },
+        { 
+          id: 'section_2', 
+          name: 'Content', 
+          type: 'content', 
+          html: '<main>Test</main>',
+          editableFields: ['content', 'cta'],
+          qualityScore: 90
+        }
+      ],
       qualityScore: 85,
-      totalTokens: 500,
-      totalCost: 0.05
-    }
+      finalResult: { sections: [], qualityScore: 85 },
+      metadata: {
+        processingTime: 1250,
+        sectionsGenerated: 4,
+        qualityScore: 85,
+        totalTokens: 500,
+        totalCost: 0.05
+      }
+    });
   });
   
   mockOpenAIClient.getInstance.mockReturnValue(mockOpenAIClient);

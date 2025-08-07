@@ -146,15 +146,31 @@ describe('PipelineController', () => {
     });
 
     test('should handle OpenAI service errors gracefully', async () => {
-      jest.clearAllMocks();
-      setupDomainServiceMocks();
-      
       const mockError = new Error('OpenAI service error');
-      mockPipelineExecutor.executePipeline.mockRejectedValue(mockError);
+      const mockCreateError = createError as jest.MockedFunction<typeof createError>;
+      
+      mockCreateError.mockReturnValue({
+        message: 'Pipeline execution failed: OpenAI service error',
+        statusCode: 500,
+        code: 'INTERNAL_ERROR'
+      } as any);
+      
+      mockPipelineExecutor.executePipeline.mockReset();
+      mockPipelineExecutor.executePipeline.mockRejectedValueOnce(mockError);
 
       await expect(pipelineController.executePipeline(mockDesignFile))
         .rejects
-        .toThrow('Pipeline execution failed: OpenAI service error');
+        .toMatchObject({
+          message: expect.stringContaining('Pipeline execution failed: OpenAI service error'),
+          statusCode: 500,
+          code: 'INTERNAL_ERROR'
+        });
+        
+      expect(mockCreateError).toHaveBeenCalledWith(
+        'Pipeline execution failed: OpenAI service error',
+        500,
+        'INTERNAL_ERROR'
+      );
     });
 
     test('should handle empty sections from AI analysis', async () => {
