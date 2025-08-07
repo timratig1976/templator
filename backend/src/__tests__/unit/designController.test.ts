@@ -9,7 +9,7 @@ const mockConvertDesignToHTML = jest.fn() as jest.MockedFunction<any>;
 const mockRefineHTML = jest.fn() as jest.MockedFunction<any>;
 
 // Mock the entire module
-jest.mock('../services/openaiService', () => {
+jest.mock('../../services/ai/openaiService', () => {
   return {
     __esModule: true,
     default: {
@@ -29,7 +29,7 @@ jest.mock('../utils/logger', () => ({
   }),
 }));
 
-import openaiService from '../../services/openaiService';
+import openaiService from '../../services/ai/openaiService';
 import { createApp } from '../../app';
 
 // Get the mocked service

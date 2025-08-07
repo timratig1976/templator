@@ -6,12 +6,12 @@
 import request from 'supertest';
 import { createApp } from '../../app';
 import { PipelineController } from '../../controllers/PipelineController';
-import { OpenAIService } from '../../services/openaiService';
+import { OpenAIService } from '../../services/ai/openaiService';
 import path from 'path';
 import fs from 'fs';
 
 // Mock dependencies
-jest.mock('../../services/openaiService');
+jest.mock('../../services/ai/openaiService');
 jest.mock('../../utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
@@ -96,8 +96,14 @@ describe('Modular Pipeline Integration Tests', () => {
         buffer: Buffer.from('fake-image-data'),
         originalname: 'test-design.png',
         mimetype: 'image/png',
-        size: 1024
-      };
+        size: 1024,
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'test-design.png',
+        path: ''
+      } as Express.Multer.File;
 
       const result = await controller.executePipeline(mockDesignFile);
 
@@ -137,8 +143,14 @@ describe('Modular Pipeline Integration Tests', () => {
         buffer: Buffer.from('invalid-data'),
         originalname: 'test-design.png',
         mimetype: 'image/png',
-        size: 1024
-      };
+        size: 1024,
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'test-design.png',
+        path: ''
+      } as Express.Multer.File;
 
       const result = await controller.executePipeline(mockDesignFile);
 
@@ -250,8 +262,14 @@ describe('Modular Pipeline Integration Tests', () => {
         buffer: Buffer.from('test-image-data'),
         originalname: 'test-design.png',
         mimetype: 'image/png',
-        size: 2048
-      };
+        size: 2048,
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'test-design.png',
+        path: ''
+      } as Express.Multer.File;
 
       const startTime = Date.now();
       const result = await controller.executePipeline(mockDesignFile);
