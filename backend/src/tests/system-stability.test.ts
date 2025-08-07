@@ -303,7 +303,7 @@ describe('System Stability Test Suite', () => {
   describe('TypeScript Compilation', () => {
     test('should compile without errors', async () => {
       try {
-        const { stdout, stderr } = await execAsync('cd backend && npx tsc --noEmit');
+        const { stdout, stderr } = await execAsync('npx tsc --noEmit');
         
         expect(stderr).toBe('');
         console.log('✅ TypeScript compilation: No errors');
@@ -323,7 +323,7 @@ describe('System Stability Test Suite', () => {
 
       for (const file of criticalFiles) {
         try {
-          const { stdout, stderr } = await execAsync(`cd backend && npx eslint ${file} --format json`);
+          const { stdout, stderr } = await execAsync(`npx eslint ${file} --format json`);
           const results = JSON.parse(stdout);
           
           const errorCount = results.reduce((sum: number, result: any) => 
