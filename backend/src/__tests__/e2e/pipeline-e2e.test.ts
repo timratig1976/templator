@@ -100,10 +100,14 @@ describe('Pipeline E2E Tests - Complete Workflow', () => {
       console.log(`✅ Pipeline created with ID: ${pipelineId}`);
       
       // Validate initial processing results
-      expect(response.body.data).toHaveProperty('sections');
-      expect(response.body.data.sections.length).toBeGreaterThan(0);
-      expect(response.body.data).toHaveProperty('qualityScore');
-      expect(response.body.data.qualityScore).toBeGreaterThan(0);
+      expect(response.body).toHaveProperty('data');
+      expect(response.body.data).toBeDefined();
+      if (response.body.data) {
+        expect(response.body.data).toHaveProperty('sections');
+        expect(response.body.data.sections.length).toBeGreaterThan(0);
+        expect(response.body.data).toHaveProperty('qualityScore');
+        expect(response.body.data.qualityScore).toBeGreaterThan(0);
+      }
       
       console.log(`✅ Generated ${response.body.data.sections.length} sections with quality score: ${response.body.data.qualityScore}`);
     }, 30000);

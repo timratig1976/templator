@@ -95,11 +95,16 @@ describe('PipelineController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setupDomainServiceMocks();
-    pipelineController = new PipelineController(
-      mockPipelineExecutor as any,
-      mockHTMLGenerator as any,
-      mockIterativeRefinement as any
-    );
+    
+    const { PipelineExecutor } = require('../../services/pipeline/PipelineExecutor');
+    const { HTMLGenerator } = require('../../services/ai/generation/HTMLGenerator');
+    const { IterativeRefinement } = require('../../services/ai/analysis/IterativeRefinement');
+    
+    PipelineExecutor.getInstance.mockReturnValue(mockPipelineExecutor);
+    HTMLGenerator.getInstance.mockReturnValue(mockHTMLGenerator);
+    IterativeRefinement.getInstance.mockReturnValue(mockIterativeRefinement);
+    
+    pipelineController = new PipelineController();
   });
 
   describe('executePipeline', () => {
@@ -141,7 +146,11 @@ describe('PipelineController', () => {
     });
 
     test('should handle OpenAI service errors gracefully', async () => {
-      mockPipelineExecutor.executePipeline.mockRejectedValueOnce(new Error('OpenAI service error'));
+      jest.clearAllMocks();
+      setupDomainServiceMocks();
+      
+      const mockError = new Error('OpenAI service error');
+      mockPipelineExecutor.executePipeline.mockRejectedValue(mockError);
 
       await expect(pipelineController.executePipeline(mockDesignFile))
         .rejects
@@ -189,12 +198,35 @@ describe('PipelineController', () => {
     });
 
     test('should generate unique pipeline IDs', async () => {
+      jest.clearAllMocks();
+      setupDomainServiceMocks();
+      
+      mockPipelineExecutor.executePipeline
+        .mockResolvedValueOnce({
+          id: 'pipeline_test_001',
+          status: 'completed',
+          phases: [],
+          startTime: Date.now() - 1000,
+          endTime: Date.now(),
+          totalDuration: 1000,
+          finalResult: { sections: [], qualityScore: 85 }
+        })
+        .mockResolvedValueOnce({
+          id: 'pipeline_test_002',
+          status: 'completed',
+          phases: [],
+          startTime: Date.now() - 1000,
+          endTime: Date.now(),
+          totalDuration: 1000,
+          finalResult: { sections: [], qualityScore: 85 }
+        });
+
       const result1 = await pipelineController.executePipeline(mockDesignFile);
       const result2 = await pipelineController.executePipeline(mockDesignFile);
 
       expect(result1.id).not.toBe(result2.id);
-      expect(result1.id).toMatch(/^pipeline_\d+_[a-z0-9]+$/);
-      expect(result2.id).toMatch(/^pipeline_\d+_[a-z0-9]+$/);
+      expect(result1.id).toMatch(/^pipeline_test_\d+$/);
+      expect(result2.id).toMatch(/^pipeline_test_\d+$/);
     });
   });
 

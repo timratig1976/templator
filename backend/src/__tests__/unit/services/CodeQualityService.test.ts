@@ -31,6 +31,19 @@ describe('CodeQualityService', () => {
     mockFs = jest.mocked(fs);
     mockExec = jest.mocked(exec);
     jest.clearAllMocks();
+    
+    jest.setTimeout(10000);
+  });
+
+  afterEach(() => {
+    // Clean up any pending operations
+    jest.clearAllTimers();
+    jest.clearAllMocks();
+    
+    // Force garbage collection if available
+    if (global.gc) {
+      global.gc();
+    }
   });
 
   describe('getCodeQualityMetrics', () => {
@@ -208,6 +221,16 @@ describe('CodeQualityService', () => {
     });
 
     it('should use cache when available', async () => {
+      // Mock successful operations
+      mockExec.mockImplementation((command: any, options: any, callback: any) => {
+        if (command.includes('find')) {
+          callback(null, { stdout: 'file1.ts' });
+        } else {
+          callback(null, { stdout: '', stderr: '' });
+        }
+        return {} as any;
+      });
+
       // First call
       await codeQualityService.getCodeQualityMetrics();
       
@@ -268,29 +291,15 @@ describe('CodeQualityService', () => {
 
   describe('grade calculation', () => {
     it('should assign correct grades', async () => {
-      // Test different score ranges
-      const testCases = [
-        { score: 95, expectedGrade: 'A+' },
-        { score: 85, expectedGrade: 'A' },
-        { score: 75, expectedGrade: 'B' },
-        { score: 65, expectedGrade: 'C' },
-        { score: 55, expectedGrade: 'D' }
-      ];
+      // Test different score ranges - use single service instance to avoid memory issues
+      mockExec.mockImplementation((command: any, options: any, callback: any) => {
+        callback(null, { stdout: '', stderr: '' });
+        return {} as any;
+      });
 
-      for (const testCase of testCases) {
-        // Mock to return specific score
-        mockExec.mockImplementation((command: any, options: any, callback: any) => {
-          callback(null, { stdout: '', stderr: '' });
-          return {} as any;
-        });
-
-        // Create service instance to avoid cache
-        const service = new CodeQualityService();
-        const metrics = await service.getCodeQualityMetrics();
-        
-        // This is a simplified test - in reality the grade depends on the calculated score
-        expect(['A+', 'A', 'B', 'C', 'D']).toContain(metrics.grade);
-      }
+      const metrics = await codeQualityService.getCodeQualityMetrics();
+      
+      expect(['A+', 'A', 'B', 'C', 'D']).toContain(metrics.grade);
     });
   });
 });

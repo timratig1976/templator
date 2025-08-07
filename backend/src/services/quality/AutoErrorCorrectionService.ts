@@ -1,6 +1,6 @@
 import { createLogger } from '../../utils/logger';
 import { logToFrontend } from '../../routes/logs';
-import { HubSpotValidationService, ValidationResult, ValidationError, ValidationSeverity, ValidationCategory, HubSpotModule } from '../quality/HubSpotValidationService';
+import { HubSpotValidationService, ValidationResult, ValidationError, ValidationSeverity, ValidationCategory, HubSpotModule } from './HubSpotValidationService';
 import { GeneratedModule } from '../deployment/HubSpotPromptService';
 
 const logger = createLogger();

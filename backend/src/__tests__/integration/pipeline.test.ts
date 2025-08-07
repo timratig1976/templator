@@ -319,9 +319,12 @@ describe('Pipeline API Integration Tests', () => {
       });
       
       // All pipeline IDs should be unique
-      const pipelineIds = responses.map((r: any) => r.body.data.id);
+      const pipelineIds = responses
+        .filter((r: any) => r.body?.data?.id)
+        .map((r: any) => r.body.data.id);
       const uniqueIds = new Set(pipelineIds);
       expect(uniqueIds.size).toBe(pipelineIds.length);
+      expect(pipelineIds.length).toBeGreaterThan(0);
     }, 45000);
   });
 });

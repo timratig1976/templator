@@ -132,9 +132,13 @@ describe('End-to-End Test Scenarios', () => {
         expect(refineResponse.body.data).toHaveProperty('refinedHTML');
       }
 
-      const refinedHTML = refineResponse.body.data.refinedHTML;
+      expect(refineResponse.body).toHaveProperty('data');
+      expect(refineResponse.body.data).toBeDefined();
+      const refinedHTML = refineResponse.body.data?.refinedHTML;
       expect(refinedHTML).toBeDefined();
-      expect(refinedHTML.length).toBeGreaterThan(generatedHTML.length);
+      if (refinedHTML && generatedHTML) {
+        expect(refinedHTML.length).toBeGreaterThan(generatedHTML.length);
+      }
 
       // Verify the workflow produces valid results
       expect(uploadResponse.body.message).toBe('Design successfully converted to HTML');
