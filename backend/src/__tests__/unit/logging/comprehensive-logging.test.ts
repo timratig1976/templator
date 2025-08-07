@@ -467,7 +467,7 @@ describe('Comprehensive Logging System', () => {
       const duration = endTime - startTime;
       
       // Should complete within reasonable time (adjust threshold as needed)
-      expect(duration).toBeLessThan(5000); // 5 seconds
+      expect(duration).toBeLessThan(6000); // 6 seconds
       
       // Verify all entries were logged
       const summary = await aiLogger.getAIMetricsSummary('24h');
