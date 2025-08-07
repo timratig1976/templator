@@ -97,7 +97,7 @@ Here's a complete HubSpot hero module:
 </div>
       `;
 
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(mockOpenAIResponse);
 
       const request: ModuleGenerationRequest = {
@@ -205,7 +205,7 @@ Here's a complete HubSpot hero module:
 \`\`\`
       `;
 
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(mockOpenAIResponse);
 
       const request: ModuleGenerationRequest = {
@@ -237,7 +237,7 @@ Here's a complete HubSpot hero module:
 
       for (const testCase of testCases) {
         // Mock appropriate OpenAI responses for each module type
-        const mockOpenAI = require('../../src/services/openaiService');
+        const mockOpenAI = require('../../src/services/ai/openaiService');
         mockOpenAI.generateHubSpotModule.mockResolvedValue(generateMockResponse(testCase.moduleType));
 
         const request: ModuleGenerationRequest = {
@@ -280,7 +280,7 @@ Here's a complete HubSpot hero module:
 \`\`\`
       `;
 
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(mockBadResponse);
 
       const request: ModuleGenerationRequest = {
@@ -300,7 +300,7 @@ Here's a complete HubSpot hero module:
 
   describe('Performance Tests', () => {
     it('should generate modules within acceptable time limits', async () => {
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(generateMockResponse('hero'));
 
       const request: ModuleGenerationRequest = {
@@ -317,7 +317,7 @@ Here's a complete HubSpot hero module:
     }, 20000);
 
     it('should handle concurrent generation requests', async () => {
-      const mockOpenAI = require('../../src/services/openaiService');
+      const mockOpenAI = require('../../src/services/ai/openaiService');
       mockOpenAI.generateHubSpotModule.mockResolvedValue(generateMockResponse('hero'));
 
       const requests = Array.from({ length: 3 }, (_, i) => ({
