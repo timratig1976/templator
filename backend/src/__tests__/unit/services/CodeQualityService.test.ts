@@ -291,15 +291,21 @@ describe('CodeQualityService', () => {
 
   describe('grade calculation', () => {
     it('should assign correct grades', async () => {
-      // Test different score ranges - use single service instance to avoid memory issues
+      // Simplified test to avoid memory issues
       mockExec.mockImplementation((command: any, options: any, callback: any) => {
         callback(null, { stdout: '', stderr: '' });
         return {} as any;
       });
 
+      mockFs.readFile.mockResolvedValue('function simple() { return true; }');
+      mockFs.readdir.mockResolvedValue([
+        { name: 'test.ts', isDirectory: () => false, isFile: () => true } as any
+      ]);
+
       const metrics = await codeQualityService.getCodeQualityMetrics();
       
       expect(['A+', 'A', 'B', 'C', 'D']).toContain(metrics.grade);
+      expect(metrics.grade).toBeDefined();
     });
   });
 });
