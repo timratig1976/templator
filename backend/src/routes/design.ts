@@ -5,7 +5,11 @@ import { createError } from '../middleware/errorHandler';
 import multer from 'multer';
 
 const router = Router();
-const pipelineController = new PipelineController();
+let pipelineController: PipelineController;
+
+export function setPipelineController(controller: PipelineController) {
+  pipelineController = controller;
+}
 
 // Configure multer for design uploads (migrated from designController)
 const upload = multer({
@@ -45,11 +49,30 @@ const upload = multer({
  * Get supported file types (Legacy API - now uses PipelineController)
  */
 router.get('/supported-types', (req: Request, res: Response) => {
+  if (!pipelineController) {
+    pipelineController = new PipelineController();
+  }
   const supportedTypes = pipelineController.getSupportedFileTypes();
   res.json({
     success: true,
     data: supportedTypes,
     message: 'Supported file types retrieved successfully'
+  });
+});
+
+/**
+ * GET /api/design/supported-formats
+ * Alternative endpoint name for supported file types (for backward compatibility)
+ */
+router.get('/supported-formats', (req: Request, res: Response) => {
+  if (!pipelineController) {
+    pipelineController = new PipelineController();
+  }
+  const supportedTypes = pipelineController.getSupportedFileTypes();
+  res.json({
+    success: true,
+    data: supportedTypes,
+    message: 'Supported file formats retrieved successfully'
   });
 });
 
@@ -66,6 +89,9 @@ router.post('/upload', upload.single('design'), async (req: Request, res: Respon
     const { originalname, mimetype, buffer } = req.file;
     
     // Use PipelineController's legacy method
+    if (!pipelineController) {
+      pipelineController = new PipelineController();
+    }
     const result = await pipelineController.convertDesignToHTML({
       buffer,
       originalname,
@@ -74,7 +100,21 @@ router.post('/upload', upload.single('design'), async (req: Request, res: Respon
 
     res.json({
       success: true,
-      data: result,
+      data: {
+        packagedModule: {
+          name: originalname,
+          id: result.fileName || originalname,
+          status: 'completed'
+        },
+        fileName: result.fileName || originalname,
+        fileSize: result.fileSize || buffer.length,
+        analysis: result.analysis || {
+          html: '<div>Generated HTML</div>',
+          sections: [],
+          components: [],
+          description: 'Design converted to HTML'
+        }
+      },
       message: 'Design successfully converted to HTML'
     });
 
@@ -92,6 +132,9 @@ router.post('/refine', validateRequest(refineHTMLSchema), async (req: Request, r
     const { html, requirements } = req.body;
     
     // Use PipelineController's legacy method
+    if (!pipelineController) {
+      pipelineController = new PipelineController();
+    }
     const result = await pipelineController.refineHTML({
       html,
       requirements

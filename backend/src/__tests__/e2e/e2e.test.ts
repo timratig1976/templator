@@ -3,15 +3,27 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { jest } from '@jest/globals';
-import apiRoutes from '../../routes/api';
+import { createApp } from '../../app';
+import { setupDomainServiceMocks } from '../setup/domainServiceMocks';
 
-// Create app function for testing
-function createApp(): express.Application {
-  const app = express();
-  app.use(express.json());
-  app.use('/api', apiRoutes);
-  return app;
-}
+jest.mock('../../services/core/ai/OpenAIClient');
+jest.mock('../../services/pipeline/PipelineExecutor');
+jest.mock('../../services/ai/generation/HTMLGenerator');
+jest.mock('../../services/ai/analysis/IterativeRefinement');
+jest.mock('../../services/quality/validation/HTMLValidator');
+jest.mock('../../services/ai/prompts/PromptManager');
+jest.mock('../../services/ai/splitting/SplittingService');
+jest.mock('../../services/ai/openaiService');
+
+
+jest.mock('../../utils/logger', () => ({
+  createLogger: () => ({
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  })
+}));
 
 // Define types for the test data
 interface Section {
@@ -34,8 +46,15 @@ describe('End-to-End Test Scenarios', () => {
   let app: express.Application;
 
   beforeAll(async () => {
+    setupDomainServiceMocks();
+    
     // Create the app with all middleware and routes
     app = createApp();
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupDomainServiceMocks(); // Reset mocks to default state
   });
 
   describe('Complete Design-to-HubSpot Workflow', () => {
@@ -57,7 +76,7 @@ describe('End-to-End Test Scenarios', () => {
 
       expect(supportedTypesResponse.body.success).toBe(true);
       expect(supportedTypesResponse.body.data.supportedTypes).toContainEqual(
-        expect.objectContaining({ extension: 'png', mimeType: 'image/png' })
+        expect.objectContaining({ type: 'image/png', extensions: expect.arrayContaining(['.png']) })
       );
 
       // Step 2: Upload design and convert to HTML

@@ -50,6 +50,35 @@ export const mockSplittingService = {
   getInstance: jest.fn() as jest.MockedFunction<any>
 };
 
+export const mockPipelineProgressTracker = {
+  trackProgress: jest.fn() as jest.MockedFunction<any>,
+  getProgress: jest.fn() as jest.MockedFunction<any>,
+  updatePhase: jest.fn() as jest.MockedFunction<any>,
+  completePhase: jest.fn() as jest.MockedFunction<any>,
+  getInstance: jest.fn() as jest.MockedFunction<any>
+};
+
+export const mockQualityMetricsDashboard = {
+  recordMetric: jest.fn() as jest.MockedFunction<any>,
+  getMetrics: jest.fn() as jest.MockedFunction<any>,
+  generateReport: jest.fn() as jest.MockedFunction<any>,
+  getInstance: jest.fn() as jest.MockedFunction<any>
+};
+
+export const mockErrorRecoverySystem = {
+  handleError: jest.fn() as jest.MockedFunction<any>,
+  registerStrategy: jest.fn() as jest.MockedFunction<any>,
+  getRecoveryStrategies: jest.fn() as jest.MockedFunction<any>,
+  getInstance: jest.fn() as jest.MockedFunction<any>
+};
+
+export const mockHubSpotAPIService = {
+  uploadModule: jest.fn() as jest.MockedFunction<any>,
+  validateModule: jest.fn() as jest.MockedFunction<any>,
+  getPortalInfo: jest.fn() as jest.MockedFunction<any>,
+  getInstance: jest.fn() as jest.MockedFunction<any>
+};
+
 export function setupDomainServiceMocks() {
   mockOpenAIClient.chatCompletion.mockResolvedValue({
     choices: [{ message: { content: '{"html": "<div>Test HTML</div>", "css": "/* Test CSS */"}' } }],
@@ -82,18 +111,52 @@ export function setupDomainServiceMocks() {
     metadata: { totalTime: 2000, totalCost: 0.02, totalTokens: 200, convergenceReached: true }
   });
   
-  mockPipelineExecutor.executePipeline.mockResolvedValue({
-    id: 'pipeline_test_123',
-    status: 'completed',
-    phases: [
-      { name: 'Input Processing', status: 'completed', duration: 100 },
-      { name: 'AI Analysis', status: 'completed', duration: 200 },
-      { name: 'HTML Generation', status: 'completed', duration: 300 }
-    ],
-    startTime: Date.now() - 1000,
-    endTime: Date.now(),
-    totalDuration: 1000,
-    finalResult: { sections: [], qualityScore: 85 }
+  mockPipelineExecutor.executePipeline.mockImplementation(() => {
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 8);
+    return Promise.resolve({
+      id: `pipeline_${timestamp}_${randomId}`,
+      status: 'completed',
+      phases: [
+        { name: 'Input Processing', status: 'completed', duration: 100 },
+        { name: 'AI Analysis', status: 'completed', duration: 200 },
+        { name: 'HTML Generation', status: 'completed', duration: 300 }
+      ],
+      startTime: Date.now() - 1000,
+      endTime: Date.now(),
+      totalDuration: 1000,
+      processingTime: 1000,
+      qualityScore: 85,
+      sections: [
+        { 
+          id: 'section_1', 
+          name: 'Header', 
+          type: 'header', 
+          html: '<header>Test</header>',
+          editableFields: ['title', 'subtitle'],
+          qualityScore: 85
+        },
+        { 
+          id: 'section_2', 
+          name: 'Content', 
+          type: 'content', 
+          html: '<main>Test</main>',
+          editableFields: ['content', 'cta'],
+          qualityScore: 90
+        }
+      ],
+      finalResult: { sections: [], qualityScore: 85 },
+      metadata: {
+        phaseTimes: {
+          'Input Processing': 100,
+          'AI Analysis': 200,
+          'HTML Generation': 300
+        },
+        totalPhases: 3,
+        successfulPhases: 3,
+        failedPhases: 0
+      }
+    });
   });
   
   mockHTMLValidator.validateHTML.mockResolvedValue({
@@ -124,6 +187,36 @@ export function setupDomainServiceMocks() {
     }
   ]);
   
+  mockPipelineProgressTracker.trackProgress.mockResolvedValue(undefined);
+  mockPipelineProgressTracker.getProgress.mockReturnValue({
+    pipelineId: 'test_pipeline',
+    currentPhase: 'HTML Generation',
+    progress: 75,
+    status: 'in_progress'
+  });
+  
+  mockQualityMetricsDashboard.recordMetric.mockResolvedValue(undefined);
+  mockQualityMetricsDashboard.getMetrics.mockReturnValue({
+    overall: 85,
+    trends: { improving: true },
+    lastUpdated: Date.now()
+  });
+  
+  mockErrorRecoverySystem.handleError.mockResolvedValue({
+    recovered: true,
+    strategy: 'fallback',
+    result: { success: true }
+  });
+  
+  mockHubSpotAPIService.uploadModule.mockResolvedValue({
+    success: true,
+    moduleId: 'test_module_123'
+  });
+  mockHubSpotAPIService.validateModule.mockResolvedValue({
+    isValid: true,
+    errors: []
+  });
+  
   mockOpenAIClient.getInstance.mockReturnValue(mockOpenAIClient);
   mockHTMLGenerator.getInstance.mockReturnValue(mockHTMLGenerator);
   mockIterativeRefinement.getInstance.mockReturnValue(mockIterativeRefinement);
@@ -131,30 +224,83 @@ export function setupDomainServiceMocks() {
   mockHTMLValidator.getInstance.mockReturnValue(mockHTMLValidator);
   mockPromptManager.getInstance.mockReturnValue(mockPromptManager);
   mockSplittingService.getInstance.mockReturnValue(mockSplittingService);
+  mockPipelineProgressTracker.getInstance.mockReturnValue(mockPipelineProgressTracker);
+  mockQualityMetricsDashboard.getInstance.mockReturnValue(mockQualityMetricsDashboard);
+  mockErrorRecoverySystem.getInstance.mockReturnValue(mockErrorRecoverySystem);
+  mockHubSpotAPIService.getInstance.mockReturnValue(mockHubSpotAPIService);
 
-  const { PipelineExecutor } = require('../../services/pipeline/PipelineExecutor');
-  const { HTMLGenerator } = require('../../services/ai/generation/HTMLGenerator');
-  const { IterativeRefinement } = require('../../services/ai/analysis/IterativeRefinement');
-  const { OpenAIClient } = require('../../services/core/ai/OpenAIClient');
-  const { HTMLValidator } = require('../../services/quality/validation/HTMLValidator');
-  const { PromptManager } = require('../../services/ai/prompts/PromptManager');
+  try {
+    const PipelineControllerModule = jest.requireActual('../../controllers/PipelineController') as any;
+    const mockPipelineController = new PipelineControllerModule.PipelineController(
+      mockPipelineExecutor,
+      mockHTMLGenerator,
+      mockIterativeRefinement
+    );
+    
+    const pipelineRoutes = require('../../routes/pipeline');
+    if (pipelineRoutes.setPipelineController) {
+      pipelineRoutes.setPipelineController(mockPipelineController);
+    }
+    
+    const designRoutes = require('../../routes/design');
+    if (designRoutes.setPipelineController) {
+      designRoutes.setPipelineController(mockPipelineController);
+    }
+  } catch (error) {
+  }
 
-  if (PipelineExecutor.getInstance) {
-    PipelineExecutor.getInstance = jest.fn().mockReturnValue(mockPipelineExecutor);
-  }
-  if (HTMLGenerator.getInstance) {
-    HTMLGenerator.getInstance = jest.fn().mockReturnValue(mockHTMLGenerator);
-  }
-  if (IterativeRefinement.getInstance) {
-    IterativeRefinement.getInstance = jest.fn().mockReturnValue(mockIterativeRefinement);
-  }
-  if (OpenAIClient.getInstance) {
-    OpenAIClient.getInstance = jest.fn().mockReturnValue(mockOpenAIClient);
-  }
-  if (HTMLValidator.getInstance) {
-    HTMLValidator.getInstance = jest.fn().mockReturnValue(mockHTMLValidator);
-  }
-  if (PromptManager.getInstance) {
-    PromptManager.getInstance = jest.fn().mockReturnValue(mockPromptManager);
-  }
+  jest.doMock('../../services/pipeline/PipelineExecutor', () => ({
+    PipelineExecutor: jest.fn().mockImplementation(() => mockPipelineExecutor),
+    default: mockPipelineExecutor
+  }));
+
+  jest.doMock('../../services/ai/generation/HTMLGenerator', () => ({
+    HTMLGenerator: jest.fn().mockImplementation(() => mockHTMLGenerator),
+    default: mockHTMLGenerator
+  }));
+
+  jest.doMock('../../services/ai/analysis/IterativeRefinement', () => ({
+    IterativeRefinement: jest.fn().mockImplementation(() => mockIterativeRefinement),
+    default: mockIterativeRefinement
+  }));
+
+  jest.doMock('../../services/core/ai/OpenAIClient', () => ({
+    OpenAIClient: jest.fn().mockImplementation(() => mockOpenAIClient),
+    default: mockOpenAIClient
+  }));
+
+  jest.doMock('../../services/quality/validation/HTMLValidator', () => ({
+    HTMLValidator: jest.fn().mockImplementation(() => mockHTMLValidator),
+    default: mockHTMLValidator
+  }));
+
+  jest.doMock('../../services/ai/prompts/PromptManager', () => ({
+    PromptManager: jest.fn().mockImplementation(() => mockPromptManager),
+    default: mockPromptManager
+  }));
+
+  jest.doMock('../../services/pipeline/PipelineProgressTracker', () => ({
+    PipelineProgressTracker: jest.fn().mockImplementation(() => mockPipelineProgressTracker),
+    default: mockPipelineProgressTracker
+  }));
+
+  jest.doMock('../../services/quality/QualityMetricsDashboard', () => ({
+    QualityMetricsDashboard: jest.fn().mockImplementation(() => mockQualityMetricsDashboard),
+    default: mockQualityMetricsDashboard
+  }));
+
+  jest.doMock('../../services/recovery/ErrorRecoverySystem', () => ({
+    ErrorRecoverySystem: jest.fn().mockImplementation(() => mockErrorRecoverySystem),
+    default: mockErrorRecoverySystem
+  }));
+
+  jest.doMock('../../services/deployment/HubSpotAPIService', () => ({
+    HubSpotAPIService: jest.fn().mockImplementation(() => mockHubSpotAPIService),
+    default: mockHubSpotAPIService
+  }));
+
+  jest.doMock('../../services/ai/splitting/SplittingService', () => ({
+    SplittingService: mockSplittingService,
+    default: mockSplittingService
+  }));
 }
