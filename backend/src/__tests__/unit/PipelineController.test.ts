@@ -1,9 +1,9 @@
 import { PipelineController } from '../../controllers/PipelineController';
-import { OpenAIService } from '../../services/openaiService';
+import { OpenAIService } from '../../services/ai/openaiService';
 import { createError } from '../../middleware/errorHandler';
 
 // Mock dependencies
-jest.mock('../../services/openaiService');
+jest.mock('../../services/ai/openaiService');
 jest.mock('../../middleware/errorHandler');
 jest.mock('../../utils/logger', () => ({
   createLogger: () => ({
@@ -39,8 +39,14 @@ describe('PipelineController', () => {
       buffer: Buffer.from('fake-image-data'),
       originalname: 'test-design.png',
       mimetype: 'image/png',
-      size: 1024
-    };
+      size: 1024,
+      fieldname: 'design',
+      encoding: '7bit',
+      stream: null as any,
+      destination: '',
+      filename: 'test-design.png',
+      path: ''
+    } as Express.Multer.File;
 
     const mockDesignAnalysis = {
       html: '<div class="test">Test HTML</div>',
@@ -208,8 +214,14 @@ describe('PipelineController', () => {
         buffer: Buffer.from('not-an-image'),
         originalname: 'test.txt',
         mimetype: 'text/plain',
-        size: 100
-      };
+        size: 100,
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'test.txt',
+        path: ''
+      } as Express.Multer.File;
 
       // Should still process but may have lower quality scores
       const result = await pipelineController.executePipeline(invalidFile);
@@ -222,8 +234,14 @@ describe('PipelineController', () => {
         buffer: Buffer.alloc(10 * 1024 * 1024), // 10MB
         originalname: 'large-design.png',
         mimetype: 'image/png',
-        size: 10 * 1024 * 1024
-      };
+        size: 10 * 1024 * 1024,
+        fieldname: 'design',
+        encoding: '7bit',
+        stream: null as any,
+        destination: '',
+        filename: 'large-design.png',
+        path: ''
+      } as Express.Multer.File;
 
       const result = await pipelineController.executePipeline(largeFile);
       expect(result).toHaveProperty('id');
