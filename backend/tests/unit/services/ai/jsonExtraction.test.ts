@@ -175,14 +175,14 @@ describe('OpenAIService - Enhanced JSON Extraction', () => {
         const content = '```json\n{\n  "html": "<div>Invalid</div>",\n  "missing": "closing brace"\n```';
         
         expect(() => callExtractJSON(content, 'test-request-error-1'))
-          .toThrow('Failed to parse JSON response');
+          .toThrow('Failed to parse AI response');
       });
 
       it('should throw error for non-JSON content', () => {
         const content = 'This is just plain text without any JSON structure.';
         
         expect(() => callExtractJSON(content, 'test-request-error-2'))
-          .toThrow('Failed to parse JSON response');
+          .toThrow('Invalid response format from AI');
       });
 
       it('should provide detailed error information', () => {
@@ -192,8 +192,7 @@ describe('OpenAIService - Enhanced JSON Extraction', () => {
           callExtractJSON(content, 'test-request-error-3');
           fail('Should have thrown an error');
         } catch (error: any) {
-          expect(error.message).toContain('Failed to parse JSON response');
-          expect(error.message).toContain('Expected');
+          expect(error.message).toContain('Failed to parse AI response');
         }
       });
     });

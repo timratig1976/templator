@@ -19,22 +19,26 @@ const createTestApp = () => {
       data: {
         fileName: 'test-design.png',
         fileSize: 1024,
+        packagedModule: {
+          name: 'test-design.png',
+          path: '/modules/test-design.png'
+        },
+        sections: [{
+          id: 'hero-1',
+          name: 'Hero Section',
+          type: 'hero',
+          html: '<h1 class="text-4xl font-bold">Welcome</h1>',
+          editableFields: [{
+            id: 'title-1',
+            name: 'Main Title',
+            type: 'text',
+            selector: 'h1',
+            defaultValue: 'Welcome',
+            required: true
+          }]
+        }],
         analysis: {
           html: '<div class="bg-white p-8"><h1 class="text-4xl font-bold">Welcome</h1></div>',
-          sections: [{
-            id: 'hero-1',
-            name: 'Hero Section',
-            type: 'hero',
-            html: '<h1 class="text-4xl font-bold">Welcome</h1>',
-            editableFields: [{
-              id: 'title-1',
-              name: 'Main Title',
-              type: 'text',
-              selector: 'h1',
-              defaultValue: 'Welcome',
-              required: true
-            }]
-          }],
           components: [{
             id: 'comp-1',
             name: 'Title',

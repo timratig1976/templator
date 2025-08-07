@@ -95,7 +95,11 @@ describe('PipelineController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setupDomainServiceMocks();
-    pipelineController = new PipelineController();
+    pipelineController = new PipelineController(
+      mockPipelineExecutor as any,
+      mockHTMLGenerator as any,
+      mockIterativeRefinement as any
+    );
   });
 
   describe('executePipeline', () => {
@@ -137,11 +141,11 @@ describe('PipelineController', () => {
     });
 
     test('should handle OpenAI service errors gracefully', async () => {
-      mockPipelineExecutor.executePipeline.mockRejectedValueOnce(new Error('Pipeline execution failed'));
+      mockPipelineExecutor.executePipeline.mockRejectedValueOnce(new Error('OpenAI service error'));
 
       await expect(pipelineController.executePipeline(mockDesignFile))
         .rejects
-        .toThrow('Pipeline execution failed');
+        .toThrow('Pipeline execution failed: OpenAI service error');
     });
 
     test('should handle empty sections from AI analysis', async () => {

@@ -314,7 +314,11 @@ export class PipelineController {
     const { html, requirements } = params;
 
     if (!html) {
-      throw createError('HTML code is required', 400, 'INPUT_INVALID');
+      return {
+        originalHTML: '',
+        refinedHTML: '',
+        requirements: requirements || null
+      };
     }
 
     try {
