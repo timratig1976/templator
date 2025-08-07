@@ -20,9 +20,9 @@ import { createApp } from '../app';
 import http from 'http';
 
 const execAsync = promisify(exec);
-const PORT = 3009;
-const BACKEND_URL = `http://localhost:${PORT}`;
-const SOCKET_URL = `http://localhost:${PORT}`;
+const PORT = process.env.TEST_PORT ? parseInt(process.env.TEST_PORT) : 0; // Use dynamic port
+let BACKEND_URL: string;
+let SOCKET_URL: string;
 
 describe('System Stability Test Suite', () => {
   let clientSocket: Socket;
@@ -37,14 +37,17 @@ describe('System Stability Test Suite', () => {
     
     await new Promise<void>((resolve) => {
       server.listen(PORT, () => {
-        console.log(`Test server started on port ${PORT}`);
+        const actualPort = (server.address() as any)?.port || PORT;
+        BACKEND_URL = `http://localhost:${actualPort}`;
+        SOCKET_URL = `http://localhost:${actualPort}`;
+        console.log(`Test server started on port ${actualPort}`);
         resolve();
       });
     });
     
     // Wait for backend to be ready
     await waitForBackend();
-  });
+  }, 60000); // Increase timeout to 60 seconds
 
   afterAll(async () => {
     if (clientSocket) {
@@ -348,7 +351,7 @@ describe('System Stability Test Suite', () => {
       ];
 
       for (const route of criticalRoutes) {
-        const response = await request('http://localhost:3009')
+        const response = await request(BACKEND_URL)
           .get(route)
           .expect((res) => {
             expect(res.status).not.toBe(404);
@@ -361,9 +364,12 @@ describe('System Stability Test Suite', () => {
 });
 
 // Helper functions
-async function waitForBackend(maxAttempts = 20, delay = 500): Promise<void> {
+async function waitForBackend(maxAttempts = 30, delay = 1000): Promise<void> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
+      if (!BACKEND_URL) {
+        throw new Error('Backend URL not set yet');
+      }
       await request(BACKEND_URL).get('/health').expect(200);
       console.log('✅ Backend is ready');
       return;

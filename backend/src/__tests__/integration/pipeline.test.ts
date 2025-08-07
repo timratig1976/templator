@@ -11,6 +11,7 @@ jest.mock('../../services/ai/generation/HTMLGenerator');
 jest.mock('../../services/ai/analysis/IterativeRefinement');
 jest.mock('../../services/quality/validation/HTMLValidator');
 jest.mock('../../services/ai/prompts/PromptManager');
+jest.mock('../../services/ai/splitting/SplittingService');
 
 describe('Pipeline API Integration Tests', () => {
   let app: any;

@@ -34,6 +34,12 @@ jest.mock('../../services/ai/prompts/PromptManager', () => ({
   }
 }));
 
+jest.mock('../../services/ai/splitting/SplittingService', () => ({
+  SplittingService: {
+    getInstance: jest.fn()
+  }
+}));
+
 jest.mock('../../middleware/errorHandler');
 
 import { PipelineController } from '../../controllers/PipelineController';
