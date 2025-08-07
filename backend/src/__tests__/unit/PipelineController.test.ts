@@ -5,7 +5,7 @@ import { createError } from '../../middleware/errorHandler';
 // Mock dependencies
 jest.mock('../../services/ai/openaiService');
 jest.mock('../../middleware/errorHandler');
-jest.mock('../../utils/logger', () => ({
+jest.mock('../utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
     error: jest.fn(),

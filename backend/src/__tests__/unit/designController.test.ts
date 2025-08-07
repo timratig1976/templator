@@ -20,7 +20,7 @@ jest.mock('../../services/ai/openaiService', () => {
 });
 
 // Mock the logger to avoid console spam
-jest.mock('../utils/logger', () => ({
+jest.mock('../../utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
     error: jest.fn(),

@@ -3,6 +3,8 @@
  * Tests API endpoints and service interactions (15% of test suite)
  */
 
+import '../../setup/integration.setup';
+import { IntegrationTestHelpers } from '../../setup/integration.setup';
 import { ProjectFactory } from '../../fixtures/project.factory';
 import { UserFactory } from '../../fixtures/user.factory';
 import { TemplateFactory } from '../../fixtures/template.factory';
