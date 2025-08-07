@@ -7,7 +7,11 @@ import { createLogger } from '../utils/logger';
 
 const router = Router();
 const logger = createLogger();
-const pipelineController = new PipelineController();
+let pipelineController: PipelineController;
+
+export function setPipelineController(controller: PipelineController) {
+  pipelineController = controller;
+}
 
 // Configure multer for pipeline uploads
 const upload = multer({
@@ -57,6 +61,9 @@ router.post('/execute', upload.single('design'), async (req: Request, res: Respo
     });
 
     // Execute the quality-focused pipeline
+    if (!pipelineController) {
+      pipelineController = new PipelineController();
+    }
     const result = await pipelineController.executePipeline(req.file);
 
     logger.info('✅ Pipeline execution completed successfully', {
@@ -226,6 +233,9 @@ router.post('/regenerate-html', async (req: Request, res: Response, next: NextFu
     });
 
     // Use the pipeline controller to regenerate HTML for the section
+    if (!pipelineController) {
+      pipelineController = new PipelineController();
+    }
     const regeneratedSection = await pipelineController.regenerateSectionHTML({
       sectionId,
       originalImage,
