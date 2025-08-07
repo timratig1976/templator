@@ -100,7 +100,7 @@ describe('PipelineController', () => {
     test('should calculate quality scores for each section', async () => {
       const result = await pipelineController.executePipeline(mockDesignFile);
 
-      result.sections.forEach(section => {
+      result.sections.forEach((section: any) => {
         expect(section.qualityScore).toBeGreaterThan(0);
         expect(section.qualityScore).toBeLessThanOrEqual(100);
       });

@@ -5,7 +5,7 @@ import fs from 'fs';
 import { createApp } from '../../app';
 
 describe('Pipeline API Integration Tests', () => {
-  let app: Express;
+  let app: any;
   const testImagePath = path.join(__dirname, '../fixtures/test-design.png');
   
   beforeAll(async () => {
@@ -285,7 +285,7 @@ describe('Pipeline API Integration Tests', () => {
     }, 35000);
 
     test('should handle concurrent requests', async () => {
-      const promises = [];
+      const promises: Promise<any>[] = [];
       
       for (let i = 0; i < 3; i++) {
         promises.push(
@@ -297,14 +297,14 @@ describe('Pipeline API Integration Tests', () => {
       
       const responses = await Promise.all(promises);
       
-      responses.forEach(response => {
+      responses.forEach((response: any) => {
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('success', true);
         expect(response.body.data).toHaveProperty('id');
       });
       
       // All pipeline IDs should be unique
-      const pipelineIds = responses.map(r => r.body.data.id);
+      const pipelineIds = responses.map((r: any) => r.body.data.id);
       const uniqueIds = new Set(pipelineIds);
       expect(uniqueIds.size).toBe(pipelineIds.length);
     }, 45000);

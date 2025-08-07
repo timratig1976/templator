@@ -4,7 +4,7 @@ import { jest } from '@jest/globals';
 const mockConvertDesignToHTML = jest.fn() as jest.MockedFunction<any>;
 const mockRefineHTML = jest.fn() as jest.MockedFunction<any>;
 
-jest.mock('../services/openaiService', () => ({
+jest.mock('../../services/ai/openaiService', () => ({
   default: {
     convertDesignToHTML: mockConvertDesignToHTML,
     refineHTML: mockRefineHTML,
