@@ -182,7 +182,7 @@ export class TemplateRepository {
       let ratedCount = 0;
       let totalUsage = 0;
 
-      templates.forEach(template => {
+      templates.forEach((template: { category: string; rating: number | null; usageCount: number }) => {
         categoryCounts[template.category] = (categoryCounts[template.category] || 0) + 1;
         
         if (template.rating !== null) {

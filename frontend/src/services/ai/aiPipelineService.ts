@@ -9,12 +9,10 @@ import { ProgressTracker } from './progressTracking';
 import { performLightweightSectionDetection } from './sectionDetection';
 import { performAIVisionAnalysis } from './aiAnalysis';
 import type { 
-  AIPhaseProgress, 
   SplittingSuggestion, 
   AIAnalysisResult, 
   AIDetectedSection,
   AIEnhancedPipelineResult,
-  PhaseProgressCallback,
   PipelineExecutionOptions 
 } from './types';
 

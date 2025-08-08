@@ -93,7 +93,7 @@ export async function performAIVisionAnalysis(designFile: File, confirmedSection
 
     if (!response.ok) {
       // Enhanced error handling with detailed parsing
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       let errorDetails = '';
       let fullErrorMessage = errorMessage;
       

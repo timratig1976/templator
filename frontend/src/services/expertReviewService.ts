@@ -3,7 +3,7 @@
  * Connects to Phase 4 backend ExpertReviewDashboard service
  */
 
-import { API_ENDPOINTS } from '../config/api';
+
 
 export interface ReviewRequest {
   module_id: string;

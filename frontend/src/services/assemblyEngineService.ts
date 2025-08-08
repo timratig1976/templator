@@ -3,7 +3,7 @@
  * Connects to Phase 4 backend ComponentAssemblyEngine service
  */
 
-import { API_ENDPOINTS } from '../config/api';
+
 
 export interface AssemblyRequest {
   target_module_type: string;
