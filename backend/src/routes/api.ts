@@ -20,6 +20,8 @@ import testImagesRoutes from './test-images';
 import pipelineMonitoringRoutes from './pipelineMonitoring';
 import hybridLayoutRoutes from './hybridLayout';
 import aiEnhancementRoutes from './aiEnhancement';
+import generationRoutes from './generation';
+import designUploadsRoutes from './designUploads';
 
 const router = Router();
 const logger = createLogger();
@@ -74,6 +76,12 @@ router.use('/hybrid-layout', hybridLayoutRoutes);
 
 // AI enhancement and section detection routes
 router.use('/ai-enhancement', aiEnhancementRoutes);
+
+// Design uploads management routes
+router.use('/design-uploads', designUploadsRoutes);
+
+// Generation routes (section versions, prompts, selection)
+router.use('/generation', generationRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {

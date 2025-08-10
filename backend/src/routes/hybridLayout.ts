@@ -3,6 +3,9 @@ import { Request, Response } from 'express';
 import multer from 'multer';
 import { createLogger } from '../utils/logger';
 import openaiService from '../services/ai/openaiService';
+import storage from '../services/storage';
+import { sha256 } from '../utils/checksum';
+import designUploadRepo from '../services/database/DesignUploadRepository';
 import enhancedLayoutDetectionService from '../services/ai/EnhancedLayoutDetectionService';
 import { createError } from '../middleware/errorHandler';
 
@@ -97,6 +100,22 @@ router.post('/analyze', (req: Request, res: Response, next: any) => {
       fileSize: req.file.size,
       mimeType: req.file.mimetype
     });
+
+    // Best-effort: persist original file to storage and record in DB
+    try {
+      const put = await storage.put(req.file.buffer, { mime: req.file.mimetype, extension: req.file.originalname.split('.').pop() || 'bin' });
+      const checksum = sha256(req.file.buffer);
+      await designUploadRepo.create({
+        filename: req.file.originalname,
+        mime: req.file.mimetype,
+        size: req.file.size,
+        storageUrl: put.url,
+        checksum,
+        meta: { source: 'hybrid-layout/analyze' }
+      });
+    } catch (e) {
+      // non-blocking
+    }
 
     // Convert buffer to base64
     const imageBase64 = req.file.buffer.toString('base64');

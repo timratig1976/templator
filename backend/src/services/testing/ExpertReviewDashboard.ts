@@ -1,8 +1,10 @@
 import { createLogger } from '../../utils/logger';
-import { ModuleComponentRepository, ModuleComponent } from '../module/ModuleComponentRepository';
+import { ModuleComponent } from '../module/ModuleComponentRepository';
+import ModuleComponentPrismaRepository from '../module/ModuleComponentPrismaRepository';
 import { ComponentAssemblyEngine, AssembledModule, ComponentAssemblyResult } from '../module/ComponentAssemblyEngine';
 import { HubSpotValidationService } from '../quality/HubSpotValidationService';
 import OpenAIService from '../ai/openaiService';
+import ReviewFeedbackRepository from '../database/ReviewFeedbackRepository';
 
 const logger = createLogger();
 
@@ -171,19 +173,21 @@ export interface QualityTrend {
 
 export class ExpertReviewDashboard {
   private static instance: ExpertReviewDashboard;
-  private componentRepository: ModuleComponentRepository;
+  private componentRepository: ModuleComponentPrismaRepository;
   private assemblyEngine: ComponentAssemblyEngine;
   private validationService: HubSpotValidationService;
   private openaiService: typeof OpenAIService;
   private reviewers: Map<string, ReviewerProfile> = new Map();
   private activeReviews: Map<string, ReviewAssignment> = new Map();
   private reviewResults: Map<string, ReviewResult> = new Map();
+  private reviewFeedbackRepo: ReviewFeedbackRepository;
 
   constructor() {
-    this.componentRepository = ModuleComponentRepository.getInstance();
+    this.componentRepository = ModuleComponentPrismaRepository.getInstance();
     this.assemblyEngine = ComponentAssemblyEngine.getInstance();
     this.validationService = HubSpotValidationService.getInstance();
     this.openaiService = OpenAIService;
+    this.reviewFeedbackRepo = new ReviewFeedbackRepository();
     this.initializeReviewSystem();
   }
 
@@ -284,6 +288,34 @@ export class ExpertReviewDashboard {
 
       // Store review result
       this.reviewResults.set(reviewResult.result_id, reviewResult);
+
+      // Best-effort: persist review feedback to DB
+      try {
+        await this.reviewFeedbackRepo.create({
+          // We may not have split/artifact context here; attach module if available later
+          moduleId: undefined,
+          designSplitId: undefined,
+          artifactId: undefined,
+          reviewer: reviewResult.reviewer_id,
+          status: 'submitted',
+          ratings: {
+            overall_score: reviewResult.overall_score,
+          },
+          comments: reviewResult.summary?.main_concerns?.join('; ') || 'Review submitted',
+          findings: {
+            sections: reviewResult.review_sections,
+            recommendations: reviewResult.recommendations,
+            approval_status: reviewResult.approval_status,
+            next_steps: reviewResult.next_steps,
+            completed_at: reviewResult.completed_at,
+          },
+        });
+      } catch (persistErr) {
+        logger.warn('Failed to persist ReviewFeedback (non-blocking)', {
+          error: persistErr instanceof Error ? persistErr.message : 'Unknown error',
+          resultId: reviewResult.result_id,
+        });
+      }
 
       // Update assignment status
       const assignment = this.activeReviews.get(reviewResult.review_request_id);

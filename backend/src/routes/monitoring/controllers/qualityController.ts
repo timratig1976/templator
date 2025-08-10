@@ -7,9 +7,11 @@ import { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../../../utils/logger';
 import QualityMetricsDashboard from '../../../services/quality/QualityMetricsDashboard';
 import { formatJsonResponse, getErrorMessage, sendErrorResponse, formatSuccessResponse } from '../utils/responseFormatter';
+import TestRunRepository from '../../../services/database/TestRunRepository';
 
 const logger = createLogger();
 const qualityDashboard = new QualityMetricsDashboard();
+const testRunRepo = new TestRunRepository();
 
 /**
  * GET /api/monitoring/quality/metrics
@@ -33,6 +35,35 @@ export const getQualityMetrics = (req: Request, res: Response): void => {
   } catch (error) {
     logger.error('Failed to retrieve quality metrics', { error: getErrorMessage(error) });
     sendErrorResponse(res, 'Failed to retrieve quality metrics');
+  }
+};
+
+/**
+ * GET /api/monitoring/quality/test-runs
+ * List recent test runs by moduleId or designSplitId
+ */
+export const getTestRuns = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { moduleId, designSplitId, limit } = req.query as Record<string, string | undefined>;
+
+    if (!moduleId && !designSplitId) {
+      return sendErrorResponse(res, 'Provide moduleId or designSplitId', 400);
+    }
+
+    let runs;
+    if (designSplitId) {
+      runs = await testRunRepo.listRunsBySplit(designSplitId);
+    } else {
+      runs = await testRunRepo.listRunsByModule(moduleId as string, parseInt(limit || '20', 10) || 20);
+    }
+
+    res.json({
+      success: true,
+      data: { runs },
+    });
+  } catch (error) {
+    logger.error('Failed to fetch test runs', { error: getErrorMessage(error), query: req.query });
+    sendErrorResponse(res, 'Failed to fetch test runs');
   }
 };
 
@@ -113,6 +144,22 @@ export const generateQualityReport = async (req: Request, res: Response, next: N
       return sendErrorResponse(res, 'Missing required fields: pipelineId and sectionData', 400);
     }
 
+    // Persist a TestRun for this quality report (best-effort)
+    let runId: string | undefined;
+    try {
+      const run = await testRunRepo.createRun({
+        designSplitId: undefined,
+        artifactId: undefined,
+        moduleId: pipelineId,
+        type: 'quality',
+        status: 'running',
+        summary: { initiatedBy: 'qualityController', sections: Array.isArray(sectionData) ? sectionData.length : 1 },
+      });
+      runId = run.id;
+    } catch (e) {
+      logger.warn('Failed to create TestRun (non-blocking)', { error: getErrorMessage(e) });
+    }
+
     // Generate quality report (mock implementation since method doesn't exist)
     const report = {
       id: `report_${Date.now()}`,
@@ -128,15 +175,57 @@ export const generateQualityReport = async (req: Request, res: Response, next: N
       score: report.score 
     });
 
+    // Append results to TestRun if available
+    try {
+      if (runId) {
+        await testRunRepo.addResult(runId, {
+          name: 'Quality Report Generation',
+          status: 'passed',
+          durationMs: 0,
+          details: { score: report.score, sections: report.sections },
+        });
+
+        if (Array.isArray(validationResults)) {
+          for (const v of validationResults) {
+            await testRunRepo.addResult(runId, {
+              name: `Validation: ${v?.validator || 'unknown'}`,
+              status: v?.status === 'passed' ? 'passed' : v?.status === 'warning' ? 'flaky' : 'failed',
+              durationMs: v?.metrics?.durationMs || 0,
+              details: v || {},
+            });
+          }
+        }
+
+        const passed = Array.isArray(validationResults)
+          ? validationResults.filter((v: any) => v?.status === 'passed').length
+          : 1;
+        const failed = Array.isArray(validationResults)
+          ? validationResults.filter((v: any) => v?.status === 'failed').length
+          : 0;
+
+        await testRunRepo.completeRun(runId, failed > 0 ? 'partial' : 'passed', {
+          reportId: report.id,
+          score: report.score,
+          total: (Array.isArray(validationResults) ? validationResults.length : 0) + 1,
+          passed: passed + 1,
+          failed,
+        });
+      }
+    } catch (e) {
+      logger.warn('Failed to persist TestRun results (non-blocking)', { error: getErrorMessage(e), runId });
+    }
+
     res.json({
       success: true,
       data: {
         report,
+        testRun: runId ? { id: runId } : null,
         summary: {
           reportId: report.id,
           score: report.score,
           generatedAt: report.timestamp,
-          sectionsAnalyzed: Array.isArray(sectionData) ? sectionData.length : 1
+          sectionsAnalyzed: Array.isArray(sectionData) ? sectionData.length : 1,
+          testRunId: runId || undefined,
         }
       }
     });

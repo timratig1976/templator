@@ -16,7 +16,8 @@ import {
   getQualityMetrics,
   getRecentQualityReports,
   getQualityTrends,
-  generateQualityReport
+  generateQualityReport,
+  getTestRuns,
 } from './controllers/qualityController';
 
 import {
@@ -44,6 +45,7 @@ import {
 import PipelineProgressTracker from '../../services/pipeline/PipelineProgressTracker';
 import QualityMetricsDashboard from '../../services/quality/QualityMetricsDashboard';
 import ErrorRecoverySystem from '../../services/recovery/ErrorRecoverySystem';
+import { getPromptsSummary, getPromptDetail } from './controllers/promptController';
 
 const router = Router();
 
@@ -74,6 +76,7 @@ router.get('/quality/metrics', getQualityMetrics);
 router.get('/quality/reports/recent', getRecentQualityReports);
 router.get('/quality/trends', getQualityTrends);
 router.post('/quality/reports/generate', generateQualityReport);
+router.get('/quality/test-runs', getTestRuns);
 
 // ========================================
 // SYSTEM HEALTH ROUTES
@@ -119,6 +122,16 @@ router.get('/trends/raw', getRawTrends);
  * Simple health check endpoint
  */
 router.get('/health/comprehensive', getSystemHealth);
+
+// ========================================
+// PROMPT MONITORING ROUTES
+// ========================================
+
+/**
+ * Prompt Monitoring Endpoints
+ */
+router.get('/prompts/summary', getPromptsSummary);
+router.get('/prompts/:id', getPromptDetail);
 
 // Export services for use in other parts of the application
 export { progressTracker, qualityDashboard, errorRecovery };

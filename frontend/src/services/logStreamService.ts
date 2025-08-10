@@ -3,6 +3,10 @@
 import { API_ENDPOINTS } from '../config/api';
 import { AILogEntry, aiLogger } from './aiLogger';
 
+// Enable SSE logs only when explicitly turned on
+const isBrowser = typeof window !== 'undefined';
+const ENABLE_SSE = isBrowser && process.env.NEXT_PUBLIC_ENABLE_SSE_LOGS === '1';
+
 class LogStreamService {
   private static instance: LogStreamService;
   private eventSource: EventSource | null = null;
@@ -19,8 +23,12 @@ class LogStreamService {
   }
 
   private constructor() {
-    // Auto-connect when service is created
-    this.connect();
+    // Auto-connect only when enabled via env flag
+    if (ENABLE_SSE) {
+      this.connect();
+    } else {
+      aiLogger.info('system', 'SSE log stream disabled (use NEXT_PUBLIC_ENABLE_SSE_LOGS=1 to enable)');
+    }
   }
 
   public connect(): void {

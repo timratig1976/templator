@@ -1,5 +1,6 @@
 import { createLogger } from '../../utils/logger';
-import { ModuleComponentRepository, ModuleComponent } from '../module/ModuleComponentRepository';
+import { ModuleComponent } from '../module/ModuleComponentRepository';
+import ModuleComponentPrismaRepository from '../module/ModuleComponentPrismaRepository';
 import { ComponentAssemblyEngine, AssembledModule } from '../module/ComponentAssemblyEngine';
 import { ExpertReviewDashboard } from './ExpertReviewDashboard';
 import { HubSpotValidationService } from '../quality/HubSpotValidationService';
@@ -49,7 +50,7 @@ const logger = createLogger();
 
 export class ComprehensiveTestSuite {
   private static instance: ComprehensiveTestSuite;
-  private componentRepository: ModuleComponentRepository;
+  private componentRepository: ModuleComponentPrismaRepository;
   private assemblyEngine: ComponentAssemblyEngine;
   private reviewDashboard: ExpertReviewDashboard;
   private validationService: HubSpotValidationService;
@@ -60,7 +61,7 @@ export class ComprehensiveTestSuite {
   private benchmarkBaselines: Map<string, PerformanceMetrics> = new Map();
 
   constructor() {
-    this.componentRepository = ModuleComponentRepository.getInstance();
+    this.componentRepository = ModuleComponentPrismaRepository.getInstance();
     this.assemblyEngine = ComponentAssemblyEngine.getInstance();
     this.reviewDashboard = ExpertReviewDashboard.getInstance();
     this.validationService = HubSpotValidationService.getInstance();

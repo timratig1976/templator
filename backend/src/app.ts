@@ -18,16 +18,22 @@ import interactivePromptsRoutes from './routes/interactivePrompts';
 import hybridLayoutRoutes from './routes/hybridLayout';
 import hybridLayoutTestRoutes from './routes/hybridLayoutTest';
 import exportRoutes from './routes/exportRoutes';
+import generationRoutes from './routes/generation';
 import pipelineRoutes from './routes/pipeline';
 import logsRoutes from './routes/logs';
 // import htmlValidationRoutes from './routes/htmlValidation'; // Temporarily disabled due to TypeScript errors
 import layoutSplittingRoutes from './routes/layoutSplittingRoutes';
+import designUploadsRoutes from './routes/designUploads';
 
 export function createApp(): express.Application {
   const app = express();
 
   // Security middleware
   app.use(helmet({
+    // Allow the frontend (localhost:3000) to request assets from backend (localhost:3009)
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // Disable COEP for local dev to avoid NotSameOrigin blocking for images
+    crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -549,10 +555,12 @@ export function createApp(): express.Application {
   app.use('/api/hybrid-layout', hybridLayoutRoutes);
   app.use('/api/hybrid-layout-test', hybridLayoutTestRoutes);
   app.use('/api/export', exportRoutes);
+  app.use('/api/generation', generationRoutes);
   app.use('/api/pipeline', pipelineRoutes);
   app.use('/api/logs', logsRoutes);
   // app.use('/api/html-validation', htmlValidationRoutes); // Temporarily disabled due to TypeScript errors
   app.use('/api/layout-splitting', layoutSplittingRoutes);
+  app.use('/api/design-uploads', designUploadsRoutes);
 
   const { errorHandler } = require('./middleware/errorHandler');
   app.use(errorHandler);

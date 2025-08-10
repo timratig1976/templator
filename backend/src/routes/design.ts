@@ -3,6 +3,9 @@ import { PipelineController } from '../controllers/PipelineController';
 import { validateRequest, refineHTMLSchema, createFileUploadValidator } from '../middleware/unifiedValidation';
 import { createError } from '../middleware/errorHandler';
 import multer from 'multer';
+import storage from '../services/storage';
+import { sha256 } from '../utils/checksum';
+import designUploadRepo from '../services/database/DesignUploadRepository';
 
 const router = Router();
 let pipelineController: PipelineController;
@@ -87,6 +90,24 @@ router.post('/upload', upload.single('design'), async (req: Request, res: Respon
     }
 
     const { originalname, mimetype, buffer } = req.file;
+    // Best-effort: persist original file to storage and record in DB
+    let storageUrl: string | null = null;
+    let checksum: string | null = null;
+    try {
+      const put = await storage.put(buffer, { mime: mimetype, extension: originalname.split('.').pop() || 'bin' });
+      storageUrl = put.url;
+      checksum = sha256(buffer);
+      await designUploadRepo.create({
+        filename: originalname,
+        mime: mimetype,
+        size: buffer.length,
+        storageUrl,
+        checksum,
+        meta: { source: 'design-upload' }
+      });
+    } catch (e) {
+      // non-blocking
+    }
     
     // Use PipelineController's legacy method
     if (!pipelineController) {

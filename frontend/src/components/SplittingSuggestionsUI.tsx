@@ -73,8 +73,40 @@ export default function SplittingSuggestionsUI({
   const [scaleFactor, setScaleFactor] = useState(1);
   const [draggedCutLine, setDraggedCutLine] = useState<number | null>(null);
   const [cutLines, setCutLines] = useState<number[]>([]);
+  const [showSectionOverlay, setShowSectionOverlay] = useState<boolean>(true);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevDisplayHeightRef = useRef<number>(0);
+
+  // Helper: build pixel cut lines from suggestions (use section boundaries: top and bottom)
+  const buildCutLines = (suggests: SplittingSuggestion[], dispHeight: number) => {
+    if (!dispHeight || !suggests?.length) return [] as number[];
+    // Collect boundaries as percentages
+    const boundariesPct: number[] = [];
+    suggests.forEach(s => {
+      const top = s.bounds.y;
+      const bottom = s.bounds.y + s.bounds.height;
+      boundariesPct.push(top, bottom);
+    });
+    // Normalize: remove 0 and 100 and near-duplicates
+    const uniquePct = boundariesPct
+      .sort((a, b) => a - b)
+      .reduce<number[]>((acc, p) => {
+        if (acc.length === 0 || Math.abs(p - acc[acc.length - 1]) > 0.5) acc.push(p);
+        return acc;
+      }, []);
+    // Convert to pixels
+    const pixels = uniquePct.map(p => (p / 100) * dispHeight);
+    // Dedupe close pixel lines
+    const minGapPx = 3;
+    const deduped = pixels
+      .sort((a, b) => a - b)
+      .reduce<number[]>((acc, y) => {
+        if (acc.length === 0 || Math.abs(y - acc[acc.length - 1]) >= minGapPx) acc.push(y);
+        return acc;
+      }, []);
+    return deduped;
+  };
 
   // Create image URL for display
   useEffect(() => {
@@ -106,7 +138,7 @@ export default function SplittingSuggestionsUI({
       setImageDimensions({ width: naturalWidth, height: naturalHeight });
       
       // Calculate optimal display dimensions to fit container while maintaining aspect ratio
-      const containerWidth = containerRef.current.offsetWidth - 48; // Account for padding
+      const containerWidth = containerRef.current.offsetWidth; // Use actual container width
       const containerHeight = Math.min(800, window.innerHeight * 0.6); // Max height
       
       const aspectRatio = naturalWidth / naturalHeight;
@@ -136,13 +168,29 @@ export default function SplittingSuggestionsUI({
       setDisplayDimensions({ width: displayWidth, height: displayHeight });
       setScaleFactor(displayWidth / naturalWidth);
       
-      // Initialize cut lines from suggestions
-      const initialCutLines = editableSuggestions.map(suggestion => 
-        (suggestion.bounds.y / 100) * displayHeight
-      ).sort((a, b) => a - b);
-      setCutLines(initialCutLines);
+      // Initialize cut lines from suggestions (use section boundaries)
+      setCutLines(buildCutLines(editableSuggestions, displayHeight));
+
+      // Track initial display height for later scaling
+      prevDisplayHeightRef.current = displayHeight;
     }
   };
+
+  // Rescale cut lines if display height changes (e.g., window resize or design width change)
+  useEffect(() => {
+    const prevH = prevDisplayHeightRef.current;
+    const currH = displayDimensions.height;
+    if (prevH && currH && Math.abs(currH - prevH) > 0.5) {
+      const factor = currH / prevH;
+      setCutLines(prev => prev.map(y => y * factor));
+      prevDisplayHeightRef.current = currH;
+    }
+  }, [displayDimensions.height]);
+
+  // Recompute cut lines when suggestions or display height change
+  useEffect(() => {
+    if (displayDimensions.height > 0) setCutLines(buildCutLines(editableSuggestions, displayDimensions.height));
+  }, [editableSuggestions, displayDimensions.height]);
 
   // Convert percentage bounds to pixel coordinates
   const getPixelBounds = (suggestion: SplittingSuggestion, containerWidth: number, containerHeight: number) => {
@@ -203,10 +251,14 @@ export default function SplittingSuggestionsUI({
   // Apply design width suggestion
   const handleApplyDesignWidth = (suggestion: typeof DESIGN_WIDTH_SUGGESTIONS[0]) => {
     if (imageRef.current && containerRef.current) {
-      const aspectRatio = suggestion.width / suggestion.height;
-      const containerWidth = containerRef.current.offsetWidth - 48;
+      // Preserve the original image aspect ratio to keep AI cutlines aligned
+      const aspectRatio = imageDimensions.width && imageDimensions.height
+        ? imageDimensions.width / imageDimensions.height
+        : (imageRef.current.naturalWidth / imageRef.current.naturalHeight);
+      const containerWidth = containerRef.current.offsetWidth;
       
-      let newDisplayWidth = containerWidth;
+      // Try to use the suggested width, but never exceed the container width
+      let newDisplayWidth = Math.min(containerWidth, suggestion.width);
       let newDisplayHeight = newDisplayWidth / aspectRatio;
       
       // Ensure minimum size
@@ -306,6 +358,10 @@ export default function SplittingSuggestionsUI({
               <div>Display: {Math.round(displayDimensions.width)} × {Math.round(displayDimensions.height)}</div>
               <div>Scale: {(scaleFactor * 100).toFixed(1)}%</div>
             </div>
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <input id="overlayToggle" type="checkbox" className="accent-blue-600" checked={showSectionOverlay} onChange={() => setShowSectionOverlay(v => !v)} />
+              <label htmlFor="overlayToggle" className="text-gray-700">Show section rectangles</label>
+            </div>
           </div>
         </div>
 
@@ -314,7 +370,11 @@ export default function SplittingSuggestionsUI({
           <div 
             ref={containerRef}
             className="relative bg-gray-50 rounded-lg overflow-hidden"
-            style={{ minHeight: '400px' }}
+            style={{ 
+              width: `${displayDimensions.width}px`, 
+              height: `${displayDimensions.height}px`, 
+              minHeight: displayDimensions.height ? undefined : '400px' 
+            }}
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -335,18 +395,36 @@ export default function SplittingSuggestionsUI({
               className="block"
               onLoad={handleImageLoad}
             />
+            {/* Section rectangles overlay */}
+            {showSectionOverlay && editableSuggestions.map((s, idx) => {
+              const px = getPixelBounds(s, displayDimensions.width, displayDimensions.height);
+              const color = SECTION_COLORS[s.type as keyof typeof SECTION_COLORS] || SECTION_COLORS.other;
+              return (
+                <div
+                  key={`rect-${idx}`}
+                  className={`absolute border ${color} pointer-events-none`}
+                  style={{
+                    left: px.x,
+                    top: px.y,
+                    width: px.width,
+                    height: px.height,
+                    boxSizing: 'border-box'
+                  }}
+                />
+              );
+            })}
             
             {/* Horizontal Cut Lines */}
             {cutLines.map((y, index) => (
               <div
                 key={index}
                 className="absolute left-0 right-0 group cursor-ns-resize"
-                style={{ top: y - 2 }}
+                style={{ top: y }}
                 onMouseDown={(e) => handleCutLineMouseDown(index, e)}
               >
                 {/* Cut line */}
                 <div 
-                  className={`w-full h-1 border-t-2 border-dashed transition-colors ${
+                  className={`w-full h-0 border-t-2 border-dashed transition-colors ${
                     draggedCutLine === index 
                       ? 'border-blue-500 bg-blue-100' 
                       : 'border-red-500 group-hover:border-red-600'

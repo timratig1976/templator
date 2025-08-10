@@ -5,6 +5,68 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Automated or manual test runs with aggregated status
+model TestRun {
+  id            String   @id @default(cuid())
+  designSplitId String?
+  artifactId    String?
+  moduleId      String?
+  type          String   // 'unit' | 'integration' | 'e2e' | 'accessibility' | 'performance' | 'security' | 'custom'
+  status        String   // 'queued' | 'running' | 'passed' | 'failed' | 'partial' | 'cancelled'
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  summary       Json?
+
+  // Relations
+  DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
+  results       TestResult[]
+
+  @@index([designSplitId])
+  @@index([artifactId])
+  @@index([moduleId])
+  @@map("test_run")
+}
+
+// Individual test case result
+model TestResult {
+  id        String   @id @default(cuid())
+  testRunId String
+  name      String
+  status    String   // 'passed' | 'failed' | 'skipped' | 'flaky'
+  durationMs Int
+  details   Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  TestRun   TestRun  @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@index([testRunId])
+  @@map("test_result")
+}
+
+// Expert review feedback attached to artifacts or splits
+model ReviewFeedback {
+  id            String   @id @default(cuid())
+  designSplitId String?
+  artifactId    String?
+  moduleId      String?
+  reviewer      String
+  status        String   // 'pending' | 'submitted' | 'approved' | 'revisions_requested'
+  ratings       Json?    // e.g., { accessibility: 4, performance: 3 }
+  comments      String
+  findings      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
+
+  @@index([designSplitId])
+  @@index([artifactId])
+  @@index([moduleId])
+  @@map("review_feedback")
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -123,4 +185,135 @@ model PromptGeneration {
   updatedAt        DateTime       @updatedAt
   
   @@map("prompt_generations")
+}
+
+// Module Components (DB-backed replacement for in-memory ModuleComponentRepository)
+model ModuleComponent {
+  id                            String   @id @default(cuid())
+  name                          String
+  description                   String?
+  category                      String
+  type                          String
+  complexity_level              String
+  hubspot_version_compatibility String[]
+
+  html_template                 String
+  css_styles                    String?
+  javascript_code               String?
+  fields_definition             Json     // Array of ComponentField
+
+  version                       String   @default("1.0.0")
+  author                        String
+  tags                          String[]
+
+  quality_score                 Float    @default(0)
+  usage_count                   Int      @default(0)
+  validation_status             String   // validated | pending | failed
+
+  rating                        Json     // ComponentRating
+  dependencies                  Json     // Array of ComponentDependency
+  interfaces                    Json     // Array of ComponentInterface
+
+  created_at                    DateTime @default(now())
+  updated_at                    DateTime @updatedAt
+
+  @@index([category])
+  @@index([type])
+  @@map("module_components")
+}
+
+// Design intake and AI splitting persistence
+model DesignUpload {
+  id          String   @id @default(cuid())
+  userId      String?
+  filename    String
+  mime        String
+  size        Int
+  checksum    String?
+  storageUrl  String?  // URL or path to stored file (S3/disk)
+  meta        Json?
+
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  splits      DesignSplit[]
+
+  @@index([userId])
+  @@map("design_uploads")
+}
+
+model DesignSplit {
+  id             String       @id @default(cuid())
+  designUploadId String
+  status         String       // pending | processing | completed | failed
+  metrics        Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  designUpload   DesignUpload @relation(fields: [designUploadId], references: [id], onDelete: Cascade)
+  assets         SplitAsset[]
+  generatedArtifacts GeneratedArtifact[]
+  validationResults  ValidationResult[]
+  reviewFeedback    ReviewFeedback[]
+  testRuns          TestRun[]
+
+  @@index([designUploadId])
+  @@index([status])
+  @@map("design_splits")
+}
+
+model SplitAsset {
+  id        String      @id @default(cuid())
+  splitId   String
+  kind      String      // image | html | css | json | other
+  storageUrl String?
+  meta      Json?       // arbitrary JSON (bounds, rationale, etc.)
+  order     Int?
+  createdAt DateTime    @default(now())
+
+  split     DesignSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@index([splitId])
+  @@index([kind])
+  @@map("split_assets")
+}
+
+// Generated outputs (HTML/CSS/preview) produced from splits or assemblies
+model GeneratedArtifact {
+  id            String   @id @default(cuid())
+  designSplitId String?
+  moduleId      String?  // optional linkage to a module/component if applicable
+  type          String   // 'html' | 'css' | 'bundle' | 'preview'
+  contentUrl    String?
+  content       String?
+  meta          Json?
+  status        String   // 'pending' | 'completed' | 'failed'
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
+
+  @@index([designSplitId])
+  @@index([type])
+  @@map("generated_artifacts")
+}
+
+// Validation results produced by validators/services
+model ValidationResult {
+  id            String   @id @default(cuid())
+  artifactId    String?
+  designSplitId String?
+  validator     String
+  status        String   // 'passed' | 'warning' | 'failed'
+  message       String
+  details       Json?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
+
+  @@index([designSplitId])
+  @@index([artifactId])
+  @@map("validation_results")
 }

@@ -67,9 +67,12 @@ export default function HybridLayoutSplitter({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [showPreview, setShowPreview] = useState(false);
+  const [cutLinesInitialized, setCutLinesInitialized] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
   // Undo/Redo functionality
   const saveToHistory = (newCutLines: number[]) => {
@@ -93,19 +96,43 @@ export default function HybridLayoutSplitter({
     }
   };
 
-  // Initialize cut lines from AI detected sections
+  // Initialize cut lines from AI detected sections when image is measured
   useEffect(() => {
-    if (aiDetectedSections.length > 0 && cutLines.length === 0) {
+    if (aiDetectedSections.length === 0 || cutLinesInitialized) return;
+    const h = imageRef.current?.clientHeight || 0;
+    if (h > 0) {
       const initialCutLines = aiDetectedSections
-        .map(section => section.bounds.y + section.bounds.height) // Bottom of each section
-        .filter((y, index, arr) => index === 0 || y !== arr[index - 1]) // Remove duplicates
+        .map(section => section.bounds.y + section.bounds.height)
+        .filter((y, index, arr) => index === 0 || y !== arr[index - 1])
         .sort((a, b) => a - b)
-        .map(y => (y / 100) * 600); // Convert percentage to pixels (assuming 600px height)
-      
+        .map(y => (y / 100) * h);
       setCutLines(initialCutLines);
       saveToHistory(initialCutLines);
+      setCutLinesInitialized(true);
     }
-  }, [aiDetectedSections]);
+  }, [aiDetectedSections, cutLinesInitialized, imageSize]);
+
+  // Fallback: observe image size and initialize when it becomes available
+  useEffect(() => {
+    if (cutLinesInitialized || aiDetectedSections.length === 0) return;
+    const el = imageRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const cr = entries[0]?.contentRect;
+      if (cr && cr.height > 0 && !cutLinesInitialized) {
+        const initialCutLines = aiDetectedSections
+          .map(section => section.bounds.y + section.bounds.height)
+          .filter((y, index, arr) => index === 0 || y !== arr[index - 1])
+          .sort((a, b) => a - b)
+          .map(y => (y / 100) * cr.height);
+        setCutLines(initialCutLines);
+        saveToHistory(initialCutLines);
+        setCutLinesInitialized(true);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [aiDetectedSections, cutLinesInitialized]);
 
   // Load and display the image using data URL (more reliable than blob URL)
   useEffect(() => {
@@ -145,6 +172,15 @@ export default function HybridLayoutSplitter({
       setImageSize({ width: 0, height: 0 });
     }
   }, [imageFile]);
+
+  // When a new image or a fresh set of AI-detected sections comes in, reset initialization state
+  useEffect(() => {
+    // Reset only when identity truly changes (new upload or regenerated set)
+    setCutLinesInitialized(false);
+    setCutLines([]);
+    setCutLineHistory([]);
+    setHistoryIndex(-1);
+  }, [imageFile, aiDetectedSections]);
 
   // Handle section selection
   const handleSectionClick = (sectionId: string, event: React.MouseEvent) => {
@@ -243,11 +279,12 @@ export default function HybridLayoutSplitter({
     
     // Reset cut lines to match AI-detected sections
     if (aiDetectedSections.length > 0) {
+      const imageHeight = imageRef.current?.clientHeight || containerRef.current?.offsetHeight || 600;
       const resetCutLines = aiDetectedSections
         .map(section => section.bounds.y + section.bounds.height) // Bottom of each section
         .filter((y, index, arr) => index === 0 || y !== arr[index - 1]) // Remove duplicates
         .sort((a, b) => a - b)
-        .map(y => (y / 100) * 600); // Convert percentage to pixels (assuming 600px height)
+        .map(y => (y / 100) * imageHeight); // Convert percentage to pixels based on rendered image
       
       setCutLines(resetCutLines);
       saveToHistory(resetCutLines);
@@ -452,19 +489,11 @@ export default function HybridLayoutSplitter({
             <div 
               ref={containerRef}
               className="relative overflow-hidden bg-gray-100 border border-gray-300 w-full"
-              style={{ 
-                height: imageSize.width > 0 && imageSize.height > 0 
-                  ? `${Math.max(
-                      600, // Minimum height
-                      Math.min(
-                        2000, // Increased maximum height
-                        (imageSize.height / imageSize.width) * 1200 // Increased base width for calculation
-                      )
-                    )}px`
-                  : '1000px', // Increased default fallback
+              style={{
                 width: '100%',
                 minWidth: '100%',
-                maxWidth: 'none'
+                maxWidth: 'none',
+                height: 'auto'
               }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -473,23 +502,20 @@ export default function HybridLayoutSplitter({
               {/* Background Image */}
               {imageUrl && (
                 <img
+                  ref={imageRef}
                   src={imageUrl}
                   alt="Design to analyze"
-                  className="w-full h-auto"
+                  className="w-full h-auto block"
                   style={{
                     width: '100%',
-                    height: 'auto',
-                    minHeight: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'top'
+                    height: 'auto'
                   }}
                   onClick={(e) => {
                     // Don't add new line if clicking near an existing cut line (within 10px)
                     const rect = e.currentTarget.getBoundingClientRect();
-                    // Calculate position relative to container, accounting for scroll
-                    const containerTop = rect.top + window.scrollY;
-                    const mouseY = e.pageY; // Use pageY for scroll-aware positioning
-                    const y = mouseY - containerTop;
+                    const imageTop = rect.top + window.scrollY;
+                    const mouseY = e.pageY;
+                    const y = mouseY - imageTop;
                     
                     const isNearExistingLine = cutLines.some(lineY => Math.abs(lineY - y) < 10);
                     
@@ -514,13 +540,14 @@ export default function HybridLayoutSplitter({
                     
                     const handleMouseMove = (e: MouseEvent) => {
                       if (containerRef.current) {
-                        const rect = containerRef.current.getBoundingClientRect();
-                        // Calculate position relative to container, accounting for scroll
-                        const containerTop = rect.top + window.scrollY;
-                        const mouseY = e.pageY; // Use pageY instead of clientY for scroll-aware positioning
-                        const newY = mouseY - containerTop;
-                        const containerHeight = containerRef.current.offsetHeight;
-                        const clampedY = Math.max(0, Math.min(newY, containerHeight));
+                        const imgEl = imageRef.current;
+                        if (!imgEl) return;
+                        const rect = imgEl.getBoundingClientRect();
+                        const imageTop = rect.top + window.scrollY;
+                        const mouseY = e.pageY; // scroll-aware
+                        const newY = mouseY - imageTop;
+                        const imageHeight = imgEl.clientHeight;
+                        const clampedY = Math.max(0, Math.min(newY, imageHeight));
                         
                         setCutLines(prev => {
                           const newCutLines = [...prev];
@@ -731,11 +758,11 @@ export default function HybridLayoutSplitter({
           {/* Action Buttons */}
           <div className="space-y-3">
             <button
-              onClick={() => onSectionsConfirmed(sections)}
+              onClick={() => setShowConfirmModal(true)}
               className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <Save className="w-4 h-4 mr-2" />
-              Confirm Sections & Generate HTML
+              Confirm Sections
             </button>
             
             <button
@@ -778,6 +805,58 @@ export default function HybridLayoutSplitter({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Sections Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-xl">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Confirm Sections</h3>
+              <p className="text-sm text-gray-600 mt-1">Please review the summary below before proceeding.</p>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <span className="text-sm text-gray-600">Total Sections</span>
+                <span className="text-base font-semibold text-gray-900">{sections.length}</span>
+              </div>
+              <div className="max-h-56 overflow-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-700">
+                    <tr>
+                      <th className="text-left px-3 py-2">Name</th>
+                      <th className="text-left px-3 py-2">Type</th>
+                      <th className="text-left px-3 py-2">Y / H (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sections.map((s) => (
+                      <tr key={s.id} className="border-t border-gray-200">
+                        <td className="px-3 py-2 text-gray-900">{s.name}</td>
+                        <td className="px-3 py-2 capitalize text-gray-700">{s.type}</td>
+                        <td className="px-3 py-2 text-gray-700">{Math.round(s.bounds.y)} / {Math.round(s.bounds.height)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="px-4 py-2 rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowConfirmModal(false); onSectionsConfirmed(sections); }}
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Confirm & Continue
+              </button>
             </div>
           </div>
         </div>

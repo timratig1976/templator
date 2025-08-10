@@ -3,6 +3,11 @@
 import { io, Socket } from 'socket.io-client';
 import { aiLogger } from './aiLogger';
 
+// Guards to avoid connecting during SSR/build
+const isBrowser = typeof window !== 'undefined';
+const socketsDisabled = process.env.NEXT_PUBLIC_DISABLE_SOCKETS === '1';
+const socketsEnabled = isBrowser && !socketsDisabled;
+
 class SocketClientService {
   private static instance: SocketClientService;
   private socket: Socket | null = null;
@@ -19,7 +24,12 @@ class SocketClientService {
   }
 
   private constructor() {
-    this.connect();
+    // Only connect when running in browser and sockets are enabled
+    if (socketsEnabled) {
+      this.connect();
+    } else {
+      aiLogger.info('system', 'Socket disabled (SSR/build or env flag)');
+    }
   }
 
   private connect(): void {

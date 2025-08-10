@@ -16,7 +16,7 @@ import {
   Settings
 } from 'lucide-react';
 import HybridLayoutSplitter from '@/components/HybridLayoutSplitter';
-import SplittingSuggestionsUI from '@/components/SplittingSuggestionsUI';
+import SplitGenerationPlanner from '@/components/SplitGenerationPlanner';
 import { useWorkflow } from '@/contexts/WorkflowContext';
 import { useWorkflowHandlers } from '@/hooks/useWorkflowHandlers';
 import { aiPipelineService } from '@/services/aiPipelineService';
@@ -92,6 +92,15 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
       aiEnhanced: true
     },
     {
+      id: 'plan-generation',
+      name: 'Plan Generation',
+      description: 'Choose which sections generate HTML and/or a module',
+      icon: Settings,
+      status: 'pending',
+      progress: 0,
+      aiEnhanced: false
+    },
+    {
       id: 'html-generation',
       name: 'AI HTML Generation',
       description: 'Generate responsive HTML with AI optimization',
@@ -116,6 +125,8 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
   const [splittingSuggestions, setSplittingSuggestions] = useState<any[]>([]);
   const [splittingSuggestionsLoading, setSplittingSuggestionsLoading] = useState(false);
   const [splittingSuggestionsError, setSplittingSuggestionsError] = useState<string>('');
+  const [confirmedSections, setConfirmedSections] = useState<any[] | null>(null);
+  const [generationPlan, setGenerationPlan] = useState<any[] | null>(null);
 
   // Update phase status based on workflow state
   useEffect(() => {
@@ -161,9 +172,8 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
       setHybridAnalysisResult(analysisResult);
       setSplittingSuggestions(analysisResult.hybridSections || []);
       setSplittingSuggestionsLoading(false);
-      
+      // Auto-advance to Hybrid Splitter for user editing/approval
       setCurrentPhaseIndex(2);
-      
     } catch (error) {
       console.error('Section detection failed:', error);
       setSplittingSuggestionsError(error instanceof Error ? error.message : 'Section detection failed');
@@ -204,16 +214,23 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
     }
   };
 
-  const handleSectionsConfirmedWithAI = async (confirmedSections: any[]) => {
-    setCurrentPhaseIndex(3); // Move to HTML generation phase
-    
-    // Submit AI feedback for continuous learning
-    if (hybridAnalysisResult?.hybridSections) {
+  const handleSectionsConfirmedWithAI = async (sections: any[]) => {
+    // Store sections and move to planning step
+    setConfirmedSections(sections);
+    setCurrentPhaseIndex(3); // Plan Generation phase
+  };
+
+  const handlePlanConfirmed = async (plan: any[]) => {
+    setGenerationPlan(plan);
+    // Submit AI feedback for continuous learning (based on original + confirmed)
+    if (hybridAnalysisResult?.hybridSections && confirmedSections) {
       await submitHybridFeedback(hybridAnalysisResult.hybridSections, confirmedSections);
     }
-    
-    await handleHybridSectionsConfirmed(confirmedSections);
-    setCurrentPhaseIndex(4); // Move to module packaging phase
+    // Proceed with existing flow using confirmed sections; backend can be extended to accept plan
+    if (confirmedSections) {
+      await handleHybridSectionsConfirmed(confirmedSections);
+    }
+    setCurrentPhaseIndex(4); // Move to HTML generation phase
   };
 
   const getPhaseStatusColor = (status: string) => {
@@ -420,17 +437,54 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
             </div>
           )}
 
-          {/* Section Detection Phase */}
+          {/* AI Section Detection Phase (AI-only, requires approval to proceed) */}
           {currentPhaseIndex === 1 && uploadedImageFile && (
-            <div className="p-6">
-              <SplittingSuggestionsUI
-                imageFile={uploadedImageFile}
-                suggestions={splittingSuggestions}
-                onConfirm={handleSplittingSuggestionsConfirm}
-                onRegenerate={handleRegenerateSuggestions}
-                isLoading={splittingSuggestionsLoading}
-                error={splittingSuggestionsError}
-              />
+            <div className="p-8 flex flex-col items-center justify-center text-center space-y-6">
+              {splittingSuggestionsLoading ? (
+                <>
+                  <div className="flex items-center space-x-3 text-blue-600">
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span className="font-medium">Analyzing design with AI Vision…</span>
+                  </div>
+                  <p className="text-sm text-gray-600 max-w-md">
+                    Detecting sections and cutlines automatically.
+                  </p>
+                </>
+              ) : (
+                <div className="w-full max-w-xl bg-white border border-gray-200 rounded-xl shadow-sm p-6 text-left">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Section Detection Complete</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Review and edit the detected sections before proceeding.
+                  </p>
+                  <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                    <div>
+                      <div className="text-sm text-gray-600">Detected Sections</div>
+                      <div className="text-2xl font-semibold text-gray-900">
+                        {hybridAnalysisResult?.hybridSections?.length || 0}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setCurrentPhaseIndex(2)}
+                      className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    >
+                      <span>Continue to Edit Sections</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {splittingSuggestionsError && (
+                    <div className="text-red-600 text-sm mb-2">
+                      {splittingSuggestionsError}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleRegenerateSuggestions}
+                    className="inline-flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Retry Analysis</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -462,8 +516,26 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
             </div>
           )}
 
+          {/* Plan Generation Phase */}
+          {currentPhaseIndex === 3 && confirmedSections && (
+            <div className="p-6">
+              <SplitGenerationPlanner
+                imageFile={uploadedImageFile}
+                sections={confirmedSections.map((s: any, idx: number) => ({
+                  id: s.id || String(idx),
+                  type: s.type || 'content',
+                  description: s.description || '',
+                  confidence: s.confidence ?? undefined,
+                  bounds: s.bounds,
+                }))}
+                onBack={() => setCurrentPhaseIndex(2)}
+                onConfirm={handlePlanConfirmed}
+              />
+            </div>
+          )}
+
           {/* HTML Generation Phase */}
-          {currentPhaseIndex === 3 && (
+          {currentPhaseIndex === 4 && (
             <div className="p-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -490,7 +562,7 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
           )}
 
           {/* Module Packaging Phase */}
-          {currentPhaseIndex === 4 && (
+          {currentPhaseIndex === 5 && (
             <div className="p-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">

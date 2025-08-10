@@ -7,6 +7,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import LogsSidebar from '../components/LogsSidebar';
+import type { AILogEntry } from '../services/aiLogger';
 import { aiLogger } from '../services/aiLogger';
 import { socketClient } from '../services/socketClient';
 
@@ -75,14 +76,14 @@ describe('LogsSidebar', () => {
 
   describe('Log display', () => {
     it('should display logs correctly', () => {
-      const mockLogs = [
+      const mockLogs: AILogEntry[] = [
         {
           id: 'log-1',
           timestamp: '2024-01-01T10:00:00.000Z',
           level: 'info',
           category: 'system',
           message: 'Test log message',
-          source: 'frontend'
+          metadata: { source: 'frontend' }
         }
       ];
 
@@ -99,14 +100,14 @@ describe('LogsSidebar', () => {
     });
 
     it('should apply correct styling for different log levels', () => {
-      const mockLogs = [
+      const mockLogs: AILogEntry[] = [
         {
           id: 'log-1',
           timestamp: '2024-01-01T10:00:00.000Z',
           level: 'error',
           category: 'system',
           message: 'Error message',
-          source: 'frontend'
+          metadata: { source: 'frontend' }
         }
       ];
 

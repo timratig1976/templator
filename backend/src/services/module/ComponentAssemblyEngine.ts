@@ -1,6 +1,9 @@
 import { createLogger } from '../../utils/logger';
-import { ModuleComponentRepository, ModuleComponent, ComponentInterface } from './ModuleComponentRepository';
+import { ModuleComponent, ComponentInterface } from './ModuleComponentRepository';
+import ModuleComponentPrismaRepository from './ModuleComponentPrismaRepository';
 import { HubSpotValidationService } from '../quality/HubSpotValidationService';
+import GeneratedArtifactRepository from '../database/GeneratedArtifactRepository';
+import ValidationResultRepository from '../database/ValidationResultRepository';
 import OpenAIService from '../ai/openaiService';
 
 const logger = createLogger();
@@ -13,6 +16,8 @@ export interface ComponentAssemblyRequest {
   customization_options?: ComponentCustomization[];
   validation_level: 'basic' | 'strict' | 'comprehensive';
   output_format: 'hubspot_module' | 'html_template' | 'component_library';
+  // Optional linking context for persistence
+  meta?: { designSplitId?: string; moduleId?: string };
 }
 
 export interface LayoutPreferences {
@@ -165,14 +170,14 @@ export interface InterfaceCompatibility {
 
 export class ComponentAssemblyEngine {
   private static instance: ComponentAssemblyEngine;
-  private componentRepository: ModuleComponentRepository;
+  private componentRepository: ModuleComponentPrismaRepository;
   private validationService: HubSpotValidationService;
   private openaiService: typeof OpenAIService;
   private compositionPatterns: Map<string, CompositionPattern> = new Map();
   private interfaceCompatibilityCache: Map<string, InterfaceCompatibility> = new Map();
 
   constructor() {
-    this.componentRepository = ModuleComponentRepository.getInstance();
+    this.componentRepository = ModuleComponentPrismaRepository.getInstance();
     this.validationService = HubSpotValidationService.getInstance();
     this.openaiService = OpenAIService;
     this.initializeCompositionPatterns();
@@ -219,7 +224,7 @@ export class ComponentAssemblyEngine {
       
       // Calculate performance metrics
       const performanceMetrics = await this.calculatePerformanceMetrics(assembledModule);
-      
+
       // Generate recommendations
       const recommendations = await this.generateRecommendations(assembledModule, validationResults, performanceMetrics);
 
@@ -239,6 +244,56 @@ export class ComponentAssemblyEngine {
         validationStatus: validationResults.filter(v => v.status === 'failed').length === 0 ? 'passed' : 'failed',
         requestId
       });
+
+      // Best-effort persistence of generated artifacts
+      try {
+        const designSplitId = request.meta?.designSplitId;
+        const moduleId = request.meta?.moduleId;
+        const html = assembledModule.html_template || '';
+        const css = assembledModule.css_styles || '';
+        if (html) {
+          await GeneratedArtifactRepository.create({
+            designSplitId,
+            moduleId,
+            type: 'html',
+            status: 'completed',
+            content: html,
+            meta: { bytes: Buffer.byteLength(html, 'utf8'), generator: 'ComponentAssemblyEngine', assemblyId }
+          });
+        }
+        if (css) {
+          await GeneratedArtifactRepository.create({
+            designSplitId,
+            moduleId,
+            type: 'css',
+            status: 'completed',
+            content: css,
+            meta: { bytes: Buffer.byteLength(css, 'utf8'), generator: 'ComponentAssemblyEngine', assemblyId }
+          });
+        }
+        // Persist validation results (link to split, artifact optional)
+        if (validationResults?.length) {
+          for (const vr of validationResults) {
+            await ValidationResultRepository.create({
+              designSplitId: designSplitId ?? null,
+              validator: 'HubSpotValidationService',
+              status: vr.status,
+              message: vr.message,
+              details: {
+                type: vr.validation_type,
+                suggested_fix: vr.suggested_fix,
+                details: vr.details ?? null,
+              }
+            });
+          }
+        }
+      } catch (persistErr) {
+        logger.warn('Failed to persist generated artifacts', {
+          error: persistErr instanceof Error ? persistErr.message : 'Unknown error',
+          assemblyId,
+          requestId
+        });
+      }
 
       return result;
 

@@ -9,6 +9,17 @@ import { WebSocketService } from '../services/core/websocket/WebSocketService';
 import { createLogger } from '../utils/logger';
 import { logToFrontend } from '../routes/logs';
 import { v4 as uuidv4 } from 'uuid';
+import { isValidBase64Image } from '../utils/base64';
+import type { Prisma } from '@prisma/client';
+import designUploadRepo from '../services/database/DesignUploadRepository';
+import designSplitRepo from '../services/database/DesignSplitRepository';
+import splitAssetRepo from '../services/database/SplitAssetRepository';
+import storage from '../services/storage';
+import { sha256 } from '../utils/checksum';
+import imageCropService from '../services/ai/ImageCropService';
+import { createHmac } from 'crypto';
+import { Readable } from 'stream';
+import fs from 'fs';
 
 // Interface for layout analysis response
 interface LayoutAnalysisResult {
@@ -43,47 +54,7 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-// Helper function to generate basic splitting suggestions (fallback)
-function generateBasicSplittingSuggestions(fileName: string) {
-  return [
-    {
-      id: 'header-section',
-      name: 'Header Section',
-      type: 'header',
-      bounds: { x: 0, y: 0, width: 100, height: 15 }, // Percentage-based
-      confidence: 0.8,
-      description: 'Top navigation and branding area',
-      suggested: true
-    },
-    {
-      id: 'hero-section',
-      name: 'Hero Section',
-      type: 'hero',
-      bounds: { x: 0, y: 15, width: 100, height: 35 },
-      confidence: 0.7,
-      description: 'Main banner or hero content area',
-      suggested: true
-    },
-    {
-      id: 'content-section',
-      name: 'Main Content',
-      type: 'content',
-      bounds: { x: 0, y: 50, width: 100, height: 40 },
-      confidence: 0.9,
-      description: 'Primary content area',
-      suggested: true
-    },
-    {
-      id: 'footer-section',
-      name: 'Footer Section',
-      type: 'footer',
-      bounds: { x: 0, y: 90, width: 100, height: 10 },
-      confidence: 0.8,
-      description: 'Footer links and information',
-      suggested: true
-    }
-  ];
-}
+// (Removed) basic heuristic splitting suggestions; AI-only enforced
 
 // Cost calculation for OpenAI API usage
 function calculateOpenAICost(totalTokens: number, model: string): number {
@@ -382,17 +353,14 @@ Identify distinct visual sections in this design and suggest optimal splitting b
       errorType: error?.constructor?.name
     });
 
-    logToFrontend('error', 'openai', `❌ AI analysis failed: ${error?.message || 'Unknown error'}. Using fallback suggestions.`, {
+    logToFrontend('error', 'openai', `❌ AI analysis failed: ${error?.message || 'Unknown error'}.`, {
       error: error?.message || 'Unknown error',
       errorType: error?.constructor?.name || 'Unknown',
-      fallbackUsed: true
+      fallbackUsed: false
     }, requestId);
 
-    // Log that we're using fallback
-    logger.warn(`[${requestId}] Using fallback basic suggestions due to AI failure`);
-    
-    // Fallback to basic suggestions if AI fails
-    return generateBasicSplittingSuggestions(fileName);
+    // Enforce AI-only: propagate failure to caller
+    throw error;
   }
 }
 
@@ -967,63 +935,6 @@ function getJobNextSteps(status: string): string[] {
 }
 
 /**
- * Helper function to validate base64 image format
- */
-function isValidBase64Image(base64String: string): boolean {
-  try {
-    // Check if it's a data URL format
-    if (!base64String || typeof base64String !== 'string') {
-      logger.error('Invalid base64 string: not a string or empty');
-      return false;
-    }
-    
-    if (!base64String.startsWith('data:image/')) {
-      logger.error('Invalid base64 string: does not start with data:image/');
-      return false;
-    }
-    
-    // More flexible regex that handles various image formats
-    const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|bmp|svg\+xml);base64,([A-Za-z0-9+\/=\s]*)$/;
-    const match = base64String.match(base64Regex);
-    
-    if (!match) {
-      logger.error('Invalid base64 string: does not match expected format');
-      logger.error('String preview:', base64String.substring(0, 100) + '...');
-      return false;
-    }
-    
-    // Validate base64 characters (allow whitespace which we'll strip)
-    const base64Part = match[2].replace(/\s/g, ''); // Remove any whitespace
-    const validBase64Regex = /^[A-Za-z0-9+\/=]*$/;
-    
-    if (!validBase64Regex.test(base64Part)) {
-      logger.error('Invalid base64 string: contains invalid characters');
-      return false;
-    }
-    
-    // Check if length is valid (must be multiple of 4 after padding)
-    const paddedLength = Math.ceil(base64Part.length / 4) * 4;
-    if (base64Part.length > 0 && paddedLength - base64Part.length > 2) {
-      logger.error('Invalid base64 string: invalid length', { length: base64Part.length });
-      return false;
-    }
-    
-    // Try to decode to verify it's valid base64
-    try {
-      Buffer.from(base64Part, 'base64');
-    } catch (decodeError) {
-      logger.error('Invalid base64 string: cannot decode', { error: decodeError });
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Error validating base64 image:', error);
-    return false;
-  }
-}
-
-/**
  * POST /api/ai-enhancement/detect-sections
  * Lightweight section detection for splitting suggestions
  */
@@ -1032,7 +943,7 @@ router.post('/detect-sections', async (req, res) => {
   const startTime = Date.now();
   
   try {
-    const { image, fileName, analysisType = 'lightweight' } = req.body;
+    const { image, fileName } = req.body;
     
     // Validate required fields
     if (!image) {
@@ -1044,13 +955,13 @@ router.post('/detect-sections', async (req, res) => {
       });
     }
     
-    logger.info(`[${requestId}] Starting lightweight section detection`, {
+    logger.info(`[${requestId}] Starting AI section detection`, {
       requestId,
       fileName: fileName || 'unknown',
-      analysisType
+      analysisType: 'ai'
     });
     
-    logToFrontend('info', 'processing', `🔍 Starting lightweight section detection for ${fileName || 'design'}`, { fileName, analysisType }, requestId);
+    logToFrontend('info', 'processing', `🤖 Starting AI section detection for ${fileName || 'design'}`, { fileName, analysisType: 'ai' }, requestId);
     
     // Validate base64 image format
     if (!isValidBase64Image(image)) {
@@ -1062,8 +973,48 @@ router.post('/detect-sections', async (req, res) => {
         code: 'INVALID_BASE64'
       });
     }
-    
-    // Use AI to analyze the design and suggest intelligent section splits
+    // Persist DesignUpload and initialize DesignSplit (processing)
+    let mime = 'image/png';
+    let inferredFileName = fileName || 'uploaded-design.png';
+    const mimeMatch = image.match(/^data:(.*?);base64,/);
+    if (mimeMatch && mimeMatch[1]) {
+      mime = mimeMatch[1];
+      const ext = mime.split('/')[1]?.toLowerCase();
+      const normExt = ext === 'jpeg' ? 'jpg' : ext;
+      inferredFileName = fileName || `uploaded-design.${normExt || 'png'}`;
+    }
+    const base64Payload = image.startsWith('data:') ? image.split(',')[1] : image;
+    const approxSizeBytes = Math.floor((base64Payload.length * 3) / 4) - (base64Payload.endsWith('==') ? 2 : base64Payload.endsWith('=') ? 1 : 0);
+
+    // Persist original image to storage (best-effort)
+    let storageUrl: string | null = null;
+    let checksum: string | null = null;
+    try {
+      const buffer = Buffer.from(base64Payload, 'base64');
+      const ext = inferredFileName.split('.').pop() || 'png';
+      const put = await storage.put(buffer, { mime, extension: ext });
+      storageUrl = put.url;
+      checksum = sha256(buffer);
+    } catch (persistErr) {
+      logger.warn(`[${requestId}] Failed to persist original image to storage (non-blocking)`, { error: getErrorMessage(persistErr) });
+    }
+
+    const designUpload = await designUploadRepo.create({
+      filename: inferredFileName,
+      mime,
+      size: approxSizeBytes,
+      storageUrl,
+      checksum,
+      meta: { requestId, source: 'detect-sections' }
+    });
+
+    const split = await designSplitRepo.create({
+      designUploadId: designUpload.id,
+      status: 'processing',
+      metrics: { analysisType: 'ai' }
+    });
+
+    // Use AI to analyze the design and suggest intelligent section splits (always AI)
     const suggestions = await SplittingService.generateSplittingSuggestions(image, fileName || 'design', requestId);
     
     const duration = Date.now() - startTime;
@@ -1074,7 +1025,32 @@ router.post('/detect-sections', async (req, res) => {
       suggestionsCount: suggestions.length
     });
     
-    logToFrontend('success', 'processing', `✅ Section detection completed in ${duration}ms with ${suggestions.length} suggestions`, { suggestionsCount: suggestions.length }, requestId, duration);
+    logToFrontend('success', 'processing', `✅ AI section detection completed in ${duration}ms with ${suggestions.length} suggestions`, { suggestionsCount: suggestions.length, analysisType: 'ai' }, requestId);
+    
+    // Persist suggestions as SplitAssets and mark split completed
+    try {
+      for (let i = 0; i < suggestions.length; i++) {
+        const s = suggestions[i] as any;
+        await splitAssetRepo.create({
+          splitId: split.id,
+          kind: 'json',
+          meta: ({
+            name: s.name,
+            type: s.type,
+            bounds: s.bounds,
+            confidence: s.confidence,
+            splittingRationale: s.splittingRationale,
+            reusability: s.reusability,
+          } as unknown) as Prisma.InputJsonValue,
+          order: i,
+        });
+      }
+      await designSplitRepo.addMetrics(split.id, { durationMs: duration, suggestionCount: suggestions.length });
+      await designSplitRepo.updateStatus(split.id, 'completed');
+    } catch (persistErr) {
+      logger.error(`[${requestId}] Failed to persist split assets`, { error: getErrorMessage(persistErr) });
+      await designSplitRepo.updateStatus(split.id, 'failed');
+    }
     
     return res.status(200).json({
       success: true,
@@ -1169,6 +1145,39 @@ router.post('/analyze-layout', async (req, res) => {
     });
     logToFrontend('info', 'processing', `Starting AI vision analysis of ${imageFormat.toUpperCase()} design layout...`, { imageSize: image.length, format: imageFormat }, requestId);
     
+    // Persist DesignUpload and initialize DesignSplit (processing)
+    let mime = imageFormat ? `image/${imageFormat}` : 'image/png';
+    const base64Payload = image.startsWith('data:') ? image.split(',')[1] : image;
+    const approxSizeBytes = Math.floor((base64Payload.length * 3) / 4) - (base64Payload.endsWith('==') ? 2 : base64Payload.endsWith('=') ? 1 : 0);
+
+    // Persist original image to storage (best-effort)
+    let storageUrl2: string | null = null;
+    let checksum2: string | null = null;
+    try {
+      const buffer2 = Buffer.from(base64Payload, 'base64');
+      const ext2 = filename.split('.').pop() || (imageFormat || 'png');
+      const put2 = await storage.put(buffer2, { mime, extension: ext2 });
+      storageUrl2 = put2.url;
+      checksum2 = sha256(buffer2);
+    } catch (persistErr) {
+      logger.warn(`[${requestId}] Failed to persist original image to storage (non-blocking)`, { error: getErrorMessage(persistErr) });
+    }
+
+    const designUpload = await designUploadRepo.create({
+      filename,
+      mime,
+      size: approxSizeBytes,
+      storageUrl: storageUrl2,
+      checksum: checksum2,
+      meta: { requestId, source: 'analyze-layout' }
+    });
+
+    const split = await designSplitRepo.create({
+      designUploadId: designUpload.id,
+      status: 'processing',
+      metrics: { analysisType }
+    });
+
     // Call the OpenAI service to analyze the layout with correct filename
     const designAnalysis = await openaiService.convertDesignToHTML(image, filename);
     
@@ -1253,6 +1262,29 @@ router.post('/analyze-layout', async (req, res) => {
       analysisResult.enhancedAnalysis.recommendations.improvementTips = [];
     }
     
+    // Persist sections as SplitAssets and mark split completed
+    try {
+      for (let i = 0; i < analysisResult.sections.length; i++) {
+        const s = analysisResult.sections[i] as Section;
+        await splitAssetRepo.create({
+          splitId: split.id,
+          kind: 'json',
+          meta: ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            editableFields: s.editableFields,
+          } as unknown) as Prisma.InputJsonValue,
+          order: i,
+        });
+      }
+      await designSplitRepo.addMetrics(split.id, { durationMs: duration, sectionCount: analysisResult.sections.length });
+      await designSplitRepo.updateStatus(split.id, 'completed');
+    } catch (persistErr) {
+      logger.error(`[${requestId}] Failed to persist analyze-layout assets`, { error: getErrorMessage(persistErr) });
+      await designSplitRepo.updateStatus(split.id, 'failed');
+    }
+
     // Log the successful analysis
     logger.info(`[${requestId}] Layout analysis completed successfully`, {
       requestId,
@@ -1322,3 +1354,126 @@ router.post('/analyze-layout', async (req, res) => {
 });
 
 export default router;
+
+// ===================== Added: Crops + Signed URL Endpoints =====================
+
+// Helper to read a stream fully into Buffer
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  return new Promise((resolve, reject) => {
+    stream.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
+}
+
+// POST /api/ai-enhancement/splits/:splitId/crops
+// body: { sections: Array<{ id?: string, index: number, bounds: {x,y,width,height}, unit: 'px'|'percent' }> }
+router.post('/splits/:splitId/crops', async (req, res) => {
+  const { splitId } = req.params;
+  const { sections } = req.body || {};
+  if (!Array.isArray(sections) || sections.length === 0) {
+    return res.status(400).json({ success: false, error: 'sections array is required' });
+  }
+
+  try {
+    // Avoid duplicates: if image-crop assets already exist for this split, return them
+    const existing = await splitAssetRepo.listBySplit(splitId);
+    const existingCrops = existing.filter(a => a.kind === 'image-crop');
+    if (existingCrops.length > 0) {
+      return res.json({ success: true, data: { assets: existingCrops } });
+    }
+
+    const split = await designSplitRepo.findById(splitId);
+    if (!split || !split.designUpload) {
+      return res.status(404).json({ success: false, error: 'DesignSplit not found or missing upload' });
+    }
+
+    const src = split.designUpload.storageUrl || '';
+    let buffer: Buffer;
+    if (src && fs.existsSync(src)) {
+      buffer = fs.readFileSync(src);
+    } else if (src) {
+      // treat as storage key
+      const stream = await storage.getStream(src);
+      buffer = await streamToBuffer(stream);
+    } else {
+      return res.status(400).json({ success: false, error: 'Missing source image for split' });
+    }
+
+    const results = await imageCropService.createCropsForSplit(splitId, buffer, sections as any);
+    // Note: service currently reads from path; adjust to buffer usage below if needed
+    // To use buffer directly, we can extend ImageCropService; fall back by writing temp file if necessary.
+    // For now, if src isn't a path, we already read buffer above; ensure src is path when calling service.
+
+    return res.json({ success: true, data: { assets: results.map(r => r.asset) } });
+  } catch (e) {
+    logger.error('Failed to create crops', { error: getErrorMessage(e), splitId });
+    return res.status(500).json({ success: false, error: 'Failed to create crops' });
+  }
+});
+
+// GET /api/ai-enhancement/splits/:splitId/assets?kind=image-crop
+router.get('/splits/:splitId/assets', async (req, res) => {
+  const { splitId } = req.params;
+  const kind = req.query.kind ? String(req.query.kind) : undefined;
+  try {
+    const items = await splitAssetRepo.listBySplit(splitId);
+    const filtered = kind ? items.filter(i => i.kind === kind) : items;
+    res.json({ success: true, data: { assets: filtered } });
+  } catch (e) {
+    logger.error('Failed to list split assets', { error: getErrorMessage(e), splitId });
+    res.status(500).json({ success: false, error: 'Failed to list assets' });
+  }
+});
+
+// Signed URL generation for local storage
+function signKey(key: string, exp: number): string {
+  const secret = process.env.ASSET_SIGNING_SECRET || 'dev-secret';
+  const payload = `${key}.${exp}`;
+  return createHmac('sha256', secret).update(payload).digest('hex');
+}
+
+function verifySignature(key: string, exp: number, sig: string): boolean {
+  if (Date.now() > exp) return false;
+  const expected = signKey(key, exp);
+  return expected === sig;
+}
+
+// GET /api/ai-enhancement/assets/signed?key=...&ttl=300000
+router.get('/assets/signed', (req, res) => {
+  const key = String(req.query.key || '');
+  const ttl = Math.min(Number(req.query.ttl || 300000), 3600000); // cap at 1h
+  if (!key) return res.status(400).json({ success: false, error: 'key is required' });
+  const exp = Date.now() + (isNaN(ttl) ? 300000 : ttl);
+  const sig = signKey(key, exp);
+  const url = `/api/ai-enhancement/assets/download?key=${encodeURIComponent(key)}&exp=${exp}&sig=${sig}`;
+  res.json({ success: true, data: { url, exp } });
+});
+
+// GET /api/ai-enhancement/assets/download?key=...&exp=...&sig=...
+router.get('/assets/download', async (req, res) => {
+  const key = String(req.query.key || '');
+  const exp = Number(req.query.exp || 0);
+  const sig = String(req.query.sig || '');
+  if (!key || !exp || !sig) return res.status(400).json({ success: false, error: 'missing params' });
+  if (!verifySignature(key, exp, sig)) return res.status(403).json({ success: false, error: 'invalid or expired signature' });
+  try {
+    const stream = await storage.getStream(key);
+    const lower = key.toLowerCase();
+    const contentType = lower.endsWith('.jpg') || lower.endsWith('.jpeg')
+      ? 'image/jpeg'
+      : lower.endsWith('.webp')
+      ? 'image/webp'
+      : lower.endsWith('.gif')
+      ? 'image/gif'
+      : lower.endsWith('.svg')
+      ? 'image/svg+xml'
+      : 'image/png';
+    res.setHeader('Content-Type', contentType);
+    stream.pipe(res);
+  } catch (e) {
+    logger.error('Failed to stream asset', { key, error: getErrorMessage(e) });
+    res.status(404).json({ success: false, error: 'not found' });
+  }
+});

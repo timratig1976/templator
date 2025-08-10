@@ -4,23 +4,14 @@ import { InteractivePromptService } from '../services/prompts/InteractivePromptS
 import { EnhancedAIService } from '../services/ai/EnhancedAIService';
 import { createLogger } from '../utils/logger';
 import multer from 'multer';
-import path from 'path';
+import storage from '../services/storage';
+import { sha256 } from '../utils/checksum';
 
 const router = express.Router();
 const logger = createLogger();
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(process.cwd(), 'storage', 'uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `section-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ storage });
+// Configure multer for image uploads (memory) and persist via storage service
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Service instances
 let comparisonService: SectionComparisonService;
@@ -75,8 +66,18 @@ router.post('/create', upload.single('originalImage'), async (req, res) => {
       });
     }
 
+    // Persist image via storage service (best-effort)
+    let originalImagePath = '';
+    try {
+      const put = await storage.put(req.file.buffer, { mime: req.file.mimetype, extension: req.file.originalname.split('.').pop() || 'bin' });
+      originalImagePath = put.url;
+      // checksum available if needed: sha256(req.file.buffer)
+    } catch (e) {
+      originalImagePath = req.file.originalname;
+    }
+
     const comparison = await comparisonService.createComparison({
-      originalImagePath: req.file.path,
+      originalImagePath,
       generatedHtml,
       generatedCss: generatedCss || '',
       prompt,

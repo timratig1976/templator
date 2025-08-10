@@ -1,4 +1,5 @@
 import { createLogger } from '../../../utils/logger';
+import { isValidBase64Image as validateBase64Image } from '../../../utils/base64';
 import { createMockLogger } from './MockLogger';
 
 const logger = process.env.NODE_ENV === 'test' ? createMockLogger() : createLogger();
@@ -199,11 +200,7 @@ export class OpenAIClient {
    * Validate base64 image format
    */
   isValidBase64Image(base64String: string): boolean {
-    if (!base64String.startsWith('data:image/')) {
-      return false;
-    }
-    const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|bmp|svg\+xml);base64,([A-Za-z0-9+\/=\s]*)$/;
-    return base64Regex.test(base64String);
+    return validateBase64Image(base64String);
   }
 
   /**
