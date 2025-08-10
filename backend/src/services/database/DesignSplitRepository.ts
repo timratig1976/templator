@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 export type DesignSplitCreateInput = {
   designUploadId: string;
   status?: 'pending' | 'processing' | 'completed' | 'failed' | string;
-  metrics?: Prisma.InputJsonValue | null;
+  metrics?: unknown | null;
 };
 
 export class DesignSplitRepository {
@@ -13,7 +13,7 @@ export class DesignSplitRepository {
       data: {
         designUploadId: input.designUploadId,
         status: input.status ?? 'processing',
-        metrics: input.metrics ?? undefined,
+        metrics: (input.metrics ?? undefined) as any,
       },
     });
   }
@@ -25,10 +25,10 @@ export class DesignSplitRepository {
     });
   }
 
-  async addMetrics(id: string, metrics: Prisma.InputJsonValue) {
+  async addMetrics(id: string, metrics: unknown) {
     return prisma.designSplit.update({
       where: { id },
-      data: { metrics },
+      data: { metrics: metrics as any },
     });
   }
 
@@ -38,6 +38,14 @@ export class DesignSplitRepository {
 
   async listByUpload(designUploadId: string) {
     return prisma.designSplit.findMany({ where: { designUploadId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async listRecent(limit: number = 20) {
+    return prisma.designSplit.findMany({ orderBy: { createdAt: 'desc' }, take: limit });
+  }
+
+  async listAssets(splitId: string) {
+    return prisma.splitAsset.findMany({ where: { splitId }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] });
   }
 }
 

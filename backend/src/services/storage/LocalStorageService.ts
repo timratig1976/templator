@@ -20,7 +20,12 @@ export default class LocalStorageService implements IStorageService {
   }
 
   async getStream(key: string): Promise<Readable> {
-    const filePath = path.join(this.baseDir, key);
+    // Accept either a plain key (relative filename) or an absolute file path
+    // Avoid duplicating baseDir when the key already contains it or is absolute
+    const normalized = key.replace(/^file:\/\//, '');
+    const filePath = path.isAbsolute(normalized)
+      ? normalized
+      : (normalized.startsWith(this.baseDir) ? normalized : path.join(this.baseDir, normalized));
     return fs.createReadStream(filePath);
   }
 

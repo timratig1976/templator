@@ -46,7 +46,7 @@ export async function getPromptsSummary(req: Request, res: Response) {
     ]);
 
     // Preload artifacts for the pipelines in view to compute RAG usage quickly
-    const pipelineIds = Array.from(new Set(items.map((i) => i.pipelineId).filter(Boolean))) as string[];
+    const pipelineIds = Array.from(new Set(items.map((i: any) => i.pipelineId).filter((v: any) => Boolean(v)))) as string[];
     let artifactsByKey = new Map<string, { ragCount: number; lastRagAt: Date | null }>();
     if (pipelineIds.length > 0) {
       const arts = await prisma.generatedArtifact.findMany({
@@ -54,7 +54,7 @@ export async function getPromptsSummary(req: Request, res: Response) {
         orderBy: { createdAt: 'desc' },
         take: 2000, // cap to keep fast; ordering ensures lastRagAt accurate enough
       });
-      for (const a of arts) {
+      for (const a of arts as any[]) {
         const meta: any = a.meta as any;
         const sec = meta?.sectionId;
         const rag = !!meta?.ragUsed;
@@ -69,12 +69,14 @@ export async function getPromptsSummary(req: Request, res: Response) {
       }
     }
 
-    let summary = items.map((pd) => {
+    let summary = items.map((pd: any) => {
       const usageCount = pd.results.length; // recent, not total; still indicative
       let avgQuality: number | null = null;
       if (pd.results.length > 0) {
-        const vals = pd.results.map((r) => (typeof r.qualityScore === 'number' ? r.qualityScore : null)).filter((v): v is number => v !== null);
-        if (vals.length > 0) avgQuality = vals.reduce((a, b) => a + b, 0) / vals.length;
+        const vals = pd.results
+          .map((r: any) => (typeof r.qualityScore === 'number' ? r.qualityScore : null))
+          .filter((v: number | null): v is number => v !== null);
+        if (vals.length > 0) avgQuality = vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
       }
       const lastUsed = pd.results[0]?.createdAt || pd.updatedAt;
       const key = `${pd.pipelineId}::${pd.sectionId}`;
@@ -94,7 +96,7 @@ export async function getPromptsSummary(req: Request, res: Response) {
     });
 
     if (ragOnly === 'true') {
-      summary = summary.filter((s) => (s.ragUsageCount || 0) > 0);
+      summary = summary.filter((s: any) => (s.ragUsageCount || 0) > 0);
     }
 
     res.json({ success: true, total, offset: skip, limit: take, items: summary });
@@ -126,8 +128,10 @@ export async function getPromptDetail(req: Request, res: Response) {
     if (!item) return res.status(404).json({ success: false, error: 'Not found' });
 
     const usageCount = item.results.length;
-    const vals = item.results.map((r) => (typeof r.qualityScore === 'number' ? r.qualityScore : null)).filter((v): v is number => v !== null);
-    const avgQuality = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const vals = item.results
+      .map((r: any) => (typeof r.qualityScore === 'number' ? r.qualityScore : null))
+      .filter((v: number | null): v is number => v !== null);
+    const avgQuality = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : null;
 
     // Pull recent generated artifacts that relate to this prompt's pipeline/section context
     let relatedArtifacts: Array<{
@@ -148,9 +152,9 @@ export async function getPromptDetail(req: Request, res: Response) {
         orderBy: { createdAt: 'desc' },
         take: 100,
       });
-      relatedArtifacts = artifacts
-        .filter((a) => (a.meta as any)?.sectionId === item.sectionId)
-        .map((a) => ({
+      relatedArtifacts = (artifacts as any[])
+        .filter((a: any) => (a.meta as any)?.sectionId === item.sectionId)
+        .map((a: any) => ({
           id: a.id,
           createdAt: a.createdAt,
           label: (a.meta as any)?.label ?? null,

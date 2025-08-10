@@ -16,10 +16,41 @@ export class PipelineController {
   private htmlGenerator: HTMLGenerator;
   private iterativeRefinement: IterativeRefinement;
 
-  constructor() {
-    this.pipelineExecutor = PipelineExecutor.getInstance();
-    this.htmlGenerator = HTMLGenerator.getInstance();
-    this.iterativeRefinement = IterativeRefinement.getInstance();
+  // Allow DI for testing; fall back to singletons in production
+  constructor(
+    pipelineExecutor?: any,
+    htmlGenerator?: any,
+    iterativeRefinement?: any
+  ) {
+    // Resolve PipelineExecutor with robust fallbacks for Jest mocks
+    const resolvedPE =
+      pipelineExecutor ||
+      (typeof (PipelineExecutor as any)?.getInstance === 'function'
+        ? (PipelineExecutor as any).getInstance()
+        : undefined) ||
+      (PipelineExecutor as any)?.default ||
+      (PipelineExecutor as any);
+    this.pipelineExecutor = resolvedPE;
+
+    // Resolve HTMLGenerator with robust fallbacks
+    const resolvedHG =
+      htmlGenerator ||
+      (typeof (HTMLGenerator as any)?.getInstance === 'function'
+        ? (HTMLGenerator as any).getInstance()
+        : undefined) ||
+      (HTMLGenerator as any)?.default ||
+      (HTMLGenerator as any);
+    this.htmlGenerator = resolvedHG;
+
+    // Resolve IterativeRefinement with robust fallbacks
+    const resolvedIR =
+      iterativeRefinement ||
+      (typeof (IterativeRefinement as any)?.getInstance === 'function'
+        ? (IterativeRefinement as any).getInstance()
+        : undefined) ||
+      (IterativeRefinement as any)?.default ||
+      (IterativeRefinement as any);
+    this.iterativeRefinement = resolvedIR;
   }
 
   /**

@@ -94,6 +94,51 @@ export default function SplitGenerationPlanner({
   const [rowTab, setRowTab] = useState<Record<string, RowTab>>({});
   const [workingHtml, setWorkingHtml] = useState<Record<string, string>>({});
 
+  // Reconcile plan when sections prop changes (e.g., user re-cuts a large upload)
+  useEffect(() => {
+    if (!sections || !sections.length) return;
+    setPlan((prev) => {
+      const prevById = new Map(prev.map((p) => [p.id, p] as const));
+      const next: GenerationPlanItem[] = sections.map((s, idx) => {
+        const existing = prevById.get(s.id);
+        if (existing) {
+          // keep user-modified fields; update type if changed
+          return {
+            ...existing,
+            type: s.type,
+            label: existing.label || defaultLabelFor(s, idx + 1),
+            moduleName: existing.moduleName ?? defaultModuleNameFor(s, idx + 1),
+          };
+        }
+        return {
+          id: s.id,
+          label: defaultLabelFor(s, idx + 1),
+          type: s.type,
+          generateHtml: true,
+          generateModule: s.type === 'header' || s.type === 'hero' || s.type === 'footer' || s.type === 'navigation' || s.type === 'form' || s.type === 'gallery' || s.type === 'testimonial' || s.type === 'cta',
+          moduleName: defaultModuleNameFor(s, idx + 1),
+          notes: s.description || '',
+        };
+      });
+      return next;
+    });
+  }, [sections]);
+
+  // Simple RAG hints by section type to enrich prompts and generation
+  const ragHintsByType: Record<SectionInput['type'], string> = {
+    header: 'Include site branding, concise navigation entry points, and accessibility (nav with aria-label).',
+    hero: 'Large headline, supporting paragraph, primary CTA button, optional secondary link, responsive spacing, prominent imagery placeholder.',
+    content: 'Semantic headings (h2-h3), paragraphs, lists, and responsive layout using Tailwind utility classes.',
+    sidebar: 'Complementary content, list of links or filters, subtle separators, and sticky behavior on large screens.',
+    footer: 'Multi-column links, small print, social icons placeholders, and contrasting background.',
+    navigation: 'Responsive nav with hamburger for mobile, focus rings, aria-expanded for menus.',
+    form: 'Labels tied to inputs via htmlFor/id, required indicators, help text, validation states, and accessible error messages.',
+    gallery: 'Responsive grid, lazy-loaded images, captions, and keyboard-focus styles.',
+    testimonial: 'Quote, author, role/company, optional avatar, and balanced spacing.',
+    cta: 'Short message, one primary action, high-contrast button, responsive padding.',
+    other: 'Clean, accessible Tailwind HTML with semantic markup and responsive design.'
+  };
+
   // Keep workingHtml in sync with active version when it changes (initialize if empty)
   useEffect(() => {
     Object.keys(activeVersionId).forEach((sid) => {
@@ -247,7 +292,16 @@ export default function SplitGenerationPlanner({
         const existing = await listSplitAssets(designSplitId, 'image-crop');
         let assets = (existing?.data?.assets || []) as any[];
 
-        if (!assets.length) {
+        // Determine if assets match current sections (by sectionId count/coverage)
+        const sectionIds = new Set(sections.map(function(s){ return s.id; }));
+        const assetSectionIds = new Set(assets.map(function(a: any){ return a && a.meta ? a.meta.sectionId : undefined; }).filter(Boolean));
+        let coverageOk = sectionIds.size === assetSectionIds.size;
+        if (coverageOk) {
+          coverageOk = true;
+          sectionIds.forEach(function(id){ if (!assetSectionIds.has(id)) { coverageOk = false; } });
+        }
+
+        if (!assets.length || !coverageOk) {
           // sections bounds here are 0..1 normalized -> convert to percent for backend
           const inputs = sections.map((s, i) => ({
             id: s.id,
@@ -260,7 +314,7 @@ export default function SplitGenerationPlanner({
               height: (s.bounds.height ?? 0) * 100,
             }
           }));
-          const created = await createCrops(designSplitId, inputs);
+          const created = await createCrops(designSplitId, inputs, { force: true });
           assets = (created?.data?.assets || []) as any[];
         }
 
@@ -268,7 +322,9 @@ export default function SplitGenerationPlanner({
         const map = await resolveThumbUrls(assets);
         setThumbUrls(map);
         // Default select first section
-        if (!selectedId && sections[0]) setSelectedId(sections[0].id);
+        if (!selectedId || !sectionIds.has(selectedId)) {
+          if (sections[0]) setSelectedId(sections[0].id);
+        }
       } catch (e) {
         setCropError('Failed to prepare section thumbnails.');
       } finally {
@@ -453,9 +509,33 @@ export default function SplitGenerationPlanner({
       <div className="space-y-4">
         {plan.map((p, i) => {
           // find thumb for this section
-          const asset = cropAssets.find(a => (a?.meta?.sectionId || null) === p.id) || null;
+          // 1) Prefer matching by sectionId (coerce to string for robustness)
+          // 2) Fallback: match by order index if sectionId is missing in meta
+          let asset =
+            cropAssets.find(a => {
+              const sid = a && a.meta ? (a.meta as any).sectionId : undefined;
+              return sid != null && String(sid) === String(p.id);
+            }) || null;
+          if (!asset) {
+            const byOrder = cropAssets.find(a => typeof a?.order === 'number' && a.order === i) || null;
+            if (byOrder) asset = byOrder;
+          }
           const key = asset?.meta?.key || asset?.storageUrl;
           const thumb = key ? thumbUrls[String(key)] : undefined;
+          // Debug trace to help diagnose wrong image mapping
+          if (process.env.NODE_ENV !== 'production') {
+            try {
+              // Only log when section is first rendered or mapping changes materially
+              // eslint-disable-next-line no-console
+              console.debug('[SplitGenerationPlanner] Thumb map', {
+                sectionIndex: i,
+                sectionId: p.id,
+                assetKey: key,
+                assetOrder: asset?.order,
+                thumbUrl: thumb,
+              });
+            } catch {}
+          }
           const open = selectedId === p.id;
           const vList = versions[p.id] || [];
           const activeVId = activeVersionId[p.id] || null;
@@ -490,39 +570,55 @@ export default function SplitGenerationPlanner({
                       {approved[p.id] && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">Approved</span>
                       )}
-                      <label className="flex items-center gap-1 text-xs">
-                        <input type="checkbox" checked={p.generateHtml} onChange={(e) => updateItem(p.id, { generateHtml: e.target.checked })} /> HTML
-                      </label>
-                      <label className="flex items-center gap-1 text-xs">
-                        <input type="checkbox" checked={p.generateModule} onChange={(e) => updateItem(p.id, { generateModule: e.target.checked })} /> Module
-                      </label>
-                      <button className="text-xs px-2 py-1 border rounded" onClick={() => moveItem(p.id, -1)} aria-label="Move up">↑</button>
-                      <button className="text-xs px-2 py-1 border rounded" onClick={() => moveItem(p.id, 1)} aria-label="Move down">↓</button>
                     </div>
                   </div>
 
                   {p.generateModule && (
-                    <div className="mt-2 grid grid-cols-1 gap-1">
-                      <label className="text-xs text-gray-600">Module name</label>
-                      <input
-                        className="border rounded px-2 py-1 text-sm"
-                        value={p.moduleName || ''}
-                        placeholder="e.g. hero_banner"
-                        onChange={(e) => updateItem(p.id, { moduleName: e.target.value })}
-                      />
+                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-gray-600">Module name</label>
+                        <input
+                          className="border rounded px-2 py-1 text-sm"
+                          value={p.moduleName || ''}
+                          placeholder="e.g. hero_banner"
+                          onChange={(e) => updateItem(p.id, { moduleName: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-gray-600">Type</label>
+                        <select
+                          className="border rounded px-2 py-1 text-sm bg-white"
+                          value={p.type}
+                          onChange={(e) => updateItem(p.id, { type: e.target.value as SectionInput['type'] })}
+                        >
+                          <option value="header">Header</option>
+                          <option value="hero">Hero</option>
+                          <option value="content">Content</option>
+                          <option value="sidebar">Sidebar</option>
+                          <option value="footer">Footer</option>
+                          <option value="navigation">Navigation</option>
+                          <option value="form">Form</option>
+                          <option value="gallery">Gallery</option>
+                          <option value="testimonial">Testimonial</option>
+                          <option value="cta">CTA</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
                     </div>
                   )}
 
-                  {!p.generateHtml && !p.generateModule && (
-                    <div className="mt-2 text-xs text-red-600">Select at least one: HTML or Module</div>
-                  )}
+                  {/* Simplified controls; generation handled via single Generate button below */}
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button
-                      className="px-3 py-1 text-sm rounded border"
+                      className="px-2.5 py-1 text-sm rounded border inline-flex items-center gap-1"
                       onClick={() => { setSelectedId(p.id); regenerateForSection(p.id); }}
                       disabled={!!regenerating[p.id]}
-                    >{regenerating[p.id] ? 'Regenerating…' : 'Regenerate HTML'}</button>
+                      title="Generate HTML with AI"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+                      {regenerating[p.id] ? 'Generating…' : 'Generate'}
+                    </button>
                     <button
                       className="px-3 py-1 text-sm rounded bg-green-600 text-white disabled:opacity-50"
                       onClick={() => { setSelectedId(p.id); approveSection(p.id); }}
@@ -563,7 +659,7 @@ export default function SplitGenerationPlanner({
                           </div>
                         )}
 
-                        {/* Prompt tab - simplified to a single full prompt editor */}
+                        {/* Prompt tab - single full prompt editor + RAG hints */}
                         {((rowTab[p.id] || 'image') === 'prompt') && (
                           <div>
                             <div className="text-sm font-medium text-gray-800 mb-2">Prompt for this section</div>
@@ -574,6 +670,19 @@ export default function SplitGenerationPlanner({
                               onChange={(e) => setFullPrompt(prev => ({ ...prev, [p.id]: e.target.value }))}
                               placeholder="Edit the entire prompt shown here."
                             />
+                            <div className="mt-2 p-2 border rounded bg-gray-50 text-xs">
+                              <div className="font-medium text-gray-700 mb-1">RAG hints for type: {p.type}</div>
+                              <div className="text-gray-600 whitespace-pre-line">{ragHintsByType[p.type]}</div>
+                              <div className="mt-2">
+                                <button
+                                  className="px-2 py-1 text-xs rounded border"
+                                  onClick={() => setFullPrompt(prev => ({
+                                    ...prev,
+                                    [p.id]: `${(prev[p.id] ?? composePrompt(basePrompt, customPrompts[p.id]))}\n\nContext:\n${ragHintsByType[p.type]}`,
+                                  }))}
+                                >Insert RAG hints</button>
+                              </div>
+                            </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <button
                                 className="px-3 py-1 text-sm rounded border"
@@ -614,35 +723,7 @@ export default function SplitGenerationPlanner({
 
                         {/* HTML tab */}
                         {((rowTab[p.id] || 'image') === 'html') && (
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            <div>
-                              <div className="text-sm font-medium text-gray-800 mb-2">Versions</div>
-                              <div className="space-y-2 max-h-72 overflow-y-auto">
-                                {vList.map(v => (
-                                  <div key={v.id} className="border rounded p-2">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <div className="text-sm font-medium">{v.label || v.id}</div>
-                                        {v.ragUsed && (
-                                          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">RAG</span>
-                                        )}
-                                      </div>
-                                      <button
-                                        className={`text-xs px-2 py-0.5 border rounded ${activeVId === v.id ? 'bg-blue-600 text-white' : ''}`}
-                                        onClick={() => { setSelectedId(p.id); selectActiveVersion(p.id, v.id); setWorkingHtml(prev => ({ ...prev, [p.id]: v.html })); }}
-                                      >Use</button>
-                                    </div>
-                                    <details className="mt-2">
-                                      <summary className="text-xs text-gray-600 cursor-pointer">View HTML</summary>
-                                      <textarea readOnly className="mt-1 w-full border rounded p-2 text-xs" rows={8} value={v.html} />
-                                    </details>
-                                  </div>
-                                ))}
-                                {vList.length === 0 && (
-                                  <div className="text-xs text-gray-500">No versions yet. Click Regenerate HTML.</div>
-                                )}
-                              </div>
-                            </div>
+                          <div className="space-y-3">
                             <div>
                               <div className="text-sm font-medium text-gray-800 mb-2">Editable HTML</div>
                               <textarea
@@ -664,13 +745,39 @@ export default function SplitGenerationPlanner({
                                 >Copy</button>
                               </div>
                             </div>
+                            <div>
+                              <label className="text-xs text-gray-600 mr-2">Version:</label>
+                              <select
+                                className="border rounded px-2 py-1 text-xs bg-white"
+                                value={activeVId || ''}
+                                onChange={(e) => {
+                                  const vid = e.target.value;
+                                  if (!vid) return;
+                                  setSelectedId(p.id);
+                                  selectActiveVersion(p.id, vid);
+                                  const v = vList.find(v => v.id === vid);
+                                  if (v) setWorkingHtml(prev => ({ ...prev, [p.id]: v.html }));
+                                }}
+                              >
+                                <option value="" disabled>{vList.length ? 'Select a version' : 'No versions yet'}</option>
+                                {vList.map(v => (
+                                  <option key={v.id} value={v.id}>{v.label || v.id}</option>
+                                ))}
+                              </select>
+                              {vList.some(v => v.ragUsed) && (
+                                <span className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">RAG</span>
+                              )}
+                            </div>
                           </div>
                         )}
 
                         {/* Preview tab */}
                         {((rowTab[p.id] || 'image') === 'preview') && (
                           <div>
-                            {activeV || workingHtml[p.id] ? (
+                            {(() => {
+                              const html = (workingHtml[p.id] ?? activeV?.html ?? '').trim();
+                              return html.length > 0;
+                            })() ? (
                               <iframe
                                 title={`Preview ${p.label}`}
                                 className="w-full h-96 border rounded"
@@ -678,7 +785,7 @@ export default function SplitGenerationPlanner({
                                 srcDoc={`<!doctype html><html><head><meta charset=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><script>window.onerror=function(){return true}</script><style>body{margin:8px;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial}</style><link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css\"/></head><body>${(workingHtml[p.id] ?? activeV?.html) || ''}</body></html>`}
                               />
                             ) : (
-                              <div className="text-xs text-gray-500">Select a version or edit HTML to preview.</div>
+                              <div className="text-xs text-gray-500">Generate HTML first.</div>
                             )}
                           </div>
                         )}

@@ -1,8 +1,11 @@
-import { PrismaClient, ModuleTemplate } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { DatabaseService } from './DatabaseService';
 import { createLogger } from '../../utils/logger';
 
 const logger = createLogger();
+
+// Fallback type when Prisma model type isn't exported (use strict typing later if needed)
+export type ModuleTemplate = any;
 
 export interface TemplateSearchCriteria {
   category?: string;
@@ -21,7 +24,7 @@ export class TemplateRepository {
   async create(template: Omit<ModuleTemplate, 'id' | 'createdAt' | 'updatedAt'>): Promise<ModuleTemplate> {
     try {
       const created = await this.prisma.moduleTemplate.create({
-        data: template,
+        data: (template as unknown) as any,
       });
       logger.info('Template created in database', { templateId: created.id, name: created.name });
       return created;
@@ -97,7 +100,7 @@ export class TemplateRepository {
     try {
       const updated = await this.prisma.moduleTemplate.update({
         where: { id },
-        data,
+        data: (data as unknown) as any,
       });
       logger.info('Template updated in database', { templateId: id });
       return updated;

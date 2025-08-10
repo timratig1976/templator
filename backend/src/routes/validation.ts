@@ -163,7 +163,7 @@ router.post('/validate', async (req, res, next) => {
     validationRequest.module.template = sanitizedTemplate;
     
     // Perform validation
-    const validationResult = await validationService.validateHTML(
+    const rawValidationResult = await validationService.validateHTML(
       sanitizedTemplate,
       {
         checkAccessibility: true,
@@ -171,6 +171,8 @@ router.post('/validate', async (req, res, next) => {
         checkSEO: true
       }
     );
+    // Normalize to ensure arrays/metrics are present
+    const validationResult: any = normalizeValidationResult(rawValidationResult as any);
 
     // Check schema compatibility
     const schemaCompatibility = await checkSchemaCompatibility(
@@ -202,15 +204,22 @@ router.post('/validate', async (req, res, next) => {
       next_steps: nextSteps
     };
 
+    // Legacy/test compatibility: expose errors/warnings at top-level and echo sanitized module
+    const legacyCompat: any = {
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
+      module: { template: sanitizedTemplate },
+    };
+
     logger.info('Module validation completed', {
       validationId,
       status,
-      score: validationResult.score,
-      errorsCount: validationResult.errors.length,
-      warningsCount: validationResult.warnings.length
+      score: (validationResult as any)?.score ?? 0,
+      errorsCount: (validationResult as any)?.errors?.length ?? 0,
+      warningsCount: (validationResult as any)?.warnings?.length ?? 0
     });
 
-    res.json(response);
+    res.json({ ...response, ...legacyCompat });
 
   } catch (error) {
     logger.error('Module validation failed', { error });
@@ -646,3 +655,18 @@ function generateBatchRecommendations(results: BatchValidationResponse['results'
 }
 
 export default router;
+
+// Ensure validationResult has required shape to avoid undefined property access
+function normalizeValidationResult(result: any) {
+  const errors = Array.isArray(result?.errors) ? result.errors : [];
+  const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+  const score = typeof result?.score === 'number' ? result.score : 0;
+  const metrics = {
+    complexity_score: typeof result?.metrics?.complexity_score === 'number' ? result.metrics.complexity_score : 0,
+    accessibility_score: typeof result?.metrics?.accessibility_score === 'number' ? result.metrics.accessibility_score : 0,
+    performance_score: typeof result?.metrics?.performance_score === 'number' ? result.metrics.performance_score : 0,
+    maintainability_score: typeof result?.metrics?.maintainability_score === 'number' ? result.metrics.maintainability_score : 0,
+  };
+  return { ...result, errors, warnings, score, metrics };
+}
+

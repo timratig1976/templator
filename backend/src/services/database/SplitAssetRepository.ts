@@ -5,7 +5,7 @@ export type SplitAssetCreateInput = {
   splitId: string;
   kind: string; // image | html | css | json | other
   storageUrl?: string | null;
-  meta?: Prisma.InputJsonValue | null;
+  meta?: unknown | null;
   order?: number | null;
 };
 
@@ -16,7 +16,7 @@ export class SplitAssetRepository {
         splitId: input.splitId,
         kind: input.kind,
         storageUrl: input.storageUrl ?? null,
-        meta: input.meta ?? undefined,
+        meta: (input.meta ?? undefined) as any,
         order: input.order ?? null,
       },
     });

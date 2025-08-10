@@ -18,8 +18,36 @@ router.get('/', async (req: Request, res: Response) => {
         ? designUploadRepo.countByUser(userId)
         : designUploadRepo.countAll(),
     ]);
+    // Enrich with counts: number of splits and parts (json assets) per upload
+    const prisma = (await import('../services/database/prismaClient')).default;
+    const ids = data.map((u: any) => u.id);
+    const [splitCounts, partCounts] = await Promise.all([
+      prisma.designSplit.groupBy({
+        by: ['designUploadId'],
+        _count: { _all: true },
+        where: { designUploadId: { in: ids } },
+      }),
+      prisma.splitAsset.findMany({
+        where: { kind: 'json', split: { designUploadId: { in: ids } } },
+        select: { id: true, splitId: true, split: { select: { designUploadId: true } } },
+      }),
+    ]);
+    const splitCountMap: Record<string, number> = {};
+    for (const row of splitCounts) {
+      splitCountMap[(row as any).designUploadId] = (row as any)._count?._all ?? 0;
+    }
+    const partCountMap: Record<string, number> = {};
+    for (const asset of partCounts as any[]) {
+      const uploadId = asset.split.designUploadId;
+      partCountMap[uploadId] = (partCountMap[uploadId] || 0) + 1;
+    }
+    const enriched = data.map((u: any) => ({
+      ...u,
+      splitCount: splitCountMap[u.id] ?? 0,
+      partCount: partCountMap[u.id] ?? 0,
+    }));
     const hasMore = offset + data.length < total;
-    return res.json({ success: true, data, pagination: { limit, offset, count: data.length, total, hasMore } });
+    return res.json({ success: true, data: enriched, pagination: { limit, offset, count: data.length, total, hasMore } });
   } catch (e) {
     return res.status(500).json({ success: false, error: e instanceof Error ? e.message : 'Failed to list uploads' });
   }

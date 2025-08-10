@@ -98,7 +98,7 @@ router.get('/sections/:sectionId/versions', async (req: Request, res: Response) 
       ? await GeneratedArtifactRepository.listBySplit(designSplitId)
       : await prisma.generatedArtifact.findMany({ orderBy: { createdAt: 'desc' } });
 
-    const versions = list.filter(a => (a.type === 'html') && (a.meta as any)?.sectionId === sectionId);
+    const versions = list.filter((a: any) => (a.type === 'html') && (a.meta as any)?.sectionId === sectionId);
 
     res.json({ success: true, versions });
   } catch (err: any) {
@@ -196,7 +196,7 @@ router.patch('/sections/:sectionId/versions/:versionId/select', async (req: Requ
     });
 
     // First, unselect all other versions for this section
-    const relevant = candidates.filter(c => ((c.meta as any)?.sectionId === sectionId));
+    const relevant = candidates.filter((c: any) => ((c.meta as any)?.sectionId === sectionId));
     for (const c of relevant) {
       const meta = (c.meta as any) || {};
       const next = { ...meta, selected: c.id === versionId };

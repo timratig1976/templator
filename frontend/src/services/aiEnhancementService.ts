@@ -14,8 +14,9 @@ export type CropSectionInput = {
   unit: 'px' | 'percent';
 };
 
-export async function createCrops(splitId: string, sections: CropSectionInput[]) {
-  const res = await api.post(`/splits/${encodeURIComponent(splitId)}/crops`, { sections });
+export async function createCrops(splitId: string, sections: CropSectionInput[], opts?: { force?: boolean }) {
+  const force = opts?.force ? '1' : undefined;
+  const res = await api.post(`/splits/${encodeURIComponent(splitId)}/crops`, { sections, force }, { params: force ? { force } : undefined });
   return res.data as { success: boolean; data: { assets: any[] } };
 }
 

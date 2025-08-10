@@ -8,7 +8,7 @@ export type DesignUploadCreateInput = {
   size: number;
   checksum?: string | null;
   storageUrl?: string | null;
-  meta?: Prisma.InputJsonValue | null;
+  meta?: unknown | null;
 };
 
 export class DesignUploadRepository {
@@ -19,7 +19,7 @@ export class DesignUploadRepository {
       mime: input.mime,
       size: input.size,
       checksum: input.checksum ?? null,
-      meta: input.meta ?? undefined,
+      meta: (input.meta ?? undefined) as any,
     };
     if (input.storageUrl !== undefined && input.storageUrl !== null) {
       data.storageUrl = input.storageUrl;

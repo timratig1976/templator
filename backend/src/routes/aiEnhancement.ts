@@ -1,4 +1,5 @@
 import express from 'express';
+import type { Request, Response } from 'express';
 import { EnhancedAIService } from '../services/ai/EnhancedAIService';
 import { FineTuningService } from '../services/ai/FineTuningService';
 import openaiService, { OpenAIService, Section, EditableField, Component } from '../services/ai/openaiService';
@@ -85,6 +86,58 @@ async function generateAISplittingSuggestions(imageBase64: string, fileName: str
       imageSize: Math.round(imageBase64.length / 1024)
     });
 
+  // List recent splits for quick-load UI
+  // GET /api/ai-enhancement/splits/recent?limit=20
+  router.get('/splits/recent', async (req: Request, res: Response) => {
+    try {
+      const limit = Math.min(Number(req.query.limit || 20), 100);
+      const recent = await designSplitRepo.listRecent(isNaN(limit) ? 20 : limit);
+      // shape items
+      const items = recent.map((s: any) => ({
+        designSplitId: s.id,
+        createdAt: s.createdAt,
+        // sectionCount can be filled lazily on summary; keep optional here
+      }));
+      return res.json({ success: true, data: { items } });
+    } catch (e) {
+      logger.error('Failed to list recent splits', { error: getErrorMessage(e) });
+      return res.status(500).json({ success: false, error: 'Failed to list recent splits' });
+    }
+  });
+
+  // Split summary: sections + optional image reference
+  // GET /api/ai-enhancement/splits/:splitId/summary
+  router.get('/splits/:splitId/summary', async (req: Request, res: Response) => {
+    const { splitId } = req.params;
+    try {
+      const split = await designSplitRepo.findById(splitId);
+      if (!split) return res.status(404).json({ success: false, error: 'DesignSplit not found' });
+
+      // Collect section descriptors from JSON assets (created by detect-sections or analyze-layout)
+      const assets = await designSplitRepo.listAssets(splitId);
+      const sections = assets
+        .filter((a: any) => a.kind === 'json')
+        .map((a: any, i: number) => {
+          const m: any = a.meta || {};
+          return {
+            id: m.id || m.sectionId || `section_${i + 1}`,
+            name: m.name || m.type || `Section ${i + 1}`,
+            type: (m.type || 'content') as string,
+            // bounds may be present from detect-sections path
+            bounds: m.bounds || undefined,
+            description: m.splittingRationale || undefined,
+          };
+        });
+
+      // Reference to uploaded image if available (key stored in designUpload.storageUrl)
+      const imageUrl = split.designUpload?.storageUrl || null;
+
+      return res.json({ success: true, data: { designSplitId: splitId, imageUrl, sections } });
+    } catch (e) {
+      logger.error('Failed to build split summary', { error: getErrorMessage(e), splitId });
+      return res.status(500).json({ success: false, error: 'Failed to load split summary' });
+    }
+  });
     logToFrontend('info', 'openai', '🤖 Analyzing design with AI Vision', {
       fileName,
       model: 'gpt-4o'
@@ -393,7 +446,7 @@ const initializeServices = async () => {
  */
 
 // Simple test route
-router.get('/test', (req, res) => {
+router.get('/test', (req: Request, res: Response) => {
   res.json({ success: true, message: 'AI Enhancement routes are working' });
 });
 
@@ -405,7 +458,7 @@ router.get('/test', (req, res) => {
  * GET /api/ai-enhancement/status
  * Get AI enhancement system status
  */
-router.get('/status', async (req, res) => {
+router.get('/status', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -450,7 +503,7 @@ router.get('/status', async (req, res) => {
  * POST /api/ai-enhancement/enhance-prompt
  * Enhance a prompt using RAG + Dynamic Context
  */
-router.post('/enhance-prompt', async (req, res) => {
+router.post('/enhance-prompt', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -493,7 +546,7 @@ router.post('/enhance-prompt', async (req, res) => {
  * POST /api/ai-enhancement/generate-html
  * Generate enhanced HTML using RAG + Dynamic Context
  */
-router.post('/generate-html', async (req, res) => {
+router.post('/generate-html', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -537,7 +590,7 @@ router.post('/generate-html', async (req, res) => {
  * POST /api/ai-enhancement/refine-html
  * Refine HTML using enhanced context awareness
  */
-router.post('/refine-html', async (req, res) => {
+router.post('/refine-html', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -581,7 +634,7 @@ router.post('/refine-html', async (req, res) => {
  * POST /api/ai-enhancement/add-knowledge
  * Add new entry to knowledge base
  */
-router.post('/add-knowledge', async (req, res) => {
+router.post('/add-knowledge', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -622,7 +675,7 @@ router.post('/add-knowledge', async (req, res) => {
  * GET /api/ai-enhancement/fine-tuning/recommendations
  * Get fine-tuning recommendations
  */
-router.get('/fine-tuning/recommendations', async (req, res) => {
+router.get('/fine-tuning/recommendations', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -662,7 +715,7 @@ router.get('/fine-tuning/recommendations', async (req, res) => {
  * POST /api/ai-enhancement/fine-tuning/prepare-data
  * Prepare training data for fine-tuning
  */
-router.post('/fine-tuning/prepare-data', async (req, res) => {
+router.post('/fine-tuning/prepare-data', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -696,7 +749,7 @@ router.post('/fine-tuning/prepare-data', async (req, res) => {
  * POST /api/ai-enhancement/fine-tuning/create-job
  * Create a fine-tuning job
  */
-router.post('/fine-tuning/create-job', async (req, res) => {
+router.post('/fine-tuning/create-job', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -737,7 +790,7 @@ router.post('/fine-tuning/create-job', async (req, res) => {
  * GET /api/ai-enhancement/fine-tuning/jobs
  * List all fine-tuning jobs
  */
-router.get('/fine-tuning/jobs', async (req, res) => {
+router.get('/fine-tuning/jobs', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -748,8 +801,8 @@ router.get('/fine-tuning/jobs', async (req, res) => {
       data: {
         jobs,
         totalJobs: jobs.length,
-        activeJobs: jobs.filter(job => ['validating_files', 'queued', 'running'].includes(job.status)).length,
-        completedJobs: jobs.filter(job => job.status === 'succeeded').length,
+        activeJobs: jobs.filter((job: any) => ['validating_files', 'queued', 'running'].includes(job.status)).length,
+        completedJobs: jobs.filter((job: any) => job.status === 'succeeded').length,
         timestamp: new Date().toISOString()
       }
     });
@@ -767,7 +820,7 @@ router.get('/fine-tuning/jobs', async (req, res) => {
  * GET /api/ai-enhancement/fine-tuning/jobs/:jobId
  * Get fine-tuning job status
  */
-router.get('/fine-tuning/jobs/:jobId', async (req, res) => {
+router.get('/fine-tuning/jobs/:jobId', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -804,7 +857,7 @@ router.get('/fine-tuning/jobs/:jobId', async (req, res) => {
  * POST /api/ai-enhancement/fine-tuning/jobs/:jobId/cancel
  * Cancel a fine-tuning job
  */
-router.post('/fine-tuning/jobs/:jobId/cancel', async (req, res) => {
+router.post('/fine-tuning/jobs/:jobId/cancel', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -844,7 +897,7 @@ router.post('/fine-tuning/jobs/:jobId/cancel', async (req, res) => {
  * POST /api/ai-enhancement/compare-approaches
  * Compare output quality between different approaches
  */
-router.post('/compare-approaches', async (req, res) => {
+router.post('/compare-approaches', async (req: Request, res: Response) => {
   try {
     await initializeServices();
     
@@ -938,7 +991,7 @@ function getJobNextSteps(status: string): string[] {
  * POST /api/ai-enhancement/detect-sections
  * Lightweight section detection for splitting suggestions
  */
-router.post('/detect-sections', async (req, res) => {
+router.post('/detect-sections', async (req: Request, res: Response) => {
   const requestId = req.body.requestId || uuidv4();
   const startTime = Date.now();
   
@@ -1041,7 +1094,7 @@ router.post('/detect-sections', async (req, res) => {
             confidence: s.confidence,
             splittingRationale: s.splittingRationale,
             reusability: s.reusability,
-          } as unknown) as Prisma.InputJsonValue,
+          } as unknown) as any,
           order: i,
         });
       }
@@ -1092,7 +1145,7 @@ router.post('/detect-sections', async (req, res) => {
  * POST /api/ai-enhancement/analyze-layout
  * Analyze design layout using OpenAI Vision API
  */
-router.post('/analyze-layout', async (req, res) => {
+router.post('/analyze-layout', async (req: Request, res: Response) => {
   const requestId = uuidv4();
   const startTime = Date.now();
   const analysisType = req.body.analysisType || 'comprehensive';
@@ -1275,7 +1328,7 @@ router.post('/analyze-layout', async (req, res) => {
             name: s.name,
             type: s.type,
             editableFields: s.editableFields,
-          } as unknown) as Prisma.InputJsonValue,
+          } as unknown) as any,
           order: i,
         });
       }
@@ -1354,8 +1407,6 @@ router.post('/analyze-layout', async (req, res) => {
   }
 });
 
-export default router;
-
 // ===================== Added: Crops + Signed URL Endpoints =====================
 
 // Helper to read a stream fully into Buffer
@@ -1370,19 +1421,22 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 
 // POST /api/ai-enhancement/splits/:splitId/crops
 // body: { sections: Array<{ id?: string, index: number, bounds: {x,y,width,height}, unit: 'px'|'percent' }> }
-router.post('/splits/:splitId/crops', async (req, res) => {
+router.post('/splits/:splitId/crops', async (req: Request, res: Response) => {
   const { splitId } = req.params;
   const { sections } = req.body || {};
+  const force = (req.query.force === '1' || req.query.force === 'true' || (req.body && (req.body.force === true || req.body.force === '1' || req.body.force === 'true')));
   if (!Array.isArray(sections) || sections.length === 0) {
     return res.status(400).json({ success: false, error: 'sections array is required' });
   }
 
   try {
-    // Avoid duplicates: if image-crop assets already exist for this split, return them
-    const existing = await splitAssetRepo.listBySplit(splitId);
-    const existingCrops = existing.filter(a => a.kind === 'image-crop');
-    if (existingCrops.length > 0) {
-      return res.json({ success: true, data: { assets: existingCrops } });
+    // Avoid duplicates unless force=true: if image-crop assets already exist for this split, return them
+    if (!force) {
+      const existing = await splitAssetRepo.listBySplit(splitId);
+      const existingCrops = existing.filter((a: any) => a.kind === 'image-crop');
+      if (existingCrops.length > 0) {
+        return res.json({ success: true, data: { assets: existingCrops } });
+      }
     }
 
     const split = await designSplitRepo.findById(splitId);
@@ -1403,6 +1457,22 @@ router.post('/splits/:splitId/crops', async (req, res) => {
     }
 
     const results = await imageCropService.createCropsForSplit(splitId, buffer, sections as any);
+    // Detailed diagnostics: confirm separate crops and metadata
+    try {
+      results.forEach((r, idx) => {
+        logger.debug('Created image crop', {
+          splitId,
+          index: idx,
+          key: r.key,
+          width: r.width,
+          height: r.height,
+          bounds: r.bounds,
+          sectionId: r.asset?.meta?.sectionId ?? null,
+          order: r.asset?.order ?? null,
+        });
+      });
+      logger.info('Crop creation summary', { splitId, count: results.length });
+    } catch {}
     // Note: service currently reads from path; adjust to buffer usage below if needed
     // To use buffer directly, we can extend ImageCropService; fall back by writing temp file if necessary.
     // For now, if src isn't a path, we already read buffer above; ensure src is path when calling service.
@@ -1415,12 +1485,12 @@ router.post('/splits/:splitId/crops', async (req, res) => {
 });
 
 // GET /api/ai-enhancement/splits/:splitId/assets?kind=image-crop
-router.get('/splits/:splitId/assets', async (req, res) => {
+router.get('/splits/:splitId/assets', async (req: Request, res: Response) => {
   const { splitId } = req.params;
   const kind = req.query.kind ? String(req.query.kind) : undefined;
   try {
     const items = await splitAssetRepo.listBySplit(splitId);
-    const filtered = kind ? items.filter(i => i.kind === kind) : items;
+    const filtered = kind ? items.filter((i: any) => i.kind === kind) : items;
     res.json({ success: true, data: { assets: filtered } });
   } catch (e) {
     logger.error('Failed to list split assets', { error: getErrorMessage(e), splitId });
@@ -1442,7 +1512,7 @@ function verifySignature(key: string, exp: number, sig: string): boolean {
 }
 
 // GET /api/ai-enhancement/assets/signed?key=...&ttl=300000
-router.get('/assets/signed', (req, res) => {
+router.get('/assets/signed', (req: Request, res: Response) => {
   const key = String(req.query.key || '');
   const ttl = Math.min(Number(req.query.ttl || 300000), 3600000); // cap at 1h
   if (!key) return res.status(400).json({ success: false, error: 'key is required' });
@@ -1453,7 +1523,7 @@ router.get('/assets/signed', (req, res) => {
 });
 
 // GET /api/ai-enhancement/assets/download?key=...&exp=...&sig=...
-router.get('/assets/download', async (req, res) => {
+router.get('/assets/download', async (req: Request, res: Response) => {
   const key = String(req.query.key || '');
   const exp = Number(req.query.exp || 0);
   const sig = String(req.query.sig || '');
@@ -1496,3 +1566,65 @@ router.get('/assets/download', async (req, res) => {
     res.status(404).json({ success: false, error: 'not found' });
   }
 });
+
+// GET /api/ai-enhancement/splits/:splitId/summary
+router.get('/splits/:splitId/summary', async (req: Request, res: Response) => {
+  const { splitId } = req.params;
+  try {
+    const split = await designSplitRepo.findById(splitId);
+    if (!split) return res.status(404).json({ success: false, error: 'DesignSplit not found' });
+
+    const assets = await designSplitRepo.listAssets(splitId);
+    const sections = assets
+      .filter((a: any) => a.kind === 'json')
+      .map((a: any, i: number) => {
+        const m: any = a.meta || {};
+        return {
+          id: m.id || m.sectionId || `section_${i + 1}`,
+          name: m.name || m.type || `Section ${i + 1}`,
+          type: (m.type || 'content') as string,
+          bounds: m.bounds || undefined,
+          description: m.splittingRationale || undefined,
+        };
+      });
+
+    const imageUrl = split.designUpload?.storageUrl || null;
+    return res.json({ success: true, data: { designSplitId: splitId, imageUrl, sections } });
+  } catch (e) {
+    logger.error('Failed to get split summary', { splitId, error: getErrorMessage(e) });
+    return res.status(500).json({ success: false, error: 'Failed to get split summary' });
+  }
+});
+
+// GET /api/ai-enhancement/splits/recent
+router.get('/splits/recent', async (req: Request, res: Response) => {
+  try {
+    const limitRaw = Number(req.query.limit || 20);
+    const limit = Math.min(isNaN(limitRaw) ? 20 : limitRaw, 100);
+    const recent = await designSplitRepo.listRecent(limit);
+
+    // Optionally enrich with a rough sectionCount from json assets.
+    const items = await Promise.all(
+      recent.map(async (s: any) => {
+        let sectionCount = 0;
+        try {
+          const assets = await designSplitRepo.listAssets(s.id);
+          sectionCount = assets.filter((a: any) => a.kind === 'json').length;
+        } catch {}
+        return {
+          designSplitId: s.id,
+          createdAt: s.createdAt,
+          name: (s as any).name || undefined,
+          sectionCount,
+        };
+      })
+    );
+
+    return res.json({ success: true, data: { items } });
+  } catch (e) {
+    logger.error('Failed to get recent splits', { error: getErrorMessage(e) });
+    res.status(500).json({ success: false, error: 'Failed to get recent splits' });
+  }
+});
+
+export default router;

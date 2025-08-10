@@ -7,7 +7,7 @@ export type GeneratedArtifactCreateInput = {
   type: string; // 'html' | 'css' | 'bundle' | 'preview'
   contentUrl?: string | null;
   content?: string | null;
-  meta?: Prisma.InputJsonValue | null;
+  meta?: unknown | null;
   status: string; // 'pending' | 'completed' | 'failed'
 };
 
@@ -17,7 +17,7 @@ export class GeneratedArtifactRepository {
       designSplitId: input.designSplitId ?? null,
       moduleId: input.moduleId ?? null,
       type: input.type,
-      meta: input.meta ?? undefined,
+      meta: (input.meta ?? undefined) as any,
       status: input.status,
     };
     if (input.contentUrl !== undefined && input.contentUrl !== null) {
@@ -29,7 +29,7 @@ export class GeneratedArtifactRepository {
     return prisma.generatedArtifact.create({ data });
   }
 
-  async updateStatus(id: string, status: string, fields?: { contentUrl?: string | null; content?: string | null; meta?: Prisma.InputJsonValue | null }) {
+  async updateStatus(id: string, status: string, fields?: { contentUrl?: string | null; content?: string | null; meta?: unknown | null }) {
     const data: any = { status };
     if (fields) {
       if (fields.contentUrl !== undefined) data.contentUrl = fields.contentUrl;

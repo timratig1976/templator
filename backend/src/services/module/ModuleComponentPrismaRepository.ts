@@ -57,7 +57,7 @@ function toRow(component: ModuleComponent) {
     html_template: component.html_template,
     css_styles: component.css_styles ?? null,
     javascript_code: component.javascript_code ?? null,
-    fields_definition: component.fields_definition as unknown as Prisma.InputJsonValue,
+    fields_definition: component.fields_definition as unknown as any,
 
     version: component.version,
     author: component.author,
@@ -67,9 +67,9 @@ function toRow(component: ModuleComponent) {
     usage_count: component.usage_count,
     validation_status: component.validation_status,
 
-    rating: component.rating as unknown as Prisma.InputJsonValue,
-    dependencies: component.dependencies as unknown as Prisma.InputJsonValue,
-    interfaces: component.interfaces as unknown as Prisma.InputJsonValue,
+    rating: component.rating as unknown as any,
+    dependencies: component.dependencies as unknown as any,
+    interfaces: component.interfaces as unknown as any,
   };
 }
 

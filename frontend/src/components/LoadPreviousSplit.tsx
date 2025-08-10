@@ -20,6 +20,7 @@ export default function LoadPreviousSplit({
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [manualId, setManualId] = useState("");
+  const [selectedId, setSelectedId] = useState<string>("");
 
   useEffect(() => {
     let mounted = true;
@@ -28,7 +29,13 @@ export default function LoadPreviousSplit({
       setError(null);
       try {
         const res = await listRecentSplits(20);
-        if (mounted) setItems(res?.data?.items || []);
+        const list = res?.data?.items || [];
+        if (mounted) {
+          setItems(list);
+          if (!selectedId && list.length > 0) {
+            setSelectedId(String(list[0].designSplitId));
+          }
+        }
       } catch (e: any) {
         if (mounted) setError("Failed to load recent splits.");
       } finally {
@@ -76,6 +83,37 @@ export default function LoadPreviousSplit({
             className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
             onClick={() => handlePick(manualId.trim())}
             disabled={loading || !manualId.trim()}
+          >
+            Load
+          </button>
+        </div>
+      </div>
+
+      {/* New: Dropdown for existing splits */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Choose existing split</label>
+        <div className="flex gap-2">
+          <select
+            className="border rounded px-2 py-1 w-full bg-white"
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            disabled={loading || items.length === 0}
+          >
+            {items.length === 0 ? (
+              <option value="" disabled>No recent splits</option>
+            ) : (
+              items.map((it) => {
+                const label = `${it.name || it.designSplitId} · ${new Date(it.createdAt).toLocaleString()}`;
+                return (
+                  <option key={it.designSplitId} value={String(it.designSplitId)}>{label}</option>
+                );
+              })
+            )}
+          </select>
+          <button
+            className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+            onClick={() => selectedId && handlePick(selectedId)}
+            disabled={loading || !selectedId}
           >
             Load
           </button>

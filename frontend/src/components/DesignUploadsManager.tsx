@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { deleteDesignUpload, listDesignUploads, DesignUpload } from '@/services/designUploadsService';
-import { getSignedUrl } from '@/services/aiEnhancementService';
+import { getSignedUrl, listSplitAssets } from '@/services/aiEnhancementService';
 import { API_BASE_URL } from '@/config/api';
 
 function formatBytes(bytes: number) {
@@ -35,6 +35,9 @@ export default function DesignUploadsManager() {
   const [previewName, setPreviewName] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({}); // id -> absolute signed URL
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryTitle, setGalleryTitle] = useState<string>('');
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [bulkIds, setBulkIds] = useState<string[] | null>(null);
   const previewModalRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -63,6 +66,44 @@ export default function DesignUploadsManager() {
     }
   };
 
+  async function openGalleryForUpload(upload: any) {
+    // Heuristic: use the most recent split for this upload by hitting the recent endpoint and filtering by uploadId is not available here,
+    // so we rely on server enrichment counts and a backend summary per split already implemented on selection flow.
+    // Instead, fetch assets via the split-assets endpoint requires a splitId; since we don't have it per row,
+    // we will call the recent splits endpoint and pick the newest where designUploadId matches if available later.
+    // For now, fallback: show any image from this upload (its original) if available.
+    try {
+      setGalleryTitle(upload.filename || 'Gallery');
+      setGalleryImages([]);
+      // Attempt: try to infer splitId from meta if present
+      const splitId = (upload as any).lastSplitId || (upload.meta && upload.meta.lastSplitId);
+      if (splitId) {
+        const assetsRes = await listSplitAssets(splitId, 'image-crop');
+        const urls: string[] = [];
+        for (const a of assetsRes.data.assets || []) {
+          const key = a.storageUrl ?? '';
+          if (!key) continue;
+          try {
+            const sig = await getSignedUrl(String(key), 5 * 60 * 1000);
+            if (sig?.data?.url) urls.push(sig.data.url);
+          } catch {}
+        }
+        if (urls.length > 0) {
+          setGalleryImages(urls);
+          setGalleryOpen(true);
+          return;
+        }
+      }
+      // Fallback: if no split assets, show original image if available
+      if (signedUrls[upload.id]) {
+        setGalleryImages([signedUrls[upload.id]]);
+        setGalleryOpen(true);
+      }
+    } catch (e) {
+      setError('Failed to open gallery');
+    }
+  }
+
   const canPrev = offset > 0;
   const canNext = hasMore;
 
@@ -82,14 +123,24 @@ export default function DesignUploadsManager() {
       const entries = await Promise.all(
         imageItems.map(async (it) => {
           try {
-            const storageUrl = it.storageUrl as string;
-            const key = storageUrl.split('/').pop() as string; // basename
-            if (!key) return [it.id, ''] as const;
-            const sig = await getSignedUrl(key, 5 * 60 * 1000);
+            const storageUrl = String(it.storageUrl);
+            // Pass through the full storageUrl as the signing key so the backend can parse prefixes correctly
+            const keyForSigning = storageUrl;
+            if (!keyForSigning) return [it.id, ''] as const;
+            const sig = await getSignedUrl(keyForSigning, 5 * 60 * 1000);
             const urlPath = sig?.data?.url || '';
             const abs = urlPath.startsWith('http') ? urlPath : `${API_BASE_URL}${urlPath}`;
             return [it.id, abs] as const;
-          } catch {
+          } catch (err) {
+            // Fallback: if original storageUrl is already absolute, try to use it directly
+            try {
+              const storageUrl = String(it.storageUrl || '');
+              if (storageUrl.startsWith('http')) {
+                console.warn('Using storageUrl without signing for', it.id);
+                return [it.id, storageUrl] as const;
+              }
+            } catch {}
+            console.warn('Failed to resolve signed URL for', it.id, err);
             return [it.id, ''] as const;
           }
         })
@@ -279,7 +330,10 @@ export default function DesignUploadsManager() {
         )}
       </td>
       <td className="px-3 py-2 text-xs text-gray-500">{it.createdAt ? new Date(it.createdAt).toLocaleString() : '-'}</td>
+      <td className="px-3 py-2 text-xs text-gray-500">{(it as any).splitCount ?? 0}</td>
+      <td className="px-3 py-2 text-xs text-gray-500">{(it as any).partCount ?? 0}</td>
       <td className="px-3 py-2 text-sm flex gap-2">
+        <button className="text-gray-700 hover:underline" onClick={() => openGalleryForUpload(it)} aria-label={`Open gallery for ${it.filename}`}>Gallery</button>
         {isImageUpload(it) && signedUrls[it.id] ? (
           <>
             <button
@@ -329,40 +383,53 @@ export default function DesignUploadsManager() {
         </div>
       )}
 
-      <div className="overflow-x-auto border rounded-lg">
-        <table className="min-w-full" aria-describedby="uploads-caption">
-          <caption id="uploads-caption" className="sr-only">List of design uploads with actions</caption>
-          <thead className="bg-gray-100">
+      {galleryOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="gallery-title"
+          onClick={(e) => { if (e.target === e.currentTarget) { setGalleryOpen(false); } }}
+          tabIndex={-1}
+        >
+          <div className="max-w-[92vw] max-h-[90vh] bg-white rounded shadow p-4 overflow-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 id="gallery-title" className="text-base font-semibold">{galleryTitle} · Parts</h3>
+              <button className="text-sm" onClick={() => setGalleryOpen(false)}>Close</button>
+            </div>
+            {galleryImages.length === 0 ? (
+              <div className="text-sm text-gray-600">No parts available for this upload.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {galleryImages.map((src, idx) => (
+                  <div key={idx} className="border rounded overflow-hidden bg-gray-50">
+                    <img src={src} alt={`Part ${idx + 1}`} className="w-full h-40 object-contain" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
             <tr>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Select</th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                <input
-                  type="checkbox"
-                  aria-label="Select all on page"
-                  checked={sortedItems.length > 0 && sortedItems.every(it => selected[it.id])}
-                  onChange={(e) => {
-                    const next: Record<string, boolean> = { ...selected };
-                    sortedItems.forEach(it => { next[it.id] = e.target.checked; });
-                    setSelected(next);
-                  }}
-                />
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                <button className="flex items-center gap-1 hover:underline" onClick={() => toggleSort('filename')} aria-label="Sort by filename">
-                  Filename {sortKey === 'filename' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                </button>
+                <button className="hover:underline" onClick={() => toggleSort('filename')}>Filename{sortKey === 'filename' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
               </th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">MIME</th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                <button className="flex items-center gap-1 hover:underline" onClick={() => toggleSort('size')} aria-label="Sort by size">
-                  Size {sortKey === 'size' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                </button>
+                <button className="hover:underline" onClick={() => toggleSort('size')}>Size{sortKey === 'size' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
               </th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Checksum</th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                <button className="flex items-center gap-1 hover:underline" onClick={() => toggleSort('createdAt')} aria-label="Sort by created">
-                  Created {sortKey === 'createdAt' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                </button>
+                <button className="hover:underline" onClick={() => toggleSort('createdAt')}>Created{sortKey === 'createdAt' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
               </th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Splits</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Parts</th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
             </tr>
           </thead>
@@ -377,11 +444,14 @@ export default function DesignUploadsManager() {
                     <td className="px-3 py-3"><div className="h-4 w-40 bg-gray-200 rounded animate-pulse" /></td>
                     <td className="px-3 py-3"><div className="h-4 w-28 bg-gray-200 rounded animate-pulse" /></td>
                     <td className="px-3 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-3 py-3"><div className="h-4 w-12 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-3 py-3"><div className="h-4 w-12 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-3 py-3"><div className="h-4 w-32 bg-gray-200 rounded animate-pulse" /></td>
                   </tr>
                 ))}
               </>
             ) : rows.length ? rows : (
-              <tr><td className="px-3 py-6 text-sm text-gray-600 text-center" colSpan={6}>
+              <tr><td className="px-3 py-6 text-sm text-gray-600 text-center" colSpan={9}>
                 No uploads found. Start by uploading a design on the Home page, then return to manage it here.
               </td></tr>
             )}

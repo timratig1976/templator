@@ -7,7 +7,7 @@ export type ValidationResultCreateInput = {
   validator: string;
   status: 'passed' | 'warning' | 'failed';
   message: string;
-  details?: Prisma.InputJsonValue | null;
+  details?: unknown | null;
 };
 
 export class ValidationResultRepository {
