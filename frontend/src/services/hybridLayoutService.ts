@@ -23,6 +23,8 @@ export interface HybridSection {
 }
 
 export interface HybridAnalysisResult {
+  // Backend DesignSplit identifier for subsequent per-section operations
+  splitId?: string;
   enhancedAnalysis: {
     sections: HybridSection[];
     imageMetadata: {
@@ -104,7 +106,8 @@ class HybridLayoutService {
       body: JSON.stringify({
         image: base64Image,
         fileName: imageFile.name,
-        analysisType: 'lightweight'
+        // AI-only path; param retained for backward compatibility
+        analysisType: 'ai'
       })
     });
 
@@ -153,6 +156,7 @@ class HybridLayoutService {
     }));
 
     return {
+      splitId: result.splitId,
       enhancedAnalysis: {
         sections: hybridSections,
         imageMetadata: {

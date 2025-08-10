@@ -29,4 +29,17 @@ export async function listSplitAssets(splitId: string, kind?: string) {
   return res.data as { success: boolean; data: { assets: any[] } };
 }
 
-export default { createCrops, getSignedUrl, listSplitAssets };
+// Minimal read helpers to load previously processed splits
+export async function listRecentSplits(limit: number = 20) {
+  const res = await api.get(`/splits/recent`, { params: { limit } });
+  // Expected shape: { success, data: { items: Array<{ designSplitId: string; createdAt: string; name?: string; sectionCount?: number }> } }
+  return res.data as { success: boolean; data: { items: any[] } };
+}
+
+export async function getSplitSummary(designSplitId: string) {
+  const res = await api.get(`/splits/${encodeURIComponent(designSplitId)}/summary`);
+  // Expected shape: { success, data: { designSplitId, imageUrl, sections } }
+  return res.data as { success: boolean; data: { designSplitId: string; imageUrl?: string | null; sections: any[] } };
+}
+
+export default { createCrops, getSignedUrl, listSplitAssets, listRecentSplits, getSplitSummary };

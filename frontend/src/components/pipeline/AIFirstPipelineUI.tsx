@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import HybridLayoutSplitter from '@/components/HybridLayoutSplitter';
 import SplitGenerationPlanner from '@/components/SplitGenerationPlanner';
+import LoadPreviousSplit, { type LoadedSplitSummary } from '@/components/LoadPreviousSplit';
 import { useWorkflow } from '@/contexts/WorkflowContext';
 import { useWorkflowHandlers } from '@/hooks/useWorkflowHandlers';
 import { aiPipelineService } from '@/services/aiPipelineService';
@@ -53,6 +54,10 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
     handleHybridSectionsConfirmed,
     submitHybridFeedback 
   } = useWorkflowHandlers();
+
+  // Optional: load an existing split without re-upload
+  const [showLoadPrevious, setShowLoadPrevious] = useState(false);
+  const [loadedSplit, setLoadedSplit] = useState<LoadedSplitSummary | null>(null);
 
   const [aiPhases, setAiPhases] = useState<AIPhase[]>([
     {
@@ -432,6 +437,17 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
                       <p className="text-sm text-gray-500 mt-1">PNG, JPG up to 10MB</p>
                     </div>
                   </label>
+
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowLoadPrevious(true)}
+                      className="w-full inline-flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Load previous layout (no upload)</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -517,18 +533,20 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
           )}
 
           {/* Plan Generation Phase */}
-          {currentPhaseIndex === 3 && confirmedSections && (
+          {currentPhaseIndex === 3 && (confirmedSections || loadedSplit) && (
             <div className="p-6">
               <SplitGenerationPlanner
-                imageFile={uploadedImageFile}
-                sections={confirmedSections.map((s: any, idx: number) => ({
+                imageFile={loadedSplit ? undefined : uploadedImageFile}
+                imageUrl={loadedSplit?.imageUrl || null}
+                designSplitId={loadedSplit?.designSplitId ?? hybridAnalysisResult?.splitId}
+                sections={(loadedSplit ? loadedSplit.sections : confirmedSections!.map((s: any, idx: number) => ({
                   id: s.id || String(idx),
                   type: s.type || 'content',
                   description: s.description || '',
                   confidence: s.confidence ?? undefined,
                   bounds: s.bounds,
-                }))}
-                onBack={() => setCurrentPhaseIndex(2)}
+                })))}
+                onBack={() => setCurrentPhaseIndex(loadedSplit ? 0 : 2)}
                 onConfirm={handlePlanConfirmed}
               />
             </div>
@@ -602,6 +620,23 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
           </div>
         )}
       </div>
+
+      {/* Load Previous Split Modal */}
+      {showLoadPrevious && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-xl">
+            <LoadPreviousSplit
+              onCancel={() => setShowLoadPrevious(false)}
+              onLoaded={(data) => {
+                setLoadedSplit(data);
+                setShowLoadPrevious(false);
+                // Jump directly to plan generation using loaded sections
+                setCurrentPhaseIndex(3);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

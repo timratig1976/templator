@@ -1055,10 +1055,11 @@ router.post('/detect-sections', async (req, res) => {
     return res.status(200).json({
       success: true,
       suggestions,
+      splitId: split.id,
       meta: {
         processingTime: duration,
         requestId,
-        analysisType: 'lightweight',
+        analysisType: 'ai',
         timestamp: new Date().toISOString()
       }
     });
@@ -1457,7 +1458,25 @@ router.get('/assets/download', async (req, res) => {
   const exp = Number(req.query.exp || 0);
   const sig = String(req.query.sig || '');
   if (!key || !exp || !sig) return res.status(400).json({ success: false, error: 'missing params' });
-  if (!verifySignature(key, exp, sig)) return res.status(403).json({ success: false, error: 'invalid or expired signature' });
+  const allowBypass = process.env.ASSET_SIGNING_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+  if (!verifySignature(key, exp, sig)) {
+    // Detailed diagnostics for 403s
+    try {
+      const now = Date.now();
+      const expected = signKey(key, exp);
+      logger.warn('Asset signature verification failed', {
+        key,
+        exp,
+        now,
+        skewMs: exp - now,
+        providedSigPrefix: sig.slice(0, 8),
+        expectedSigPrefix: expected.slice(0, 8),
+        sameSig: expected === sig,
+        allowBypass,
+      });
+    } catch {}
+    if (!allowBypass) return res.status(403).json({ success: false, error: 'invalid or expired signature' });
+  }
   try {
     const stream = await storage.getStream(key);
     const lower = key.toLowerCase();

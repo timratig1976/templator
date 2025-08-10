@@ -111,7 +111,7 @@ fi
 # Start backend server
 print_info "📡 Starting backend server on port 3009..."
 cd backend
-npm run dev > ../backend.log 2>&1 &
+PORT=3009 npm run dev > ../backend.log 2>&1 &
 BACKEND_PID=$!
 cd ..
 
