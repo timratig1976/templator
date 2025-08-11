@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { deleteDesignUpload, listDesignUploads, DesignUpload } from '@/services/designUploadsService';
-import { getSignedUrl, listSplitAssets } from '@/services/aiEnhancementService';
+import { getSignedUrl, listSplitAssets, listRecentSplits, createCrops, getSplitSummary } from '@/services/aiEnhancementService';
 import { API_BASE_URL } from '@/config/api';
 
 function formatBytes(bytes: number) {
@@ -45,6 +45,7 @@ export default function DesignUploadsManager() {
   const confirmModalRef = useRef<HTMLDivElement | null>(null);
   const confirmPrimaryBtnRef = useRef<HTMLButtonElement | null>(null);
   const confirmCloseBtnRef = useRef<HTMLButtonElement | null>(null);
+  const galleryModalRef = useRef<HTMLDivElement | null>(null);
 
   // Focus the close button when the preview opens
   useEffect(() => {
@@ -74,26 +75,212 @@ export default function DesignUploadsManager() {
     // For now, fallback: show any image from this upload (its original) if available.
     try {
       setGalleryTitle(upload.filename || 'Gallery');
+      console.log('[Gallery] opening for upload', { id: upload?.id, filename: upload?.filename });
       setGalleryImages([]);
-      // Attempt: try to infer splitId from meta if present
-      const splitId = (upload as any).lastSplitId || (upload.meta && upload.meta.lastSplitId);
+      // Attempt: try to infer splitId from several possible fields
+      const splitId = (upload as any).designSplitId
+        || (upload as any).lastSplitId
+        || (upload.meta && (upload.meta.designSplitId || upload.meta.lastSplitId));
       if (splitId) {
-        const assetsRes = await listSplitAssets(splitId, 'image-crop');
-        const urls: string[] = [];
-        for (const a of assetsRes.data.assets || []) {
-          const key = a.storageUrl ?? '';
-          if (!key) continue;
+        const assetsRes = await listSplitAssets(String(splitId), 'image-crop');
+        let assets = assetsRes?.data?.assets || [];
+        console.log('[Gallery] assets for split', splitId, assets);
+        // Always fetch summary to know the intended section set
+        let sections: any[] = [];
+        try {
+          const summary = await getSplitSummary(String(splitId));
+          sections = summary?.data?.sections || [];
+        } catch (e) {
+          console.log('[Gallery] could not load split summary', e);
+        }
+        // If no crops exist yet for this split, try to create them from split summary
+        if (!assets.length && sections.length) {
+          try {
+            const inputs = sections.map((s: any, i: number) => {
+              const bx = Number(s.bounds?.x ?? 0);
+              const by = Number(s.bounds?.y ?? 0);
+              const bw = Number(s.bounds?.width ?? 0);
+              const bh = Number(s.bounds?.height ?? 0);
+              // Detect if bounds are in 0..1 (fractions) or already 0..100 (percent)
+              const maxVal = Math.max(bx, by, bw, bh);
+              const factor = maxVal <= 1 ? 100 : 1;
+              return {
+                id: s.id,
+                index: i,
+                unit: 'percent' as const,
+                bounds: {
+                  x: bx * factor,
+                  y: by * factor,
+                  width: bw * factor,
+                  height: bh * factor,
+                },
+              };
+            });
+            const created = await createCrops(String(splitId), inputs, { force: true });
+            assets = (created?.data?.assets || []) as any[];
+            console.log('[Gallery] created crops', assets);
+          } catch (e) {
+            console.log('[Gallery] failed to create crops from summary', e);
+          }
+        }
+        // Align assets to section set if available
+        if (sections.length) {
+          const sectionIds = new Set(sections.map((s: any) => s.id).filter(Boolean));
+          let filtered = assets.filter((a: any) => {
+            const sid = a?.meta?.sectionId;
+            return sid ? sectionIds.has(sid) : true;
+          });
+          // Sort by stored order/meta
+          filtered.sort((a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0));
+          // If the ID-based filter produced zero (mismatched IDs), fallback purely by order
+          if (filtered.length === 0 && assets.length) {
+            filtered = [...assets].sort((a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0));
+          }
+          // Trim to the number of sections
+          assets = filtered.slice(0, sections.length);
+          console.log('[Gallery] filtered assets by sections (with order fallback)', { before: (assetsRes?.data?.assets || []).length, after: assets.length, sections: sections.length });
+
+          // If the crops look like lines (very thin), auto-regenerate once using corrected bounds scaling
+          const thinThreshold = 6; // px
+          const thinCount = assets.filter((a: any) => (a?.meta?.height ?? 0) < thinThreshold || (a?.meta?.width ?? 0) < thinThreshold).length;
+          if (thinCount >= Math.ceil(sections.length / 2)) {
+            console.log('[Gallery] detected thin crops; attempting one-time regeneration with corrected percent bounds', { thinCount, total: sections.length });
+            try {
+              const inputs = sections.map((s: any, i: number) => {
+                const bx = Number(s.bounds?.x ?? 0);
+                const by = Number(s.bounds?.y ?? 0);
+                const bw = Number(s.bounds?.width ?? 0);
+                const bh = Number(s.bounds?.height ?? 0);
+                const maxVal = Math.max(bx, by, bw, bh);
+                const factor = maxVal <= 1 ? 100 : 1;
+                return {
+                  id: s.id,
+                  index: i,
+                  unit: 'percent' as const,
+                  bounds: { x: bx * factor, y: by * factor, width: bw * factor, height: bh * factor },
+                };
+              });
+              const regen = await createCrops(String(splitId), inputs, { force: true });
+              assets = (regen?.data?.assets || []).slice(0, sections.length);
+              console.log('[Gallery] regenerated crops', assets);
+            } catch (e) {
+              console.log('[Gallery] regeneration failed', e);
+            }
+          }
+        }
+        const urlsSet = new Set<string>();
+        let idx = 0;
+        for (const a of assets) {
+          const key: string = (a?.meta?.key) || (a?.storageUrl ?? '');
+          console.log('[Gallery] asset item', { key, storageUrl: a?.storageUrl, metaKey: a?.meta?.key });
+          if (!key) { idx++; continue; }
           try {
             const sig = await getSignedUrl(String(key), 5 * 60 * 1000);
-            if (sig?.data?.url) urls.push(sig.data.url);
-          } catch {}
+            let urlPath = sig?.data?.url || '';
+            if (urlPath) urlPath += (urlPath.includes('?') ? '&' : '?') + `i=${idx}`;
+            const abs = urlPath.startsWith('http') ? urlPath : `${API_BASE_URL}${urlPath}`;
+            if (abs) urlsSet.add(abs);
+          } catch (e) {
+            console.log('[Gallery] signing failed for key', key, e);
+          }
+          idx++;
         }
+        const urls = Array.from(urlsSet);
+        console.log('[Gallery] resolved URLs', urls);
         if (urls.length > 0) {
           setGalleryImages(urls);
           setGalleryOpen(true);
           return;
         }
       }
+
+      // Fallback: only if we do NOT have a splitId on this row, try recent splits for the SAME upload
+      try {
+        const recent = await listRecentSplits(15);
+        const items = (recent?.data?.items || []).filter((it: any) => it?.designUploadId === upload?.id);
+        for (const it of items) {
+          if (!it?.designSplitId) continue;
+          try {
+            const assetsRes = await listSplitAssets(String(it.designSplitId), 'image-crop');
+            let assets = assetsRes?.data?.assets || [];
+            console.log('[Gallery][fallback] assets for split', it.designSplitId, assets);
+
+            // Fetch sections to align counts
+            let sections: any[] = [];
+            try {
+              const summary = await getSplitSummary(String(it.designSplitId));
+              sections = summary?.data?.sections || [];
+            } catch (e) {
+              console.log('[Gallery][fallback] could not load split summary', e);
+            }
+            if (sections.length) {
+              const sectionIds = new Set(sections.map((s: any) => s.id).filter(Boolean));
+              let filtered = assets.filter((a: any) => {
+                const sid = a?.meta?.sectionId;
+                return sid ? sectionIds.has(sid) : true;
+              });
+              filtered.sort((a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0));
+              if (filtered.length === 0 && assets.length) {
+                filtered = [...assets].sort((a: any, b: any) => (a?.order ?? 0) - (b?.order ?? 0));
+              }
+              assets = filtered.slice(0, sections.length);
+              console.log('[Gallery][fallback] filtered assets by sections (with order fallback)', { before: (assetsRes?.data?.assets || []).length, after: assets.length, sections: sections.length });
+
+              const thinThreshold = 6; // px
+              const thinCount = assets.filter((a: any) => (a?.meta?.height ?? 0) < thinThreshold || (a?.meta?.width ?? 0) < thinThreshold).length;
+              if (thinCount >= Math.ceil(sections.length / 2)) {
+                console.log('[Gallery][fallback] detected thin crops; attempting regeneration with corrected percent bounds', { thinCount, total: sections.length });
+                try {
+                  const inputs = sections.map((s: any, i: number) => {
+                    const bx = Number(s.bounds?.x ?? 0);
+                    const by = Number(s.bounds?.y ?? 0);
+                    const bw = Number(s.bounds?.width ?? 0);
+                    const bh = Number(s.bounds?.height ?? 0);
+                    const maxVal = Math.max(bx, by, bw, bh);
+                    const factor = maxVal <= 1 ? 100 : 1;
+                    return {
+                      id: s.id,
+                      index: i,
+                      unit: 'percent' as const,
+                      bounds: { x: bx * factor, y: by * factor, width: bw * factor, height: bh * factor },
+                    };
+                  });
+                  const regen = await createCrops(String(it.designSplitId), inputs, { force: true });
+                  assets = (regen?.data?.assets || []).slice(0, sections.length);
+                  console.log('[Gallery][fallback] regenerated crops', assets);
+                } catch (e) {
+                  console.log('[Gallery][fallback] regeneration failed', e);
+                }
+              }
+            }
+
+            const urlsSet = new Set<string>();
+            let idx = 0;
+            for (const a of assets) {
+              const key: string = (a?.meta?.key) || (a?.storageUrl ?? '');
+              console.log('[Gallery][fallback] asset item', { key, storageUrl: a?.storageUrl, metaKey: a?.meta?.key });
+              if (!key) { idx++; continue; }
+              try {
+                const sig = await getSignedUrl(String(key), 5 * 60 * 1000);
+                let urlPath = sig?.data?.url || '';
+                if (urlPath) urlPath += (urlPath.includes('?') ? '&' : '?') + `i=${idx}`;
+                const abs = urlPath.startsWith('http') ? urlPath : `${API_BASE_URL}${urlPath}`;
+                if (abs) urlsSet.add(abs);
+              } catch (e) {
+                console.log('[Gallery][fallback] signing failed for key', key, e);
+              }
+              idx++;
+            }
+            const urls = Array.from(urlsSet);
+            console.log('[Gallery][fallback] resolved URLs', urls);
+            if (urls.length > 0) {
+              setGalleryImages(urls);
+              setGalleryOpen(true);
+              return;
+            }
+          } catch {}
+        }
+      } catch {}
       // Fallback: if no split assets, show original image if available
       if (signedUrls[upload.id]) {
         setGalleryImages([signedUrls[upload.id]]);
@@ -329,7 +516,7 @@ export default function DesignUploadsManager() {
           </span>
         )}
       </td>
-      <td className="px-3 py-2 text-xs text-gray-500">{it.createdAt ? new Date(it.createdAt).toLocaleString() : '-'}</td>
+      <td className="px-3 py-2 text-xs text-gray-500" suppressHydrationWarning>{it.createdAt ? new Date(it.createdAt).toUTCString() : '-'}</td>
       <td className="px-3 py-2 text-xs text-gray-500">{(it as any).splitCount ?? 0}</td>
       <td className="px-3 py-2 text-xs text-gray-500">{(it as any).partCount ?? 0}</td>
       <td className="px-3 py-2 text-sm flex gap-2">
@@ -390,9 +577,10 @@ export default function DesignUploadsManager() {
           aria-modal="true"
           aria-labelledby="gallery-title"
           onClick={(e) => { if (e.target === e.currentTarget) { setGalleryOpen(false); } }}
+          onKeyDown={(e) => handleModalKeyDown(e, galleryModalRef, () => setGalleryOpen(false))}
           tabIndex={-1}
         >
-          <div className="max-w-[92vw] max-h-[90vh] bg-white rounded shadow p-4 overflow-auto">
+          <div ref={galleryModalRef} className="max-w-[92vw] max-h-[90vh] bg-white rounded shadow p-4 overflow-auto">
             <div className="flex items-center justify-between mb-3">
               <h3 id="gallery-title" className="text-base font-semibold">{galleryTitle} · Parts</h3>
               <button className="text-sm" onClick={() => setGalleryOpen(false)}>Close</button>
@@ -403,7 +591,31 @@ export default function DesignUploadsManager() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {galleryImages.map((src, idx) => (
                   <div key={idx} className="border rounded overflow-hidden bg-gray-50">
-                    <img src={src} alt={`Part ${idx + 1}`} className="w-full h-40 object-contain" />
+                    <img
+                      src={src}
+                      alt={`Part ${idx + 1}`}
+                      title={`Part ${idx + 1}`}
+                      className="w-full h-40 object-contain"
+                      onLoad={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        const w = img.naturalWidth;
+                        const h = img.naturalHeight;
+                        console.log('[Gallery] image loaded', { idx, src, naturalWidth: w, naturalHeight: h });
+                        if (h > 0 && h < 6) {
+                          try { img.style.outline = '2px dashed #94a3b8'; } catch {}
+                        }
+                      }}
+                      onError={(e) => {
+                        console.log('[Gallery] image failed to load', { idx, src });
+                        try {
+                          (e.target as HTMLImageElement).style.opacity = '0.3';
+                          (e.target as HTMLImageElement).style.filter = 'grayscale(100%)';
+                        } catch {}
+                      }}
+                    />
+                    <div className="px-2 py-1 text-[11px] text-gray-600 flex justify-between">
+                      <span>#{idx + 1}</span>
+                    </div>
                   </div>
                 ))}
               </div>

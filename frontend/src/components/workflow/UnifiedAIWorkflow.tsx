@@ -214,26 +214,6 @@ export default function UnifiedAIWorkflow() {
         onComplete={handlePipelineComplete}
       />
 
-      {/* Legacy Step Fallback (Hidden by default) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 border border-gray-200">
-          <div className="text-xs text-gray-500 mb-2">Debug Info</div>
-          <div className="text-xs space-y-1">
-            <div>Current Step: <span className="font-mono">{currentStep}</span></div>
-            <div>Processing: <span className="font-mono">{isProcessing ? 'Yes' : 'No'}</span></div>
-            <div>Phases: <span className="font-mono">{pipelinePhases.length}</span></div>
-            <div>Has File: <span className="font-mono">{uploadedImageFile ? 'Yes' : 'No'}</span></div>
-            <div>Has Analysis: <span className="font-mono">{hybridAnalysisResult ? 'Yes' : 'No'}</span></div>
-          </div>
-          <button
-            onClick={handleReset}
-            className="mt-2 text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
-          >
-            Reset Workflow
-          </button>
-        </div>
-      )}
-
       {/* Error Display */}
       {error && (
         <div className="fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg max-w-md">

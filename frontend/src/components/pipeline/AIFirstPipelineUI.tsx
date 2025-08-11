@@ -144,7 +144,7 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
         progress = 100;
       } else if (index === currentPhaseIndex) {
         status = 'running';
-        progress = 50; // Could be dynamic based on actual progress
+        progress = 0; // Start at 0 until we have real progress
       }
 
       // Special handling for specific phases
@@ -554,29 +554,7 @@ export default function AIFirstPipelineUI({ onComplete }: AIFirstPipelineUIProps
 
           {/* HTML Generation Phase */}
           {currentPhaseIndex === 4 && (
-            <div className="p-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Code className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating AI-Optimized HTML</h3>
-                <p className="text-gray-600 mb-6">
-                  Creating responsive, semantic HTML with AI-powered optimization...
-                </p>
-                
-                <div className="max-w-md mx-auto">
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                      <RefreshCw className="w-4 h-4 text-green-600 animate-spin" />
-                      <span className="text-green-800 font-medium">AI HTML Generation</span>
-                    </div>
-                    <div className="w-full bg-green-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{ width: '80%' }} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <div className="p-8" />
           )}
 
           {/* Module Packaging Phase */}

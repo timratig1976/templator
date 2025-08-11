@@ -2,6 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Move, Edit3, Plus, Trash2, Eye, Save, RotateCcw, Zap } from 'lucide-react';
+import { useWorkflow } from '@/contexts/WorkflowContext';
+import { createCrops, listSplitAssets, getSignedUrl } from '@/services/aiEnhancementService';
+import { aiLogger } from '@/services/aiLogger';
 
 interface Section {
   id: string;
@@ -51,7 +54,18 @@ export default function HybridLayoutSplitter({
   onSectionsConfirmed, 
   onBack 
 }: HybridLayoutSplitterProps) {
-  const [sections, setSections] = useState<Section[]>(aiDetectedSections);
+  // Ensure each section has a unique id; some AI outputs may miss ids or duplicate them
+  const normalizeSections = (list: Section[]) => {
+    const seen = new Set<string>();
+    return list.map((s, idx) => {
+      let id = s.id && !seen.has(s.id) ? s.id : '';
+      if (!id) id = `section_${idx}_${Date.now()}`;
+      seen.add(id);
+      return { ...s, id };
+    });
+  };
+
+  const [sections, setSections] = useState<Section[]>(() => normalizeSections(aiDetectedSections));
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -69,10 +83,85 @@ export default function HybridLayoutSplitter({
   const [showPreview, setShowPreview] = useState(false);
   const [cutLinesInitialized, setCutLinesInitialized] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [creatingCrops, setCreatingCrops] = useState(false);
+  const { hybridAnalysisResult } = useWorkflow();
+  const [generatedPreviewUrls, setGeneratedPreviewUrls] = useState<string[]>([]);
+  const [canContinueAfterGen, setCanContinueAfterGen] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; kind: 'success' | 'error' } | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  
+  // Compute initial cut lines from sections given image height.
+  // Default assumption: bounds are in pixels.
+  // If both y and height are <= 1, treat as normalized 0..1.
+  // If many sections have small values (<= 100) but not normalized, infer percentage (0..100).
+  const computeInitialCutLinesFromSections = (sections: Section[], imgHeight: number) => {
+    if (!sections?.length || imgHeight <= 0) return [] as number[];
+    // Heuristic: check if the majority look like percentages
+    const smallCount = sections.filter(s => (s.bounds?.y ?? 0) <= 100 && (s.bounds?.height ?? 0) <= 100).length;
+    const normalizedCount = sections.filter(s => (s.bounds?.y ?? 0) <= 1 && (s.bounds?.height ?? 0) <= 1).length;
+    const assumePercent = normalizedCount === 0 && smallCount >= Math.ceil(sections.length * 0.6);
+
+    const raw = sections.map(s => {
+      const by = Number(s.bounds?.y ?? 0);
+      const bh = Number(s.bounds?.height ?? 0);
+      // Only handle normalized 0..1. Do NOT assume percent; many real px heights are < 100.
+      const isNormalized = by >= 0 && by <= 1 && bh >= 0 && bh <= 1;
+      let endY = by + bh;
+      if (isNormalized) endY = (by + bh) * imgHeight;
+      else if (assumePercent) endY = ((by + bh) / 100) * imgHeight;
+      return endY;
+    });
+    // Clamp to (0, imgHeight) and dedupe with epsilon to avoid collapsing nearly-identical values
+    const eps = 0.25; // quarter pixel tolerance
+    const arr = raw
+      .map(y => Math.max(0, Math.min(imgHeight, y)))
+      .filter(y => y > 0 + eps && y < imgHeight - eps)
+      .sort((a, b) => a - b);
+    const unique: number[] = [];
+    for (const y of arr) {
+      if (unique.length === 0 || Math.abs(y - unique[unique.length - 1]) > eps) {
+        unique.push(y);
+      }
+    }
+    return unique;
+  };
+
+  // Keep sections list synchronized with cut lines (each band between lines is a section)
+  const syncSectionsWithCutLines = (imageHeight: number) => {
+    const sorted = [...cutLines].filter(v => v >= 0 && v <= imageHeight).sort((a,b) => a-b);
+    const edges = [0, ...sorted, imageHeight];
+    const newCount = Math.max(0, edges.length - 1);
+
+    setSections(prev => {
+      const next: Section[] = [];
+      for (let i = 0; i < newCount; i++) {
+        const y = Math.round(edges[i]);
+        const h = Math.max(0, Math.round(edges[i+1] - edges[i]));
+        const existing = prev[i];
+        if (existing) {
+          next.push({
+            ...existing,
+            name: existing.name || `Section ${i + 1}`,
+            bounds: { ...existing.bounds, y, height: h },
+          });
+        } else {
+          next.push({
+            id: `section_${i}_${Date.now()}`,
+            name: `Section ${i + 1}`,
+            type: 'content',
+            bounds: { x: 0, y, width: imageDimensions.width || 0, height: h },
+            html: '',
+            editableFields: [],
+            aiConfidence: 0,
+          });
+        }
+      }
+      return next;
+    });
+  };
 
   // Undo/Redo functionality
   const saveToHistory = (newCutLines: number[]) => {
@@ -101,38 +190,42 @@ export default function HybridLayoutSplitter({
     if (aiDetectedSections.length === 0 || cutLinesInitialized) return;
     const h = imageRef.current?.clientHeight || 0;
     if (h > 0) {
-      const initialCutLines = aiDetectedSections
-        .map(section => section.bounds.y + section.bounds.height)
-        .filter((y, index, arr) => index === 0 || y !== arr[index - 1])
-        .sort((a, b) => a - b)
-        .map(y => (y / 100) * h);
+      const initialCutLines = computeInitialCutLinesFromSections(aiDetectedSections, h);
       setCutLines(initialCutLines);
       saveToHistory(initialCutLines);
       setCutLinesInitialized(true);
+      // Also ensure sections reflect these lines
+      syncSectionsWithCutLines(h);
     }
-  }, [aiDetectedSections, cutLinesInitialized, imageSize]);
+  }, [aiDetectedSections, cutLinesInitialized]);
 
-  // Fallback: observe image size and initialize when it becomes available
+  // Observe image size to initialize cut lines as soon as height becomes available
   useEffect(() => {
-    if (cutLinesInitialized || aiDetectedSections.length === 0) return;
-    const el = imageRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      const cr = entries[0]?.contentRect;
-      if (cr && cr.height > 0 && !cutLinesInitialized) {
-        const initialCutLines = aiDetectedSections
-          .map(section => section.bounds.y + section.bounds.height)
-          .filter((y, index, arr) => index === 0 || y !== arr[index - 1])
-          .sort((a, b) => a - b)
-          .map(y => (y / 100) * cr.height);
-        setCutLines(initialCutLines);
-        saveToHistory(initialCutLines);
+    if (cutLinesInitialized) return;
+    const imgEl = imageRef.current;
+    if (!imgEl) return;
+    const ro = new ResizeObserver(() => {
+      const h = imgEl.clientHeight || 0;
+      if (h > 0 && aiDetectedSections.length > 0 && !cutLinesInitialized) {
+        const initial = computeInitialCutLinesFromSections(aiDetectedSections, h);
+        setCutLines(initial);
+        saveToHistory(initial);
         setCutLinesInitialized(true);
+        syncSectionsWithCutLines(h);
       }
     });
-    ro.observe(el);
+    ro.observe(imgEl);
     return () => ro.disconnect();
   }, [aiDetectedSections, cutLinesInitialized]);
+
+  // Sync sections whenever cut lines change and image height is known
+  useEffect(() => {
+    const h = imageRef.current?.clientHeight || 0;
+    if (h > 0) {
+      syncSectionsWithCutLines(h);
+    }
+  }, [cutLines]);
+
 
   // Load and display the image using data URL (more reliable than blob URL)
   useEffect(() => {
@@ -274,17 +367,13 @@ export default function HybridLayoutSplitter({
 
   // Reset to AI suggestions
   const resetToAISuggestions = () => {
-    setSections(aiDetectedSections);
+    setSections(normalizeSections(aiDetectedSections));
     setSelectedSection(null);
     
     // Reset cut lines to match AI-detected sections
     if (aiDetectedSections.length > 0) {
       const imageHeight = imageRef.current?.clientHeight || containerRef.current?.offsetHeight || 600;
-      const resetCutLines = aiDetectedSections
-        .map(section => section.bounds.y + section.bounds.height) // Bottom of each section
-        .filter((y, index, arr) => index === 0 || y !== arr[index - 1]) // Remove duplicates
-        .sort((a, b) => a - b)
-        .map(y => (y / 100) * imageHeight); // Convert percentage to pixels based on rendered image
+      const resetCutLines = computeInitialCutLinesFromSections(aiDetectedSections, imageHeight);
       
       setCutLines(resetCutLines);
       saveToHistory(resetCutLines);
@@ -353,27 +442,20 @@ export default function HybridLayoutSplitter({
         // Update sections
         setSections(newSections);
         
-        // Generate new cut lines from AI suggestions
-        // Get current container height dynamically
-        const containerHeight = containerRef.current ? containerRef.current.offsetHeight : 
-          (imageSize.width > 0 && imageSize.height > 0 
-            ? Math.max(
-                600, // Minimum height
-                Math.min(
-                  2000, // Maximum height
-                  (imageSize.height / imageSize.width) * 1200 // Calculated height based on aspect ratio
-                )
-              )
-            : 1000); // Default fallback
-        
-        const newCutLines = newSections
-          .map(section => section.bounds.y + section.bounds.height)
-          .filter((y, index, arr) => index === 0 || y !== arr[index - 1])
-          .sort((a, b) => a - b)
-          .map(y => (y / 100) * containerHeight);
+        // Generate new cut lines from AI suggestions using the RENDERED IMAGE HEIGHT
+        // This ensures first-load and regenerate behaviors match exactly.
+        let imgHeight = imageRef.current?.clientHeight || 0;
+        if (imgHeight <= 0) {
+          // Fallback to natural size if not yet rendered; will be re-synced by effects
+          imgHeight = imageSize.height || 0;
+        }
+        const newCutLines = computeInitialCutLinesFromSections(newSections, imgHeight);
         
         setCutLines(newCutLines);
         saveToHistory(newCutLines);
+        if (imgHeight > 0) {
+          syncSectionsWithCutLines(imgHeight);
+        }
         
         console.log('AI regeneration successful:', newSections.length, 'sections detected');
       } else {
@@ -464,9 +546,9 @@ export default function HybridLayoutSplitter({
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Main Canvas Area */}
-        <div className="flex-1 w-full min-w-0">
+        <div className="w-full min-w-0 lg:col-span-3">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full">
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -484,6 +566,9 @@ export default function HybridLayoutSplitter({
                   </button>
                 </div>
               </div>
+            </div>
+            <div className="px-4 py-2 text-xs text-gray-600 border-b border-gray-100">
+              Tip: A section is the area between two cut lines. The top of the first section starts at the image top until the first cut line.
             </div>
             
             <div 
@@ -523,16 +608,38 @@ export default function HybridLayoutSplitter({
                       const newCutLines = [...cutLines, y].sort((a, b) => a - b);
                       setCutLines(newCutLines);
                       saveToHistory(newCutLines);
+                      const ih = imageRef.current?.clientHeight || 0;
+                      if (ih > 0) syncSectionsWithCutLines(ih);
                     }
                   }}
                 />
               )}
               
+              {/* Section bands (visual identification between cut lines) */}
+              {(() => {
+                const imgEl = imageRef.current;
+                const height = imgEl?.clientHeight || 0;
+                const sorted = [...cutLines].filter(v => v >= 0 && v <= height).sort((a,b) => a-b);
+                const edges = [0, ...sorted, height];
+                return edges.slice(0, Math.max(0, edges.length - 1)).map((top, i) => {
+                  const bottom = edges[i+1];
+                  const h = Math.max(0, bottom - top);
+                  const alt = i % 2 === 0;
+                  return (
+                    <div key={`band-${i}`} className={`absolute left-0 right-0 pointer-events-none ${alt ? 'bg-yellow-50/40' : 'bg-blue-50/40'} z-10`} style={{ top, height: h }}>
+                      <div className="absolute left-2 top-2 text-[11px] px-2 py-0.5 rounded bg-black/50 text-white">
+                        Section {i + 1}: {Math.round(top)}px → {Math.round(bottom)}px
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+
               {/* Horizontal Cut Lines */}
               {cutLines.map((y, index) => (
                 <div
                   key={index}
-                  className="absolute left-0 right-0 group cursor-ns-resize"
+                  className="absolute left-0 right-0 group cursor-ns-resize z-20"
                   style={{ top: y - 2 }}
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -563,6 +670,11 @@ export default function HybridLayoutSplitter({
                       document.removeEventListener('mouseup', handleMouseUp);
                       // Save to history after drag is complete
                       saveToHistory(cutLines);
+                      // Trigger sync with new line positions
+                      if (imageRef.current) {
+                        const ih = imageRef.current.clientHeight;
+                        syncSectionsWithCutLines(ih);
+                      }
                     };
                     
                     document.addEventListener('mousemove', handleMouseMove);
@@ -579,23 +691,31 @@ export default function HybridLayoutSplitter({
                   />
                   
                   {/* Cut line label and controls */}
-                  <div className="absolute left-2 -top-6 bg-white px-2 py-1 rounded shadow-sm border text-xs font-medium flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span>Section {index + 1}</span>
+                  <div className="absolute left-2 -top-6 bg-white px-2 py-1 rounded shadow-sm border text-xs font-medium flex items-center gap-2 opacity-95 group-hover:opacity-100 transition-opacity z-30">
+                    <span>
+                      {(() => {
+                        const below = sections[index + 1];
+                        const name = below?.name || `Section ${index + 2}`;
+                        return name;
+                      })()}
+                    </span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         const newCutLines = cutLines.filter((_, i) => i !== index);
                         setCutLines(newCutLines);
                         saveToHistory(newCutLines);
+                        const ih = imageRef.current?.clientHeight || 0;
+                        if (ih > 0) syncSectionsWithCutLines(ih);
                       }}
-                      className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                      className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 z-30"
                     >
                       ×
                     </button>
                   </div>
                   
                   {/* Drag handle */}
-                  <div className="absolute right-2 -top-2 w-4 h-4 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute right-2 -top-2 w-4 h-4 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-30">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
                 </div>
@@ -614,7 +734,7 @@ export default function HybridLayoutSplitter({
         </div>
 
         {/* Side Panel */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:col-span-1">
           {/* Section List */}
           <div className="bg-white rounded-lg shadow-lg">
             <div className="px-4 py-3 border-b border-gray-200">
@@ -643,7 +763,7 @@ export default function HybridLayoutSplitter({
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-600 capitalize">{section.type}</p>
+                      <p className="text-xs text-gray-600 capitalize">{section.type} • y: {Math.round(section.bounds.y)}px, h: {Math.round(section.bounds.height)}px</p>
                     </div>
                     <button
                       onClick={(e) => {
@@ -843,22 +963,107 @@ export default function HybridLayoutSplitter({
                   </tbody>
                 </table>
               </div>
+
+              {generatedPreviewUrls.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-900 mt-2 mb-2">Generated Previews</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {generatedPreviewUrls.map((url, idx) => (
+                      <div key={idx} className="border border-gray-200 rounded overflow-hidden bg-gray-50">
+                        <img src={url} alt={`Section ${idx + 1}`} className="w-full h-24 object-contain bg-white" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-4 border-t border-gray-200 flex items-center justify-end space-x-3">
               <button
                 onClick={() => setShowConfirmModal(false)}
                 className="px-4 py-2 rounded bg-gray-100 text-gray-800 hover:bg-gray-200"
+                disabled={creatingCrops}
               >
                 Cancel
               </button>
               <button
-                onClick={() => { setShowConfirmModal(false); onSectionsConfirmed(sections); }}
-                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                onClick={async () => {
+                  // If already generated, continue without regenerating
+                  if (canContinueAfterGen) {
+                    setShowConfirmModal(false);
+                    onSectionsConfirmed(sections);
+                    return;
+                  }
+                  try {
+                    setCreatingCrops(true);
+                    setGeneratedPreviewUrls([]);
+                    setCanContinueAfterGen(false);
+                    const splitId = hybridAnalysisResult?.splitId;
+                    if (splitId) {
+                      aiLogger.logFlowStep('processing', 'Creating crops from confirmed sections', 'start', { splitId, count: sections.length });
+                      const inputs = sections.map((s, i) => {
+                        const bx = Number(s.bounds?.x ?? 0);
+                        const by = Number(s.bounds?.y ?? 0);
+                        const bw = Number(s.bounds?.width ?? 0);
+                        const bh = Number(s.bounds?.height ?? 0);
+                        const maxVal = Math.max(bx, by, bw, bh);
+                        const factor = maxVal <= 1 ? 100 : 1; // detect 0..1 vs 0..100
+                        return {
+                          id: s.id,
+                          index: i,
+                          unit: 'percent' as const,
+                          bounds: { x: bx * factor, y: by * factor, width: bw * factor, height: bh * factor },
+                        };
+                      });
+                      await createCrops(String(splitId), inputs, { force: true });
+                      aiLogger.logFlowStep('processing', 'Crops created successfully', 'complete', { splitId });
+
+                      // Load generated assets and sign URLs for preview
+                      try {
+                        const assetsRes = await listSplitAssets(String(splitId), 'image-crop');
+                        const assets = assetsRes?.data?.assets || [];
+                        const urls: string[] = [];
+                        for (const a of assets) {
+                          const key = a?.meta?.key || a?.key;
+                          if (!key) continue;
+                          const signed = await getSignedUrl(key, 5 * 60 * 1000);
+                          if (signed?.data?.url) urls.push(signed.data.url);
+                        }
+                        setGeneratedPreviewUrls(urls);
+                        setToast({ visible: true, message: `Generated ${urls.length} parts successfully`, kind: 'success' });
+                        setTimeout(() => setToast(null), 3000);
+                      } catch (e) {
+                        console.error('Failed to load preview assets', e);
+                      }
+                      setCanContinueAfterGen(true);
+                    } else {
+                      aiLogger.logFlowStep('processing', 'Skipping crop creation (no splitId)', 'complete');
+                      setToast({ visible: true, message: 'No split id found. Skipped part generation.', kind: 'error' });
+                      setTimeout(() => setToast(null), 3000);
+                    }
+                  } catch (err) {
+                    console.error('Crop creation during confirm failed:', err);
+                    aiLogger.error('processing', 'Crop creation during confirm failed', { error: String(err) });
+                    setToast({ visible: true, message: 'Failed to generate parts', kind: 'error' });
+                    setTimeout(() => setToast(null), 3000);
+                  } finally {
+                    setCreatingCrops(false);
+                    // Keep modal open; allow user to review previews, then continue
+                  }
+                }}
+                className={`px-4 py-2 rounded text-white ${creatingCrops ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+                disabled={creatingCrops}
               >
-                Confirm & Continue
+                {creatingCrops ? 'Generating parts…' : (canContinueAfterGen ? 'Continue' : 'Confirm & Generate')}
               </button>
+
             </div>
           </div>
+        </div>
+      )}
+      {/* Toast */}
+      {toast?.visible && (
+        <div className={`fixed bottom-4 right-4 z-[60] px-4 py-3 rounded shadow-lg text-white ${toast.kind === 'success' ? 'bg-green-600' : 'bg-red-600'}`} role="status" aria-live="polite">
+          {toast.message}
         </div>
       )}
     </div>

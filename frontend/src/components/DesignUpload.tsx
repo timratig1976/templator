@@ -21,6 +21,8 @@ export default function DesignUpload({ onUploadSuccess, onUploadError, onHybridL
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [showProcessingOptions, setShowProcessingOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const preflightIntervalRef = useRef<number | null>(null);
+  const awaitingFirstStatusRef = useRef<boolean>(false);
 
   const supportedTypes = [
     { ext: 'PNG', desc: 'High-quality designs' },
@@ -77,7 +79,18 @@ export default function DesignUpload({ onUploadSuccess, onUploadError, onHybridL
   const handlePipelineProgress = (status: PipelineStatus) => {
     setPipelineStatus(status);
     setCurrentPhase(status.currentPhase);
-    setUploadProgress(status.progress);
+
+    // Stop preflight ramp once real status arrives
+    if (awaitingFirstStatusRef.current) {
+      if (preflightIntervalRef.current !== null) {
+        window.clearInterval(preflightIntervalRef.current);
+        preflightIntervalRef.current = null;
+      }
+      awaitingFirstStatusRef.current = false;
+    }
+
+    // Never regress progress
+    setUploadProgress(prev => Math.max(prev, status.progress));
 
     // Log progress updates using 'processing' category
     aiLogger.info('processing', `Pipeline ${status.status}: ${status.currentPhase}`, {
@@ -99,6 +112,12 @@ export default function DesignUpload({ onUploadSuccess, onUploadError, onHybridL
     setCurrentPhase('Initializing');
     setPipelineStatus(null);
 
+    // Begin a gentle preflight ramp (0 -> 20%) while waiting for the first backend status
+    awaitingFirstStatusRef.current = true;
+    preflightIntervalRef.current = window.setInterval(() => {
+      setUploadProgress(prev => (prev < 20 ? prev + 1 : prev));
+    }, 200);
+
     // Log upload start
     aiLogger.logUploadStart(requestId, selectedFile.name, selectedFile.size);
     aiLogger.info('processing', 'Starting modular 5-phase pipeline process', {
@@ -116,7 +135,7 @@ export default function DesignUpload({ onUploadSuccess, onUploadError, onHybridL
 
       const processingTime = Date.now() - startTime;
 
-      // Log successful completion - fix logUploadSuccess call
+      // Log successful completion
       aiLogger.logUploadSuccess(requestId, processingTime.toString(), processingTime);
 
       aiLogger.info('processing', 'Modular pipeline completed successfully', {
@@ -131,38 +150,20 @@ export default function DesignUpload({ onUploadSuccess, onUploadError, onHybridL
       // Call success callback with pipeline result and image file for hybrid layout analysis
       onUploadSuccess(result, selectedFile.name, selectedFile);
 
-    } catch (error) {
-      const processingTime = Date.now() - startTime;
-      
-      // Handle pipeline-specific errors
-      if (error instanceof Error && 'code' in error) {
-        const pipelineError = error as any;
-        aiLogger.logUploadError(requestId, pipelineError.message, processingTime);
-
-        aiLogger.error('processing', `Pipeline failed in ${pipelineError.phase || 'unknown'} phase: ${pipelineError.message}`, {
-          errorCode: pipelineError.code,
-          phase: pipelineError.phase,
-          details: pipelineError.details
-        }, requestId);
-
-        onUploadError(`Pipeline Error (${pipelineError.code}): ${pipelineError.message}`);
-      } else {
-        // Handle generic errors
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        
-        aiLogger.logUploadError(requestId, errorMessage, processingTime);
-
-        aiLogger.error('processing', `Unexpected error during pipeline execution: ${errorMessage}`, {
-          error: error instanceof Error ? error.stack : error
-        }, requestId);
-
-        onUploadError(`Upload failed: ${errorMessage}`);
-      }
+    } catch (error: any) {
+      console.error('Pipeline upload failed:', error);
+      const duration = Date.now() - startTime;
+      aiLogger.logUploadError(requestId, error?.message || 'Unknown error', duration);
+      onUploadError(error?.message || 'Failed to process the design file. Please try again.');
     } finally {
+      // Clear preflight if still active
+      if (preflightIntervalRef.current !== null) {
+        window.clearInterval(preflightIntervalRef.current);
+        preflightIntervalRef.current = null;
+      }
+      awaitingFirstStatusRef.current = false;
       setIsUploading(false);
-      setUploadProgress(0);
-      setCurrentPhase('');
-      setPipelineStatus(null);
+      setShowProcessingOptions(false);
     }
   };
 

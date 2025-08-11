@@ -3,6 +3,7 @@ import { useWorkflow } from '@/contexts/WorkflowContext';
 import { PipelineExecutionResult } from '@/services/pipelineService';
 import { aiLogger } from '@/services/aiLogger';
 import layoutSplittingService from '@/services/layoutSplittingService';
+import { createCrops } from '@/services/aiEnhancementService';
 import hybridLayoutService from '@/services/hybridLayoutService';
 
 export function useWorkflowHandlers() {
@@ -18,6 +19,7 @@ export function useWorkflowHandlers() {
     designResult,
     originalFileName,
     uploadedImageFile,
+    hybridAnalysisResult,
   } = useWorkflow();
 
   const handleUploadSuccess = useCallback(async (result: PipelineExecutionResult, fileName?: string, imageFile?: File) => {
@@ -203,6 +205,7 @@ export function useWorkflowHandlers() {
       };
 
       setDesignResult(pipelineResult);
+
       setCurrentStep('editor');
       
       aiLogger.logFlowStep('hybrid-confirm', 'Hybrid Sections Processing Complete', 'complete', {

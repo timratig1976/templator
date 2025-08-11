@@ -1615,6 +1615,7 @@ router.get('/splits/recent', async (req: Request, res: Response) => {
           designSplitId: s.id,
           createdAt: s.createdAt,
           name: (s as any).name || undefined,
+          designUploadId: s.designUploadId,
           sectionCount,
         };
       })
