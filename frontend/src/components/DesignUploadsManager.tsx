@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { deleteDesignUpload, listDesignUploads, DesignUpload } from '@/services/designUploadsService';
 import { getSignedUrl, listSplitAssets, listRecentSplits, createCrops, getSplitSummary } from '@/services/aiEnhancementService';
 import { API_BASE_URL } from '@/config/api';
+import { useRouter } from 'next/navigation';
 
 function formatBytes(bytes: number) {
   if (bytes === 0) return '0 B';
@@ -13,7 +14,29 @@ function formatBytes(bytes: number) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// Compact relative time like 5m, 2h, 3d
+function relativeTime(dateStr?: string | null) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  const diff = Date.now() - d.getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h';
+  const days = Math.floor(h / 24);
+  if (days < 7) return days + 'd';
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return weeks + 'w';
+  const months = Math.floor(days / 30);
+  if (months < 12) return months + 'mo';
+  const years = Math.floor(days / 365);
+  return years + 'y';
+}
+
 export default function DesignUploadsManager() {
+  const router = useRouter();
   const [items, setItems] = useState<DesignUpload[]>([]);
   const [limit, setLimit] = useState(10);
   const [offset, setOffset] = useState(0);
@@ -46,6 +69,7 @@ export default function DesignUploadsManager() {
   const confirmPrimaryBtnRef = useRef<HTMLButtonElement | null>(null);
   const confirmCloseBtnRef = useRef<HTMLButtonElement | null>(null);
   const galleryModalRef = useRef<HTMLDivElement | null>(null);
+  const masterCheckboxRef = useRef<HTMLInputElement | null>(null);
 
   // Focus the close button when the preview opens
   useEffect(() => {
@@ -446,6 +470,28 @@ export default function DesignUploadsManager() {
     return sortedItems.filter(it => isImageUpload(it) && !!signedUrls[it.id]);
   }, [sortedItems, signedUrls]);
 
+  // Selection helpers for the current page
+  const pageIds = useMemo(() => sortedItems.map(it => it.id), [sortedItems]);
+  const selectedCountOnPage = useMemo(() => pageIds.filter(id => !!selected[id]).length, [pageIds, selected]);
+  const allOnPageSelected = useMemo(() => pageIds.length > 0 && selectedCountOnPage === pageIds.length, [pageIds.length, selectedCountOnPage]);
+  const someOnPageSelected = useMemo(() => selectedCountOnPage > 0 && !allOnPageSelected, [selectedCountOnPage, allOnPageSelected]);
+
+  useEffect(() => {
+    if (masterCheckboxRef.current) {
+      masterCheckboxRef.current.indeterminate = someOnPageSelected && !allOnPageSelected;
+    }
+  }, [someOnPageSelected, allOnPageSelected]);
+
+  function toggleSelectAllOnPage(checked: boolean) {
+    setSelected(prev => {
+      const next = { ...prev } as Record<string, boolean>;
+      for (const id of pageIds) {
+        next[id] = checked;
+      }
+      return next;
+    });
+  }
+
   function toggleSort(key: 'createdAt' | 'size' | 'filename') {
     if (sortKey === key) {
       setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
@@ -496,7 +542,7 @@ export default function DesignUploadsManager() {
 
   const rows = useMemo(() => sortedItems.map((it) => (
     <tr key={it.id} className="border-b border-gray-200 hover:bg-gray-50">
-      <td className="px-3 py-2 text-sm">
+      <td className="px-2 py-1.5 text-[13px]">
         <input
           type="checkbox"
           aria-label={`Select ${it.filename}`}
@@ -504,43 +550,110 @@ export default function DesignUploadsManager() {
           onChange={(e) => setSelected(prev => ({ ...prev, [it.id]: e.target.checked }))}
         />
       </td>
-      <td className="px-3 py-2 text-sm font-medium text-gray-800">{it.filename}</td>
-      <td className="px-3 py-2 text-sm text-gray-600">{it.mime}</td>
-      <td className="px-3 py-2 text-sm text-gray-600">{formatBytes(it.size)}</td>
-      <td className="px-3 py-2 text-xs font-mono text-gray-500 truncate max-w-[280px]" title={it.checksum || ''}>
-        {showFullChecksum ? (it.checksum || '-') : (<>{it.checksum?.slice(0, 12)}{it.checksum && it.checksum.length > 12 ? '…' : ''}</>)}
-        {it.checksum && (
-          <span className="ml-2 inline-flex gap-2">
-            <button className="text-blue-600 hover:underline" onClick={() => { navigator.clipboard.writeText(it.checksum!); setToast('Checksum copied'); }}>Copy</button>
-            <button className="text-gray-700 hover:underline" onClick={() => setShowFullChecksum(v => !v)}>{showFullChecksum ? 'Truncate' : 'Expand'}</button>
-          </span>
+      <td className="px-2 py-1.5 text-[13px] font-medium text-gray-800">
+        <div className="flex items-center gap-2 truncate" title={`${it.filename || ''}${it.mime ? ` • ${it.mime}` : ''}${it.checksum ? ` • sha256:${it.checksum}` : ''}`}>
+          {isImageUpload(it) && signedUrls[it.id] && (
+            <img src={signedUrls[it.id]} alt="" className="w-6 h-6 object-cover rounded-sm border" />
+          )}
+          <span className="truncate">{it.filename}</span>
+        </div>
+        {isImageUpload(it) && (
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px] text-gray-700">
+            <button
+              className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
+              aria-label={`Open Split for ${it.filename}`}
+              onClick={() => {
+                const newId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `p_${Date.now()}`;
+                const qp = new URLSearchParams({ designUploadId: it.id });
+                router.push(`/projects/${newId}/split?${qp.toString()}`);
+              }}
+            >Split</button>
+            <button
+              className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
+              aria-label={`Open Plan (HTML) for ${it.filename}`}
+              onClick={() => {
+                const newId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `p_${Date.now()}`;
+                const qp = new URLSearchParams({ designUploadId: it.id });
+                router.push(`/projects/${newId}/plan?${qp.toString()}`);
+              }}
+            >HTML</button>
+            <button
+              className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
+              aria-label={`Open Generate (Modules) for ${it.filename}`}
+              onClick={() => {
+                const newId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `p_${Date.now()}`;
+                const qp = new URLSearchParams({ designUploadId: it.id });
+                router.push(`/projects/${newId}/generate?${qp.toString()}`);
+              }}
+            >Modules</button>
+          </div>
         )}
       </td>
-      <td className="px-3 py-2 text-xs text-gray-500" suppressHydrationWarning>{it.createdAt ? new Date(it.createdAt).toUTCString() : '-'}</td>
-      <td className="px-3 py-2 text-xs text-gray-500">{(it as any).splitCount ?? 0}</td>
-      <td className="px-3 py-2 text-xs text-gray-500">{(it as any).partCount ?? 0}</td>
-      <td className="px-3 py-2 text-sm flex gap-2">
-        <button className="text-gray-700 hover:underline" onClick={() => openGalleryForUpload(it)} aria-label={`Open gallery for ${it.filename}`}>Gallery</button>
-        {isImageUpload(it) && signedUrls[it.id] ? (
-          <>
-            <button
-              className="text-gray-700 hover:underline"
-              onClick={() => {
-                lastFocusedRef.current = (document.activeElement as HTMLElement) || null;
-                setPreviewUrl(signedUrls[it.id] || null);
-                setPreviewName(it.filename || null);
-                const idx = imagesOnPage.findIndex(x => x.id === it.id);
-                setPreviewIndex(idx >= 0 ? idx : null);
-              }}
-              aria-label={`Preview ${it.filename}`}
-            >Preview</button>
-            <a className="text-blue-600 hover:underline" href={signedUrls[it.id]} target="_blank" rel="noreferrer" aria-label={`Open ${it.filename}`}>Open</a>
-            <button className="text-gray-700 hover:underline" onClick={() => handleCopy(signedUrls[it.id])} aria-label={`Copy URL for ${it.filename}`}>Copy URL</button>
-          </>
-        ) : (
-          <span className="text-gray-400" aria-live="polite">No file</span>
-        )}
-        <button className="text-red-600 hover:underline" onClick={() => handleDelete(it.id, it.filename)} aria-label={`Delete ${it.filename}`}>Delete</button>
+      <td className="px-2 py-1.5 text-[13px] text-gray-600 hidden sm:table-cell">{formatBytes(it.size)}</td>
+      <td className="px-2 py-1.5 text-[12px] text-gray-500" title={it.createdAt ? new Date(it.createdAt).toUTCString() : '-'} suppressHydrationWarning>{relativeTime(it.createdAt)}</td>
+      <td className="px-2 py-1.5 text-[12px] text-gray-700">
+        <span className="inline-flex items-center gap-2">
+          <span className="px-1.5 py-[1px] rounded bg-gray-100 text-gray-700">S: {(it as any).splitCount ?? 0}</span>
+          <span className="px-1.5 py-[1px] rounded bg-gray-100 text-gray-700">P: {(it as any).partCount ?? 0}</span>
+        </span>
+      </td>
+      <td className="px-2 py-1.5 text-[13px]">
+        <div className="flex items-center gap-2">
+          <button
+            className="p-1 rounded hover:bg-gray-100"
+            onClick={() => openGalleryForUpload(it)}
+            aria-label={`Open gallery for ${it.filename}`}
+            title="Gallery"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="2.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </button>
+          {isImageUpload(it) && signedUrls[it.id] ? (
+            <>
+              <button
+                className="p-1 rounded hover:bg-gray-100"
+                onClick={() => {
+                  lastFocusedRef.current = (document.activeElement as HTMLElement) || null;
+                  setPreviewUrl(signedUrls[it.id] || null);
+                  setPreviewName(it.filename || null);
+                  const idx = imagesOnPage.findIndex(x => x.id === it.id);
+                  setPreviewIndex(idx >= 0 ? idx : null);
+                }}
+                aria-label={`Preview ${it.filename}`}
+                title="Preview"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <a
+                className="p-1 rounded hover:bg-gray-100"
+                href={signedUrls[it.id]}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Open ${it.filename}`}
+                title="Open in new tab"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3h7v7"/><path d="M10 14L21 3"/><path d="M5 12v7a2 2 0 0 0 2 2h7"/></svg>
+              </a>
+              <button
+                className="p-1 rounded hover:bg-gray-100"
+                onClick={() => handleCopy(signedUrls[it.id])}
+                aria-label={`Copy URL for ${it.filename}`}
+                title="Copy URL"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </>
+          ) : (
+            <span className="text-gray-400" aria-live="polite">No file</span>
+          )}
+          <button
+            className="p-1 rounded hover:bg-gray-100 text-red-600"
+            onClick={() => handleDelete(it.id, it.filename)}
+            aria-label={`Delete ${it.filename}`}
+            title="Delete"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
       </td>
     </tr>
   )), [sortedItems, selected, showFullChecksum]);
@@ -626,23 +739,29 @@ export default function DesignUploadsManager() {
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 bg-gray-50 z-10 shadow-[0_1px_0_rgba(0,0,0,0.06)]">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Select</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase">
+                <label className="inline-flex items-center gap-2 select-none">
+                  <input
+                    ref={masterCheckboxRef}
+                    type="checkbox"
+                    aria-label="Select all on this page"
+                    checked={allOnPageSelected}
+                    onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
+                  />
+                  <span className="hidden sm:inline">Select</span>
+                </label>
+              </th>
+              <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase">
                 <button className="hover:underline" onClick={() => toggleSort('filename')}>Filename{sortKey === 'filename' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">MIME</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
+              <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase hidden sm:table-cell">
                 <button className="hover:underline" onClick={() => toggleSort('size')}>Size{sortKey === 'size' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
               </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Checksum</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                <button className="hover:underline" onClick={() => toggleSort('createdAt')}>Created{sortKey === 'createdAt' ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''}</button>
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Splits</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Parts</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+              <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase">Created</th>
+              <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase">Activity</th>
+              <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -650,20 +769,17 @@ export default function DesignUploadsManager() {
               <>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="border-b border-gray-200">
-                    <td className="px-3 py-3"><div className="h-4 w-48 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-16 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-40 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-28 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-12 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-12 bg-gray-200 rounded animate-pulse" /></td>
-                    <td className="px-3 py-3"><div className="h-4 w-32 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-2 py-3"><div className="h-4 w-6 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-2 py-3"><div className="h-4 w-40 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-2 py-3 hidden sm:table-cell"><div className="h-4 w-14 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-2 py-3"><div className="h-4 w-16 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-2 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
+                    <td className="px-2 py-3"><div className="h-4 w-24 bg-gray-200 rounded animate-pulse" /></td>
                   </tr>
                 ))}
               </>
             ) : rows.length ? rows : (
-              <tr><td className="px-3 py-6 text-sm text-gray-600 text-center" colSpan={9}>
+              <tr><td className="px-3 py-6 text-sm text-gray-600 text-center" colSpan={6}>
                 No uploads found. Start by uploading a design on the Home page, then return to manage it here.
               </td></tr>
             )}

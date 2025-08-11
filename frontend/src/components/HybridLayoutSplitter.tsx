@@ -66,6 +66,45 @@ export default function HybridLayoutSplitter({
   };
 
   const [sections, setSections] = useState<Section[]>(() => normalizeSections(aiDetectedSections));
+  // Keep local sections in sync when props.aiDetectedSections changes (e.g., hydration or regeneration)
+  useEffect(() => {
+    setSections(normalizeSections(aiDetectedSections));
+  }, [aiDetectedSections]);
+
+  // Convert bounds to percent units based on rendered image size.
+  // If values are normalized (0..1), multiply by 100. If pixels (>1), convert relative to image size.
+  const toPercentBounds = (
+    bounds: { x: number; y: number; width: number; height: number },
+    imgWidth: number,
+    imgHeight: number
+  ) => {
+    const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+    const clampPct = (v: number) => Math.max(0, Math.min(100, v));
+    const { x, y, width, height } = bounds;
+    const xIsNorm = x <= 1 && width <= 1;
+    const yIsNorm = y <= 1 && height <= 1;
+    const pxToPctX = imgWidth > 0 ? (v: number) => (v / imgWidth) * 100 : (_: number) => 0;
+    const pxToPctY = imgHeight > 0 ? (v: number) => (v / imgHeight) * 100 : (_: number) => 0;
+    const xp = xIsNorm ? clampPct(clamp01(x) * 100) : clampPct(pxToPctX(x));
+    const yp = yIsNorm ? clampPct(clamp01(y) * 100) : clampPct(pxToPctY(y));
+    const wp = xIsNorm ? clampPct(clamp01(width) * 100) : clampPct(pxToPctX(width));
+    const hp = yIsNorm ? clampPct(clamp01(height) * 100) : clampPct(pxToPctY(height));
+    return { x: xp, y: yp, width: wp, height: hp };
+  };
+
+  // Normalize cut lines: clamp, sort, dedupe
+  const normalizeCutLines = (lines: number[], imgHeight: number) => {
+    const eps = 0.5;
+    const clamped = lines
+      .map((y) => Math.max(0, Math.min(imgHeight, Math.round(y))))
+      .filter((y) => y > eps && y < imgHeight - eps)
+      .sort((a, b) => a - b);
+    const unique: number[] = [];
+    for (const y of clamped) {
+      if (unique.length === 0 || Math.abs(y - unique[unique.length - 1]) > eps) unique.push(y);
+    }
+    return unique;
+  };
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -139,7 +178,7 @@ export default function HybridLayoutSplitter({
       const next: Section[] = [];
       for (let i = 0; i < newCount; i++) {
         const y = Math.round(edges[i]);
-        const h = Math.max(0, Math.round(edges[i+1] - edges[i]));
+        const h = Math.max(1, Math.round(edges[i+1] - edges[i]));
         const existing = prev[i];
         if (existing) {
           next.push({
@@ -203,7 +242,7 @@ export default function HybridLayoutSplitter({
   useEffect(() => {
     if (cutLinesInitialized) return;
     const imgEl = imageRef.current;
-    if (!imgEl) return;
+    if (!imgEl) return; // Will re-run when imageUrl changes and ref mounts
     const ro = new ResizeObserver(() => {
       const h = imgEl.clientHeight || 0;
       if (h > 0 && aiDetectedSections.length > 0 && !cutLinesInitialized) {
@@ -216,7 +255,22 @@ export default function HybridLayoutSplitter({
     });
     ro.observe(imgEl);
     return () => ro.disconnect();
-  }, [aiDetectedSections, cutLinesInitialized]);
+  }, [aiDetectedSections, cutLinesInitialized, imageUrl]);
+
+  // After initialization, keep sections in sync if the rendered image height changes (e.g., container resize)
+  useEffect(() => {
+    if (!cutLinesInitialized) return;
+    const imgEl = imageRef.current;
+    if (!imgEl) return;
+    const ro = new ResizeObserver(() => {
+      const h = imgEl.clientHeight || 0;
+      if (h > 0 && cutLines.length > 0) {
+        syncSectionsWithCutLines(h);
+      }
+    });
+    ro.observe(imgEl);
+    return () => ro.disconnect();
+  }, [cutLinesInitialized, cutLines]);
 
   // Sync sections whenever cut lines change and image height is known
   useEffect(() => {
@@ -267,8 +321,13 @@ export default function HybridLayoutSplitter({
   }, [imageFile]);
 
   // When a new image or a fresh set of AI-detected sections comes in, reset initialization state
+  // Guard: do NOT run on first mount to avoid wiping initial init due to effect ordering
+  const didMountRef = useRef(false);
   useEffect(() => {
-    // Reset only when identity truly changes (new upload or regenerated set)
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
     setCutLinesInitialized(false);
     setCutLines([]);
     setCutLineHistory([]);
@@ -464,7 +523,8 @@ export default function HybridLayoutSplitter({
       
     } catch (error) {
       console.error('Failed to regenerate with AI:', error);
-      alert('Failed to regenerate sections with AI. Please try again.');
+      setToast({ visible: true, message: 'Failed to regenerate sections', kind: 'error' });
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setIsRegenerating(false);
     }
@@ -578,7 +638,7 @@ export default function HybridLayoutSplitter({
                 width: '100%',
                 minWidth: '100%',
                 maxWidth: 'none',
-                height: 'auto'
+                height: (imageRef.current?.clientHeight || 'auto') as number | 'auto'
               }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -605,10 +665,10 @@ export default function HybridLayoutSplitter({
                     const isNearExistingLine = cutLines.some(lineY => Math.abs(lineY - y) < 10);
                     
                     if (!isNearExistingLine && !draggedCutLine) {
-                      const newCutLines = [...cutLines, y].sort((a, b) => a - b);
-                      setCutLines(newCutLines);
-                      saveToHistory(newCutLines);
                       const ih = imageRef.current?.clientHeight || 0;
+                      const normalized = normalizeCutLines([...cutLines, y], ih || Number.MAX_SAFE_INTEGER);
+                      setCutLines(normalized);
+                      saveToHistory(normalized);
                       if (ih > 0) syncSectionsWithCutLines(ih);
                     }
                   }}
@@ -668,12 +728,15 @@ export default function HybridLayoutSplitter({
                       setDraggedCutLine(null);
                       document.removeEventListener('mousemove', handleMouseMove);
                       document.removeEventListener('mouseup', handleMouseUp);
-                      // Save to history after drag is complete
-                      saveToHistory(cutLines);
-                      // Trigger sync with new line positions
+                      // Normalize, save, and sync after drag is complete
                       if (imageRef.current) {
                         const ih = imageRef.current.clientHeight;
-                        syncSectionsWithCutLines(ih);
+                        setCutLines((prev) => {
+                          const normalized = normalizeCutLines(prev, ih || Number.MAX_SAFE_INTEGER);
+                          saveToHistory(normalized);
+                          syncSectionsWithCutLines(ih);
+                          return normalized;
+                        });
                       }
                     };
                     
@@ -702,10 +765,11 @@ export default function HybridLayoutSplitter({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const newCutLines = cutLines.filter((_, i) => i !== index);
-                        setCutLines(newCutLines);
-                        saveToHistory(newCutLines);
                         const ih = imageRef.current?.clientHeight || 0;
+                        const filtered = cutLines.filter((_, i) => i !== index);
+                        const normalized = normalizeCutLines(filtered, ih || Number.MAX_SAFE_INTEGER);
+                        setCutLines(normalized);
+                        saveToHistory(normalized);
                         if (ih > 0) syncSectionsWithCutLines(ih);
                       }}
                       className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 z-30"
@@ -953,13 +1017,20 @@ export default function HybridLayoutSplitter({
                     </tr>
                   </thead>
                   <tbody>
-                    {sections.map((s) => (
-                      <tr key={s.id} className="border-t border-gray-200">
-                        <td className="px-3 py-2 text-gray-900">{s.name}</td>
-                        <td className="px-3 py-2 capitalize text-gray-700">{s.type}</td>
-                        <td className="px-3 py-2 text-gray-700">{Math.round(s.bounds.y)} / {Math.round(s.bounds.height)}</td>
-                      </tr>
-                    ))}
+                    {sections.map((s) => {
+                      const ih = imageRef.current?.clientHeight || imageSize.height || 0;
+                      const iw = imageRef.current?.clientWidth || imageSize.width || 0;
+                      const pct = toPercentBounds(s.bounds, iw, ih);
+                      return (
+                        <tr key={s.id} className="border-t border-gray-200">
+                          <td className="px-3 py-2 text-gray-900">{s.name}</td>
+                          <td className="px-3 py-2 capitalize text-gray-700">{s.type}</td>
+                          <td className="px-3 py-2 text-gray-700">
+                            {`${Math.round(s.bounds.y)}px (${Math.round(pct.y)}%) / ${Math.round(s.bounds.height)}px (${Math.round(pct.height)}%)`}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1000,18 +1071,15 @@ export default function HybridLayoutSplitter({
                     const splitId = hybridAnalysisResult?.splitId;
                     if (splitId) {
                       aiLogger.logFlowStep('processing', 'Creating crops from confirmed sections', 'start', { splitId, count: sections.length });
+                      const ih = imageRef.current?.clientHeight || imageSize.height || 0;
+                      const iw = imageRef.current?.clientWidth || imageSize.width || 0;
                       const inputs = sections.map((s, i) => {
-                        const bx = Number(s.bounds?.x ?? 0);
-                        const by = Number(s.bounds?.y ?? 0);
-                        const bw = Number(s.bounds?.width ?? 0);
-                        const bh = Number(s.bounds?.height ?? 0);
-                        const maxVal = Math.max(bx, by, bw, bh);
-                        const factor = maxVal <= 1 ? 100 : 1; // detect 0..1 vs 0..100
+                        const pct = toPercentBounds(s.bounds, iw, ih);
                         return {
                           id: s.id,
                           index: i,
                           unit: 'percent' as const,
-                          bounds: { x: bx * factor, y: by * factor, width: bw * factor, height: bh * factor },
+                          bounds: pct,
                         };
                       });
                       await createCrops(String(splitId), inputs, { force: true });

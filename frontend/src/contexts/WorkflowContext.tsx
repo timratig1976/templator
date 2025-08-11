@@ -8,6 +8,17 @@ import { socketClient } from '@/services/socketClient';
 
 export type WorkflowStep = 'upload' | 'preview' | 'hybrid-split' | 'editor' | 'module' | 'projects';
 
+// Planned generation item for Phase 2 generator step
+export interface GenerationPlanItem {
+  id: string;
+  label: string;
+  type: 'header' | 'hero' | 'content' | 'footer' | 'sidebar' | 'navigation' | 'form' | 'gallery' | 'testimonial' | 'cta' | 'other';
+  generateHtml: boolean;
+  generateModule: boolean;
+  moduleName?: string;
+  notes?: string;
+}
+
 export interface Section {
   id: string;
   name: string;
@@ -68,6 +79,10 @@ interface WorkflowContextType {
   setHybridAnalysisResult: (result: any) => void;
   uploadedImageFile: File | null;
   setUploadedImageFile: (file: File | null) => void;
+
+  // Phase 2: generation planning
+  generationPlan: GenerationPlanItem[];
+  setGenerationPlan: (plan: GenerationPlanItem[]) => void;
   
   // Project management
   projectManager: ReturnType<typeof useProjectManager>;
@@ -89,6 +104,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
   const [originalFileName, setOriginalFileName] = useState<string>('');
   const [hybridAnalysisResult, setHybridAnalysisResult] = useState<any>(null);
   const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
+  const [generationPlan, setGenerationPlan] = useState<GenerationPlanItem[]>([]);
 
   // Project management
   const projectManager = useProjectManager();
@@ -122,6 +138,7 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     setOriginalFileName('');
     setHybridAnalysisResult(null);
     setUploadedImageFile(null);
+    setGenerationPlan([]);
     setShowAILogs(false);
     
     aiLogger.logFlowStep('workflow-reset', 'Workflow Reset', 'complete');
@@ -160,6 +177,10 @@ export function WorkflowProvider({ children }: { children: ReactNode }) {
     setHybridAnalysisResult,
     uploadedImageFile,
     setUploadedImageFile,
+
+    // Phase 2: generation planning
+    generationPlan,
+    setGenerationPlan,
     
     // Project management
     projectManager,

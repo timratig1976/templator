@@ -31,7 +31,9 @@ export default function RootLayout({
             </div>
           </header>
           <div className="flex-1">
-            {children}
+            <div className="max-w-screen-xl mx-auto px-2 md:px-4">
+              {children}
+            </div>
           </div>
           <footer className="w-full py-2 px-4 bg-gray-100 text-xs text-gray-500 text-center border-t border-gray-200">
             <a href="/maintenance" className="hover:underline">🧪 Test Suite & Maintenance</a>

@@ -39,10 +39,7 @@ export const useProjectManager = (): UseProjectManagerReturn => {
     error: null,
   });
 
-  // Load all projects on mount
-  useEffect(() => {
-    loadAllProjects();
-  }, []);
+  // Autoload removed: we directly choose which project to edit.
 
   const updateState = useCallback((updates: Partial<ProjectManagerState>) => {
     setState(prev => ({ ...prev, ...updates }));
@@ -70,8 +67,7 @@ export const useProjectManager = (): UseProjectManagerReturn => {
         saveStatus: 'saved',
       });
 
-      // Refresh project list
-      await loadAllProjects();
+      // Skipping auto-refresh of all projects
 
       console.log('✅ Project saved successfully:', savedProject.name);
       return savedProject;
@@ -199,8 +195,7 @@ export const useProjectManager = (): UseProjectManagerReturn => {
           updateState({ currentProject: null });
         }
         
-        // Refresh project list
-        await loadAllProjects();
+        // Skipping auto-refresh of all projects
         
         console.log('✅ Project deleted successfully');
       }
@@ -229,7 +224,6 @@ export const useProjectManager = (): UseProjectManagerReturn => {
         isLoading: false,
       });
 
-      console.log(`✅ Loaded ${projects.length} projects`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load projects';
       updateState({
