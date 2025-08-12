@@ -7,19 +7,22 @@ export type SplitAssetCreateInput = {
   storageUrl?: string | null;
   meta?: unknown | null;
   order?: number | null;
+  projectId?: string | null;
 };
 
 export class SplitAssetRepository {
   async create(input: SplitAssetCreateInput) {
-    return prisma.splitAsset.create({
-      data: {
-        splitId: input.splitId,
-        kind: input.kind,
-        storageUrl: input.storageUrl ?? null,
-        meta: (input.meta ?? undefined) as any,
-        order: input.order ?? null,
-      },
-    });
+    const data: any = {
+      splitId: input.splitId,
+      kind: input.kind,
+      storageUrl: input.storageUrl ?? null,
+      meta: (input.meta ?? undefined) as any,
+      order: input.order ?? null,
+    };
+    if (typeof input.projectId !== 'undefined') {
+      data.projectId = input.projectId;
+    }
+    return prisma.splitAsset.create({ data });
   }
 
   async listBySplit(splitId: string) {

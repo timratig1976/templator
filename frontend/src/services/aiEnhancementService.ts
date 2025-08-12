@@ -14,9 +14,19 @@ export type CropSectionInput = {
   unit: 'px' | 'percent';
 };
 
-export async function createCrops(splitId: string, sections: CropSectionInput[], opts?: { force?: boolean }) {
+export async function createCrops(
+  splitId: string,
+  sections: CropSectionInput[],
+  opts?: { force?: boolean; projectId?: string }
+) {
   const force = opts?.force ? '1' : undefined;
-  const res = await api.post(`/splits/${encodeURIComponent(splitId)}/crops`, { sections, force }, { params: force ? { force } : undefined });
+  const payload: any = { sections, force };
+  if (opts?.projectId) payload.projectId = opts.projectId;
+  const res = await api.post(
+    `/splits/${encodeURIComponent(splitId)}/crops`,
+    payload,
+    { params: force ? { force } : undefined }
+  );
   return res.data as { success: boolean; data: { assets: any[] } };
 }
 
@@ -28,6 +38,11 @@ export async function getSignedUrl(key: string, ttlMs: number = 300000) {
 export async function listSplitAssets(splitId: string, kind?: string) {
   const res = await api.get(`/splits/${encodeURIComponent(splitId)}/assets`, { params: kind ? { kind } : undefined });
   return res.data as { success: boolean; data: { assets: any[] } };
+}
+
+export async function deleteSplitAsset(splitId: string, key: string) {
+  const res = await api.delete(`/splits/${encodeURIComponent(splitId)}/assets`, { params: { key } });
+  return res.data as { success: boolean };
 }
 
 // Minimal read helpers to load previously processed splits
@@ -43,4 +58,4 @@ export async function getSplitSummary(designSplitId: string) {
   return res.data as { success: boolean; data: { designSplitId: string; imageUrl?: string | null; sections: any[] } };
 }
 
-export default { createCrops, getSignedUrl, listSplitAssets, listRecentSplits, getSplitSummary };
+export default { createCrops, getSignedUrl, listSplitAssets, deleteSplitAsset, listRecentSplits, getSplitSummary };

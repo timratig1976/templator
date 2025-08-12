@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Move, Edit3, Plus, Trash2, Eye, Save, RotateCcw, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Move, Edit3, Plus, Trash2, Save, RotateCcw, ArrowLeft, ArrowRight, Zap, Undo2, Redo2 } from 'lucide-react';
 import { useWorkflow } from '@/contexts/WorkflowContext';
 import { createCrops, listSplitAssets, getSignedUrl } from '@/services/aiEnhancementService';
 import { aiLogger } from '@/services/aiLogger';
+import GenerateButton from '@/components/common/GenerateButton';
 
 interface Section {
   id: string;
@@ -16,9 +18,9 @@ interface Section {
     width: number;
     height: number;
   };
-  html: string;
-  editableFields: any[];
-  aiConfidence: number;
+  html?: string;
+  editableFields?: any[];
+  aiConfidence?: number;
 }
 
 interface HybridLayoutSplitterProps {
@@ -119,7 +121,7 @@ export default function HybridLayoutSplitter({
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [showPreview, setShowPreview] = useState(false);
+  // Removed preview feature for a more compact UI
   const [cutLinesInitialized, setCutLinesInitialized] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [creatingCrops, setCreatingCrops] = useState(false);
@@ -127,10 +129,98 @@ export default function HybridLayoutSplitter({
   const [generatedPreviewUrls, setGeneratedPreviewUrls] = useState<string[]>([]);
   const [canContinueAfterGen, setCanContinueAfterGen] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; kind: 'success' | 'error' } | null>(null);
+  const router = useRouter();
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+
+  // Initial snapshots for diff
+  const initialSectionsRef = useRef<Section[] | null>(null);
+  const initialCutLinesRef = useRef<number[] | null>(null);
+
+  // Diff details for modal
+  type SectionDiff = {
+    typeChanged: Array<{ index: number; from: string; to: string }>;
+    nameChanged: Array<{ index: number; from: string; to: string }>;
+    countChanged?: { from: number; to: number } | null;
+    movedCutLines: number;
+  };
+  const [pendingDiff, setPendingDiff] = useState<SectionDiff | null>(null);
+
+  // Initialize initial snapshots the first time both sections and cutLines are ready
+  useEffect(() => {
+    const ih = imageRef.current?.clientHeight || 0;
+    if (initialSectionsRef.current == null && sections.length > 0) {
+      initialSectionsRef.current = JSON.parse(JSON.stringify(sections));
+    }
+    if (initialCutLinesRef.current == null && ih > 0) {
+      initialCutLinesRef.current = [...cutLines];
+    }
+  }, [sections, cutLines]);
+
+  // Compute a diff between initial and current state
+  const computeDiff = (): SectionDiff | null => {
+    const ih = imageRef.current?.clientHeight || 0;
+    const initialSections = initialSectionsRef.current;
+    const initialCuts = initialCutLinesRef.current;
+    if (!initialSections || ih <= 0) return null; // not ready yet
+
+    const current = sections;
+    const diff: SectionDiff = {
+      typeChanged: [],
+      nameChanged: [],
+      countChanged: null,
+      movedCutLines: 0,
+    };
+
+    if (initialSections.length !== current.length) {
+      diff.countChanged = { from: initialSections.length, to: current.length };
+    }
+    const minLen = Math.min(initialSections.length, current.length);
+    for (let i = 0; i < minLen; i++) {
+      if (initialSections[i].type !== current[i].type) {
+        diff.typeChanged.push({ index: i, from: initialSections[i].type, to: current[i].type });
+      }
+      if ((initialSections[i].name || '') !== (current[i].name || '')) {
+        diff.nameChanged.push({ index: i, from: initialSections[i].name, to: current[i].name });
+      }
+    }
+    if (initialCuts) {
+      const eps = 1;
+      const a = initialCuts;
+      const b = cutLines;
+      const maxLen = Math.max(a.length, b.length);
+      for (let i = 0; i < maxLen; i++) {
+        const av = a[i];
+        const bv = b[i];
+        if (av == null || bv == null) diff.movedCutLines += 1; else if (Math.abs(av - bv) > eps) diff.movedCutLines += 1;
+      }
+    }
+    return diff;
+  };
+
+  // Handle Next: skip modal if no changes; otherwise show modal with details
+  const handleNext = () => {
+    const diff = computeDiff();
+    if (!diff) {
+      // Baseline not ready (e.g., initial refs or image height not resolved yet)
+      // Treat as unchanged and proceed to keep UX smooth
+      onSectionsConfirmed(sections);
+      return;
+    }
+    const noCount = !diff.countChanged;
+    const noType = diff.typeChanged.length === 0;
+    const noName = diff.nameChanged.length === 0;
+    const noMoves = diff.movedCutLines === 0;
+    const unchanged = noCount && noType && noName && noMoves;
+    if (unchanged) {
+      onSectionsConfirmed(sections);
+    } else {
+      setPendingDiff(diff);
+      setShowConfirmModal(true);
+    }
+  };
   
   // Compute initial cut lines from sections given image height.
   // Default assumption: bounds are in pixels.
@@ -381,38 +471,92 @@ export default function HybridLayoutSplitter({
   };
 
   // Handle mouse up
-  const handleMouseUp = () => {
+  const handleMouseUp = (event: React.MouseEvent) => {
     setIsDragging(false);
-    setIsResizing(false);
+    setSelectedSection(null);
   };
 
-  // Add new section
+  // Add new section by inserting a new cut line at the midpoint of the largest band
   const addNewSection = () => {
-    const newSection: Section = {
-      id: `section_${Date.now()}`,
-      name: 'New Section',
-      type: 'content',
-      bounds: {
-        x: 50,
-        y: 50,
-        width: 200,
-        height: 150
-      },
-      html: '<div class="p-4"><h2>New Section</h2><p>Content goes here</p></div>',
-      editableFields: [],
-      aiConfidence: 0 // User-created section
-    };
-    
-    setSections(prev => [...prev, newSection]);
-    setSelectedSection(newSection.id);
+    const ih = imageRef.current?.clientHeight || imageSize.height || 0;
+    if (ih <= 0) return;
+
+    const sorted = [...cutLines].filter(v => v > 0 && v < ih).sort((a,b) => a-b);
+    const edges = [0, ...sorted, ih];
+
+    let maxGap = -1;
+    let maxIdx = 0;
+    for (let i = 0; i < edges.length - 1; i++) {
+      const gap = edges[i+1] - edges[i];
+      if (gap > maxGap) {
+        maxGap = gap;
+        maxIdx = i;
+      }
+    }
+    const y0 = edges[maxIdx];
+    const y1 = edges[maxIdx + 1];
+    const mid = Math.round(y0 + (y1 - y0) / 2);
+
+    const nextCutLines = normalizeCutLines([...cutLines, mid], ih);
+    setCutLines(nextCutLines);
+    saveToHistory(nextCutLines);
+
+    // Build next sections immediately and select the new (lower) split band
+    const sorted2 = [...nextCutLines].filter(v => v >= 0 && v <= ih).sort((a,b) => a-b);
+    const edges2 = [0, ...sorted2, ih];
+    const newCount = Math.max(0, edges2.length - 1);
+    const nextSections: Section[] = [];
+    for (let i = 0; i < newCount; i++) {
+      const yb = Math.round(edges2[i]);
+      const hb = Math.max(1, Math.round(edges2[i+1] - edges2[i]));
+      const existing = sections[i];
+      if (existing) {
+        nextSections.push({
+          ...existing,
+          name: existing.name || `Section ${i + 1}`,
+          bounds: { ...existing.bounds, y: yb, height: hb },
+        });
+      } else {
+        nextSections.push({
+          id: `section_${i}_${Date.now()}`,
+          name: `Section ${i + 1}`,
+          type: 'content',
+          bounds: { x: 0, y: yb, width: imageDimensions.width || 0, height: hb },
+          html: '',
+          editableFields: [],
+          aiConfidence: 0,
+        });
+      }
+    }
+    setSections(nextSections);
+    const selectIdx = Math.min(maxIdx + 1, nextSections.length - 1);
+    if (selectIdx >= 0) setSelectedSection(nextSections[selectIdx].id);
   };
 
-  // Delete section
+  // Delete a section by removing the nearest separating cut line
   const deleteSection = (sectionId: string) => {
-    setSections(prev => prev.filter(s => s.id !== sectionId));
-    if (selectedSection === sectionId) {
-      setSelectedSection(null);
-    }
+    const ih = imageRef.current?.clientHeight || imageSize.height || 0;
+    if (ih <= 0) return;
+
+    const idx = sections.findIndex(s => s.id === sectionId);
+    if (idx === -1) return;
+
+    // Sections map to bands between edges = [0, ...cutLines, ih]
+    // For section idx, prefer removing its lower edge cut line cutLines[idx] when possible,
+    // otherwise remove the upper one cutLines[idx-1]. If no cut lines, nothing to remove.
+    if (cutLines.length === 0) return;
+
+    let removeIndex = idx < cutLines.length ? idx : cutLines.length - 1;
+    if (removeIndex < 0) return;
+
+    const next = cutLines.filter((_, i) => i !== removeIndex);
+    const normalized = normalizeCutLines(next, ih);
+    setCutLines(normalized);
+    saveToHistory(normalized);
+    syncSectionsWithCutLines(ih);
+
+    // Clear selection if the deleted section was selected
+    if (selectedSection === sectionId) setSelectedSection(null);
   };
 
   // Update section properties
@@ -551,84 +695,73 @@ export default function HybridLayoutSplitter({
   };
 
   return (
-    <div className="w-full p-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              🤖 + 👤 Hybrid Layout Splitting
-            </h2>
-            <p className="text-gray-600 mt-1">
-              AI detected {aiDetectedSections.length} sections. Review, adjust, and refine before generating HTML.
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              {showPreview ? 'Hide' : 'Show'} Preview
-            </button>
-            <button
-              onClick={undo}
-              disabled={historyIndex <= 0}
-              className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Undo
-            </button>
-            <button
-              onClick={redo}
-              disabled={historyIndex >= cutLineHistory.length - 1}
-              className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RotateCcw className="w-4 h-4 mr-2 transform scale-x-[-1]" />
-              Redo
-            </button>
-            <button
-              onClick={regenerateWithAI}
-              disabled={isRegenerating}
-              className="flex items-center px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Zap className="w-4 h-4 mr-2" />
-              {isRegenerating ? 'Regenerating...' : 'Regenerate with AI'}
-            </button>
-            <button
-              onClick={resetToAISuggestions}
-              className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset to AI
-            </button>
-          </div>
+    <div className="w-full p-4">
+      {/* Compact top toolbar */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={undo}
+            disabled={historyIndex <= 0}
+            className="h-9 w-9 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            title="Undo"
+            aria-label="Undo"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <GenerateButton onClick={regenerateWithAI} loading={isRegenerating} />
+          <button
+            onClick={redo}
+            disabled={historyIndex >= cutLineHistory.length - 1}
+            className="h-9 w-9 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            title="Redo"
+            aria-label="Redo"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={resetToAISuggestions}
+            className="h-9 w-9 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center justify-center"
+            title="Revert to AI suggestions"
+            aria-label="Revert to AI suggestions"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const splitId = hybridAnalysisResult?.splitId;
+              if (splitId) {
+                router.push(`/split-assets?splitId=${encodeURIComponent(String(splitId))}`);
+              }
+            }}
+            disabled={!hybridAnalysisResult?.splitId}
+            className="h-9 w-9 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            title={hybridAnalysisResult?.splitId ? 'Manage Parts' : 'No split id yet'}
+            aria-label="Manage Parts"
+          >
+            <Edit3 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Main Canvas Area */}
         <div className="w-full min-w-0 lg:col-span-3">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full">
-            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+          <div className="bg-white rounded-lg shadow w-full">
+            <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Interactive Layout Editor</h3>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">
-                    {sections.length} sections
-                  </span>
-                  <button
-                    onClick={addNewSection}
-                    className="flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200 transition-colors"
-                  >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add Section
-                  </button>
-                </div>
+                <div className="text-xs text-gray-600">{sections.length} sections</div>
+                <button
+                  onClick={addNewSection}
+                  className="flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 transition-colors"
+                  title="Add section"
+                  aria-label="Add section"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add
+                </button>
               </div>
-            </div>
-            <div className="px-4 py-2 text-xs text-gray-600 border-b border-gray-100">
-              Tip: A section is the area between two cut lines. The top of the first section starts at the image top until the first cut line.
             </div>
             
             <div 
@@ -939,60 +1072,34 @@ export default function HybridLayoutSplitter({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              onClick={() => setShowConfirmModal(true)}
-              className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Confirm Sections
-            </button>
-            
-            <button
-              onClick={onBack}
-              className="w-full flex items-center justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              ← Back to Upload
-            </button>
-          </div>
+          {/* Spacer for bottom toolbar */}
+          <div className="h-16" />
         </div>
       </div>
 
-      {/* Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Section Preview</h3>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-4 overflow-auto max-h-96">
-              <div className="space-y-4">
-                {sections.map((section) => (
-                  <div key={section.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">{section.name}</h4>
-                      <span className="text-sm text-gray-600 capitalize">{section.type}</span>
-                    </div>
-                    <div 
-                      className="bg-gray-50 p-3 rounded text-sm font-mono text-gray-800 overflow-auto"
-                      style={{ maxHeight: '150px' }}
-                    >
-                      {section.html}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+      {/* Bottom navigation toolbar */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+        <div className="flex items-center gap-3 bg-white/90 backdrop-blur px-3 py-2 rounded-full shadow border">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200"
+            aria-label="Back"
+            title="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back</span>
+          </button>
+          <button
+            onClick={handleNext}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-green-600 text-white hover:bg-green-700"
+            aria-label="Next step"
+            title="Next step"
+          >
+            <span className="text-sm">Next step</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Confirm Sections Modal */}
       {showConfirmModal && (

@@ -33,7 +33,8 @@ export class ImageCropService {
   async createCropsForSplit(
     splitId: string,
     sourceBuffer: Buffer,
-    sections: SectionInput[]
+    sections: SectionInput[],
+    projectId?: string
   ) {
     const buf = sourceBuffer;
     const img = sharp(sourceBuffer);
@@ -71,6 +72,7 @@ export class ImageCropService {
           sectionId: s.id ?? null,
         },
         order: s.index,
+        projectId: projectId ?? null,
       });
 
       results.push({ key: put.key, width, height, bounds: { x: left, y: top, width, height }, asset: created });

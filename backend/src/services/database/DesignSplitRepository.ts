@@ -5,17 +5,20 @@ export type DesignSplitCreateInput = {
   designUploadId: string;
   status?: 'pending' | 'processing' | 'completed' | 'failed' | string;
   metrics?: unknown | null;
+  projectId?: string | null;
 };
 
 export class DesignSplitRepository {
   async create(input: DesignSplitCreateInput) {
-    return prisma.designSplit.create({
-      data: {
-        designUploadId: input.designUploadId,
-        status: input.status ?? 'processing',
-        metrics: (input.metrics ?? undefined) as any,
-      },
-    });
+    const data: any = {
+      designUploadId: input.designUploadId,
+      status: input.status ?? 'processing',
+      metrics: (input.metrics ?? undefined) as any,
+    };
+    if (typeof input.projectId !== 'undefined') {
+      data.projectId = input.projectId;
+    }
+    return prisma.designSplit.create({ data });
   }
 
   async updateStatus(id: string, status: string) {
@@ -29,6 +32,14 @@ export class DesignSplitRepository {
     return prisma.designSplit.update({
       where: { id },
       data: { metrics: metrics as any },
+    });
+  }
+
+  async setProject(id: string, projectId: string) {
+    const data: any = { projectId };
+    return prisma.designSplit.update({
+      where: { id },
+      data,
     });
   }
 

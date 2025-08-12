@@ -120,6 +120,7 @@ export default function DesignUploadsManager() {
         // If no crops exist yet for this split, try to create them from split summary
         if (!assets.length && sections.length) {
           try {
+            const projectId = (upload as any)?.projectId || (upload as any)?.meta?.projectId;
             const inputs = sections.map((s: any, i: number) => {
               const bx = Number(s.bounds?.x ?? 0);
               const by = Number(s.bounds?.y ?? 0);
@@ -140,7 +141,7 @@ export default function DesignUploadsManager() {
                 },
               };
             });
-            const created = await createCrops(String(splitId), inputs, { force: true });
+            const created = await createCrops(String(splitId), inputs, { force: true, projectId });
             assets = (created?.data?.assets || []) as any[];
             console.log('[Gallery] created crops', assets);
           } catch (e) {
@@ -170,6 +171,7 @@ export default function DesignUploadsManager() {
           if (thinCount >= Math.ceil(sections.length / 2)) {
             console.log('[Gallery] detected thin crops; attempting one-time regeneration with corrected percent bounds', { thinCount, total: sections.length });
             try {
+              const projectId = (upload as any)?.projectId || (upload as any)?.meta?.projectId;
               const inputs = sections.map((s: any, i: number) => {
                 const bx = Number(s.bounds?.x ?? 0);
                 const by = Number(s.bounds?.y ?? 0);
@@ -184,7 +186,7 @@ export default function DesignUploadsManager() {
                   bounds: { x: bx * factor, y: by * factor, width: bw * factor, height: bh * factor },
                 };
               });
-              const regen = await createCrops(String(splitId), inputs, { force: true });
+              const regen = await createCrops(String(splitId), inputs, { force: true, projectId });
               assets = (regen?.data?.assets || []).slice(0, sections.length);
               console.log('[Gallery] regenerated crops', assets);
             } catch (e) {
@@ -586,6 +588,30 @@ export default function DesignUploadsManager() {
                 router.push(`/projects/${newId}/generate?${qp.toString()}`);
               }}
             >Modules</button>
+            {(() => {
+              const splitId = (it as any)?.designSplitId
+                || (it as any)?.lastSplitId
+                || (it as any)?.meta?.designSplitId
+                || (it as any)?.meta?.lastSplitId;
+              if (splitId) {
+                const qp = new URLSearchParams({ splitId: String(splitId) });
+                return (
+                  <button
+                    className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
+                    aria-label={`Edit Parts for ${it.filename}`}
+                    onClick={() => router.push(`/split-assets?${qp.toString()}`)}
+                  >Edit Parts</button>
+                );
+              }
+              return (
+                <button
+                  className="px-2 py-0.5 rounded border bg-white text-gray-400 cursor-not-allowed"
+                  aria-label={`Edit Parts for ${it.filename}`}
+                  title="No split available yet for this upload"
+                  disabled
+                >Edit Parts</button>
+              );
+            })()}
           </div>
         )}
       </td>

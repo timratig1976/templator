@@ -1420,10 +1420,10 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 }
 
 // POST /api/ai-enhancement/splits/:splitId/crops
-// body: { sections: Array<{ id?: string, index: number, bounds: {x,y,width,height}, unit: 'px'|'percent' }> }
+// body: { sections: Array<{ id?: string, index: number, bounds: {x,y,width,height}, unit: 'px'|'percent' }>, projectId?: string }
 router.post('/splits/:splitId/crops', async (req: Request, res: Response) => {
   const { splitId } = req.params;
-  const { sections } = req.body || {};
+  const { sections, projectId: bodyProjectId } = req.body || {};
   const force = (req.query.force === '1' || req.query.force === 'true' || (req.body && (req.body.force === true || req.body.force === '1' || req.body.force === 'true')));
   if (!Array.isArray(sections) || sections.length === 0) {
     return res.status(400).json({ success: false, error: 'sections array is required' });
@@ -1444,6 +1444,12 @@ router.post('/splits/:splitId/crops', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'DesignSplit not found or missing upload' });
     }
 
+    // If projectId provided, ensure split carries it; prefer the split's existing value if present
+    const projectId = (split as any).projectId || (typeof bodyProjectId === 'string' ? bodyProjectId : undefined);
+    if (!(split as any).projectId && projectId) {
+      try { await designSplitRepo.setProject(splitId, projectId); } catch {}
+    }
+
     const src = split.designUpload.storageUrl || '';
     let buffer: Buffer;
     if (src && fs.existsSync(src)) {
@@ -1456,7 +1462,7 @@ router.post('/splits/:splitId/crops', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Missing source image for split' });
     }
 
-    const results = await imageCropService.createCropsForSplit(splitId, buffer, sections as any);
+    const results = await imageCropService.createCropsForSplit(splitId, buffer, sections as any, projectId);
     // Detailed diagnostics: confirm separate crops and metadata
     try {
       results.forEach((r, idx) => {

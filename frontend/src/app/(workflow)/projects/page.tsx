@@ -305,6 +305,35 @@ export default function ProjectsDashboardPage() {
                     >
                       Modules
                     </button>
+                    {(() => {
+                      // Try to find a splitId on the project, checking common locations used by services
+                      const splitId = (p as any)?.designSplitId
+                        || (p as any)?.splitId
+                        || (p as any)?.metadata?.designSplitId
+                        || (p as any)?.metadata?.splitId;
+                      if (splitId) {
+                        const qp = new URLSearchParams({ splitId: String(splitId) });
+                        return (
+                          <button
+                            aria-label={`Edit Parts for ${p.name}`}
+                            onClick={() => router.push(`/split-assets?${qp.toString()}`)}
+                            className="px-2.5 py-1 text-xs rounded border bg-white hover:bg-gray-50"
+                          >
+                            Edit Parts
+                          </button>
+                        );
+                      }
+                      return (
+                        <button
+                          aria-label={`Edit Parts (unavailable) for ${p.name}`}
+                          disabled
+                          title="No split available yet for this project"
+                          className="px-2.5 py-1 text-xs rounded border bg-white text-gray-400 cursor-not-allowed"
+                        >
+                          Edit Parts
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -333,6 +362,15 @@ export default function ProjectsDashboardPage() {
                       className="px-3 py-1.5 text-sm rounded bg-gray-100 hover:bg-gray-200"
                     >
                       Open Templator
+                    </button>
+                    <button
+                      onClick={() => {
+                        const qp = new URLSearchParams({ splitId: s.designSplitId });
+                        router.push(`/split-assets?${qp.toString()}`);
+                      }}
+                      className="ml-2 px-3 py-1.5 text-sm rounded border bg-white hover:bg-gray-50"
+                    >
+                      Parts
                     </button>
                   </div>
                 </div>

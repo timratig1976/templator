@@ -72,6 +72,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Templator Projects (aligns with frontend SavedProject)
+model Project {
+  id               String   @id @default(cuid())
+  name             String
+  originalFileName String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Optional metadata similar to frontend shape
+  metadata         Json?
+
+  // Relations
+  splits           DesignSplit[]
+  assets           SplitAsset[]
+
+  @@map("projects")
+}
+
 // Template Library Models (replaces TemplateLibraryService Map storage)
 model ModuleTemplate {
   id          String   @id @default(cuid())
@@ -249,6 +267,10 @@ model DesignSplit {
   metrics        Json?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  
+  // NEW: relational link to Project
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id])
 
   // Relations
   designUpload   DesignUpload @relation(fields: [designUploadId], references: [id], onDelete: Cascade)
@@ -260,6 +282,7 @@ model DesignSplit {
 
   @@index([designUploadId])
   @@index([status])
+  @@index([projectId])
   @@map("design_splits")
 }
 
@@ -271,11 +294,16 @@ model SplitAsset {
   meta      Json?       // arbitrary JSON (bounds, rationale, etc.)
   order     Int?
   createdAt DateTime    @default(now())
+  
+  // NEW: direct relational link to Project for filtering and joins
+  projectId String?
+  project   Project?    @relation(fields: [projectId], references: [id])
 
   split     DesignSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
 
   @@index([splitId])
   @@index([kind])
+  @@index([projectId])
   @@map("split_assets")
 }
 
