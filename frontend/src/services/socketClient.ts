@@ -15,43 +15,91 @@ class SocketClientService {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000; // Start with 1 second
+  private connecting = false;
 
   public static getInstance(): SocketClientService {
-    if (!SocketClientService.instance) {
-      SocketClientService.instance = new SocketClientService();
+    // Persist across HMR by stashing on globalThis
+    const g = globalThis as any;
+    if (!g.__templatorSocketClient) {
+      g.__templatorSocketClient = new SocketClientService();
     }
-    return SocketClientService.instance;
+    return g.__templatorSocketClient as SocketClientService;
   }
 
   private constructor() {
-    // Only connect when running in browser and sockets are enabled
-    if (socketsEnabled) {
-      this.connect();
-    } else {
+    // Lazy connect: do not connect on import/constructor to avoid duplicate connects/HMR
+    if (!socketsEnabled) {
       aiLogger.info('system', 'Socket disabled (SSR/build or env flag)');
     }
+    // Optionally auto-init after window load to avoid startup race
+    if (socketsEnabled && typeof window !== 'undefined') {
+      window.addEventListener('load', () => this.ensureConnected());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.ensureConnected();
+      });
+    }
+  }
+
+  private ensureConnected(): void {
+    if (!socketsEnabled) return;
+    if (this.isConnected || this.socket || this.connecting) return;
+    this.connect();
   }
 
   private connect(): void {
     try {
       // Connect to backend Socket.IO server
-      this.socket = io('http://localhost:3009', {
-        transports: ['polling', 'websocket'], // Try polling first, then websocket
+      const backendUrl = (typeof window !== 'undefined' && (window as any).NEXT_PUBLIC_BACKEND_URL)
+        || process.env.NEXT_PUBLIC_BACKEND_URL
+        || 'http://localhost:3009';
+
+      // Probe backend health first to avoid immediate connection refused
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      fetch(`${backendUrl}/health`, { signal: controller.signal })
+        .then(() => {
+          clearTimeout(timeoutId);
+          this.openSocket(backendUrl);
+        })
+        .catch(() => {
+          clearTimeout(timeoutId);
+          // Backend not ready; retry later via ensureConnected
+          this.connecting = false;
+          setTimeout(() => this.ensureConnected(), 1500);
+        });
+
+    } catch (error) {
+      console.error('Failed to create socket connection:', error);
+      aiLogger.error('system', 'Failed to create socket connection', { error });
+      this.connecting = false;
+    }
+  }
+
+  private openSocket(backendUrl: string): void {
+    try {
+      this.connecting = true;
+      this.socket = io(backendUrl, {
+        // Allow both transports and attempt upgrade for resilience
+        transports: ['websocket', 'polling'],
+        // Explicit Socket.IO path
+        path: '/socket.io',
+        withCredentials: true,
         timeout: 20000,
-        forceNew: true,
+        forceNew: false,
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: this.reconnectDelay,
         reconnectionDelayMax: 5000,
         randomizationFactor: 0.5,
         upgrade: true,
-        rememberUpgrade: false
+        rememberUpgrade: true
       });
 
       this.setupEventListeners();
     } catch (error) {
-      console.error('Failed to create socket connection:', error);
-      aiLogger.error('system', 'Failed to create socket connection', { error });
+      console.error('Failed to open socket:', error);
+      aiLogger.error('system', 'Failed to open socket', { error });
+      this.connecting = false;
     }
   }
 
@@ -61,6 +109,7 @@ class SocketClientService {
     // Connection events
     this.socket.on('connect', () => {
       this.isConnected = true;
+      this.connecting = false;
       this.reconnectAttempts = 0;
       console.log('✅ Socket.IO connected to backend');
       aiLogger.success('system', 'Real-time log streaming connected', {
@@ -70,12 +119,14 @@ class SocketClientService {
 
     this.socket.on('disconnect', (reason) => {
       this.isConnected = false;
+      this.connecting = false;
       console.log('❌ Socket.IO disconnected:', reason);
       aiLogger.warning('system', 'Real-time log streaming disconnected', { reason });
     });
 
     this.socket.on('connect_error', (error) => {
       this.isConnected = false;
+      this.connecting = false;
       this.reconnectAttempts++;
       console.error('❌ Socket.IO connection error:', error);
       aiLogger.error('system', 'Log stream connection error', { 
@@ -92,6 +143,7 @@ class SocketClientService {
 
     this.socket.on('reconnect', (attemptNumber) => {
       this.isConnected = true;
+      this.connecting = false;
       console.log(`✅ Socket.IO reconnected after ${attemptNumber} attempts`);
       aiLogger.success('system', 'Real-time log streaming reconnected', {
         attempts: attemptNumber
@@ -172,6 +224,7 @@ class SocketClientService {
 
   // Send events to backend (if needed)
   public emit(event: string, data: any): void {
+    this.ensureConnected();
     if (this.socket && this.isConnected) {
       this.socket.emit(event, data);
     } else {
@@ -181,6 +234,7 @@ class SocketClientService {
 
   // Add event listener to socket
   public on(event: string, listener: (...args: any[]) => void): void {
+    this.ensureConnected();
     if (this.socket) {
       this.socket.on(event, listener);
     }

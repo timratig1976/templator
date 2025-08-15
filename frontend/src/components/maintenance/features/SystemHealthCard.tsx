@@ -51,7 +51,7 @@ export const SystemHealthCard: React.FC<SystemHealthCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-gray-900">🏥 System Health</h3>
           <button
-            onClick={() => onRawDataClick('/api/monitoring/health/comprehensive', 'System Health Raw Data')}
+            onClick={() => onRawDataClick('/api/monitoring/system/health', 'System Health Raw Data')}
             className="text-xs text-blue-600 hover:text-blue-800 underline"
           >
             View Raw Data
@@ -92,7 +92,7 @@ export const SystemHealthCard: React.FC<SystemHealthCardProps> = ({
           </div>
 
           {/* Memory Usage */}
-          {systemHealth.memory && (
+          {typeof (systemHealth as any).memory !== 'undefined' && (
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-500">Memory</span>
               <Tooltip
@@ -103,14 +103,23 @@ export const SystemHealthCard: React.FC<SystemHealthCardProps> = ({
                 showTooltip={showTooltip}
                 onTooltipChange={onTooltipChange}
               >
-                <div className="text-right">
-                  <div className="text-sm text-gray-900">
-                    {formatMemory(systemHealth.memory.used)} / {formatMemory(systemHealth.memory.total)}
+                {typeof (systemHealth as any).memory === 'number' ? (
+                  <div className="text-right">
+                    <div className="text-sm text-gray-900">
+                      {(systemHealth as any).memory}% used
+                    </div>
+                    <div className="text-xs text-gray-500">Aggregate memory utilization</div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    RSS: {formatMemory(systemHealth.memory.rss)}
+                ) : (
+                  <div className="text-right">
+                    <div className="text-sm text-gray-900">
+                      {formatMemory((systemHealth as any).memory.used)} / {formatMemory((systemHealth as any).memory.total)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      RSS: {formatMemory((systemHealth as any).memory.rss)}
+                    </div>
                   </div>
-                </div>
+                )}
               </Tooltip>
             </div>
           )}

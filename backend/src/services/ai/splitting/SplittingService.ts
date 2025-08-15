@@ -45,7 +45,8 @@ export class SplittingService {
   async generateSplittingSuggestions(
     imageBase64: string, 
     fileName: string, 
-    requestId: string
+    requestId: string,
+    customPrompt?: string
   ): Promise<SplittingSuggestion[]> {
     try {
       logger.info(`[${requestId}] Starting AI-powered section detection`, {
@@ -56,10 +57,16 @@ export class SplittingService {
 
       logToFrontend('info', 'openai', '🤖 Analyzing design with AI Vision', {
         fileName,
-        model: 'gpt-4o'
+        model: 'gpt-4o',
+        usingCustomPrompt: !!customPrompt
       }, requestId);
 
-      const prompt = this.buildSplittingPrompt();
+      // Use custom prompt if provided (from AI Maintenance), otherwise use default
+      const prompt = customPrompt || this.buildSplittingPrompt();
+      
+      if (customPrompt) {
+        logger.info(`[${requestId}] Using custom prompt from AI Maintenance (${customPrompt.length} chars)`);
+      }
       const startTime = Date.now();
 
       // Validate base64 image format
@@ -143,14 +150,11 @@ export class SplittingService {
       logToFrontend('error', 'openai', `❌ AI analysis failed: ${error?.message || 'Unknown error'}. Using fallback suggestions.`, {
         error: error?.message || 'Unknown error',
         errorType: error?.constructor?.name || 'Unknown',
-        fallbackUsed: true
+        fallbackUsed: false
       }, requestId);
 
-      // Log that we're using fallback
-      logger.warn(`[${requestId}] Using fallback basic suggestions due to AI failure`);
-      
-      // Fallback to basic suggestions if AI fails
-      return this.generateBasicSplittingSuggestions(fileName);
+      // No mock fallback: propagate error so caller can handle properly
+      throw error;
     }
   }
 

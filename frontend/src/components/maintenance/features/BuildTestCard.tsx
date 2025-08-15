@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import Link from 'next/link';
 import { BuildTestStatus } from '../hooks/useMaintenanceData';
 import { getStatusColor, getStatusBgColor } from '../utils/colorUtils';
 import Tooltip from '../ui/Tooltip';
@@ -16,6 +17,7 @@ export interface BuildTestCardProps {
   testProgress: string;
   showTooltip?: string | null;
   onTooltipChange?: (id: string | null) => void;
+  linkOnly?: boolean;
 }
 
 export const BuildTestCard: React.FC<BuildTestCardProps> = ({
@@ -25,7 +27,8 @@ export const BuildTestCard: React.FC<BuildTestCardProps> = ({
   testRunning,
   testProgress,
   showTooltip,
-  onTooltipChange
+  onTooltipChange,
+  linkOnly
 }) => {
   if (!buildTestStatus) {
     return (
@@ -147,29 +150,45 @@ export const BuildTestCard: React.FC<BuildTestCardProps> = ({
 
           {/* Action Button */}
           <div className="pt-2">
-            <button
-              onClick={onRunBuildTest}
-              disabled={testRunning || buildTestStatus.isRunning}
-              className={`w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${
-                testRunning || buildTestStatus.isRunning
-                  ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                  : 'text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-              }`}
-            >
-              {testRunning || buildTestStatus.isRunning ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
-                  Running Test...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m6-10V7a3 3 0 11-6 0V4h6zM4 20h16" />
-                  </svg>
-                  Run Build Test
-                </>
-              )}
-            </button>
+            {linkOnly ? (
+              <Link
+                href="/maintenance/build-tests"
+                className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                Open Build Tests
+              </Link>
+            ) : (
+              <button
+                onClick={() => {
+                  /* debug click */
+                  try { console.log('[BuildTestCard] Run Build Test clicked'); } catch {}
+                  onRunBuildTest();
+                }}
+                disabled={testRunning || buildTestStatus.isRunning}
+                className={`w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md transition-colors ${
+                  testRunning || buildTestStatus.isRunning
+                    ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                    : 'text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                }`}
+              >
+                {testRunning || buildTestStatus.isRunning ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
+                    Running Test...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m6-10V7a3 3 0 11-6 0V4h6zM4 20h16" />
+                    </svg>
+                    Run Build Test
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

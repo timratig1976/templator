@@ -39,6 +39,31 @@ check_port() {
     fi
 }
 
+# Function to force-free one or more ports
+kill_ports() {
+    local ports=("$@")
+    for port in "${ports[@]}"; do
+        print_warning "Ensuring port $port is free..."
+        # Collect unique PIDs listening on the port
+        local pids
+        pids=$(lsof -ti tcp:$port -sTCP:LISTEN 2>/dev/null | sort -u | tr '\n' ' ')
+        if [ -n "$pids" ]; then
+            print_warning "Terminating PIDs on port $port: $pids"
+            kill -TERM $pids 2>/dev/null || true
+            sleep 1
+            # Force kill anything still alive
+            for p in $pids; do
+                if kill -0 "$p" 2>/dev/null; then
+                    print_warning "Force killing PID $p on port $port"
+                    kill -KILL "$p" 2>/dev/null || true
+                fi
+            done
+        else
+            print_info "No listeners on port $port"
+        fi
+    done
+}
+
 # Function to wait for server to be ready
 wait_for_server() {
     local url=$1
@@ -84,18 +109,8 @@ print_info "Frontend: http://localhost:3000"
 print_info "Backend: http://localhost:3009"
 echo ""
 
-# Check if ports are available
-if ! check_port 3009; then
-    print_error "Port 3009 is already in use. Please stop the process using this port."
-    lsof -i :3009
-    exit 1
-fi
-
-if ! check_port 3000; then
-    print_error "Port 3000 is already in use. Please stop the process using this port."
-    lsof -i :3000
-    exit 1
-fi
+# Always free the dev ports before starting
+kill_ports 3009 3000
 
 # Check if node_modules exist
 if [ ! -d "backend/node_modules" ]; then

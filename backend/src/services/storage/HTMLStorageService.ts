@@ -2,6 +2,7 @@ import { createLogger } from '../../utils/logger';
 import fs from 'fs/promises';
 import path from 'path';
 import { PipelineExecutionResult } from '../pipeline/PipelineExecutor';
+import prisma from '../database/prismaClient';
 
 // Define EnhancedSection locally since it's specific to storage
 interface EnhancedSection {
@@ -339,7 +340,7 @@ ${sectionsHtml}
   }
 
   /**
-   * Delete a project
+   * Delete a project and all related splits and assets
    */
   async deleteProject(projectId: string): Promise<boolean> {
     const project = this.projects.get(projectId);
@@ -348,15 +349,45 @@ ${sectionsHtml}
     }
 
     try {
-      // Delete project files
+      logger.info('Starting project deletion with cascade cleanup', { projectId });
+
+      // Step 1: Delete all related split assets from database
+      const deletedAssets = await prisma.splitAsset.deleteMany({
+        where: { projectId: projectId }
+      });
+      logger.info('Deleted split assets', { projectId, count: deletedAssets.count });
+
+      // Step 2: Delete all related design splits from database
+      const deletedSplits = await prisma.designSplit.deleteMany({
+        where: { projectId: projectId }
+      });
+      logger.info('Deleted design splits', { projectId, count: deletedSplits.count });
+
+      // Step 3: Delete the project from database if it exists
+      try {
+        await prisma.project.delete({
+          where: { id: projectId }
+        });
+        logger.info('Deleted project from database', { projectId });
+      } catch (dbError) {
+        // Project might not exist in database yet, continue with file cleanup
+        logger.warn('Project not found in database, continuing with file cleanup', { projectId, error: dbError });
+      }
+
+      // Step 4: Delete project files from filesystem
       const projectDir = path.join(this.storageDir, projectId);
       await fs.rm(projectDir, { recursive: true, force: true });
+      logger.info('Deleted project files', { projectId, projectDir });
       
-      // Remove from memory and persist
+      // Step 5: Remove from memory and persist
       this.projects.delete(projectId);
       await this.saveProjects();
 
-      logger.info('Project deleted', { projectId });
+      logger.info('Project deletion completed successfully', { 
+        projectId, 
+        deletedAssets: deletedAssets.count, 
+        deletedSplits: deletedSplits.count 
+      });
       return true;
     } catch (error) {
       logger.error('Failed to delete project', { projectId, error });

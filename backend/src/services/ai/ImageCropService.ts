@@ -14,6 +14,8 @@ export type SectionInput = {
   id?: string;
   bounds: { x: number; y: number; width: number; height: number };
   unit: 'px' | 'percent';
+  name?: string;
+  type?: string;
 };
 
 export type CropResult = {
@@ -70,6 +72,8 @@ export class ImageCropService {
           bounds: { x: left, y: top, width, height },
           originalDimensions: { width: meta.width, height: meta.height },
           sectionId: s.id ?? null,
+          sectionName: s.name ?? null,
+          sectionType: s.type ?? null,
         },
         order: s.index,
         projectId: projectId ?? null,

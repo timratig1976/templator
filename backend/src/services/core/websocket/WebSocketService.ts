@@ -72,6 +72,22 @@ export class WebSocketService {
   }
 
   /**
+   * Attach an existing Socket.IO instance (reuse server-owned io)
+   */
+  setIO(io: SocketIOServer): void {
+    this.io = io;
+    this.setupEventHandlers();
+    logger.info('WebSocket service attached to existing Socket.IO instance');
+  }
+
+  /**
+   * Get current Socket.IO instance (if any)
+   */
+  getIO(): SocketIOServer | null {
+    return this.io;
+  }
+
+  /**
    * Setup WebSocket event handlers
    */
   private setupEventHandlers(): void {

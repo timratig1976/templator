@@ -1,0 +1,104 @@
+// AI Prompt Versioning Schema
+// Add this to your main schema.prisma file
+
+model AIProcess {
+  id          String   @id @default(cuid())
+  name        String   @unique // "split-detection", "html-generation", etc.
+  displayName String   // "Split Detection", "HTML Generation", etc.
+  description String?
+  category    String   // "analysis", "generation", "enhancement", "validation"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  prompts     AIPrompt[]
+  testResults AIPromptTestResult[]
+
+  @@map("ai_processes")
+}
+
+model AIPrompt {
+  id            String   @id @default(cuid())
+  processId     String
+  version       String   // "v1.2.3", "v2.0.0-beta", etc.
+  title         String?  // Optional human-readable title
+  description   String?  // What changed in this version
+  promptContent String   @db.Text // The actual prompt text
+  templateVars  Json?    // Template variables and their descriptions
+  isActive      Boolean  @default(false) // Only one active version per process
+  isDefault     Boolean  @default(false) // Default fallback version
+  author        String   // Who created this version
+  tags          String[] // ["experimental", "production", "hotfix"]
+  metadata      Json?    // Additional metadata (model settings, etc.)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  process     AIProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  testResults AIPromptTestResult[]
+  metrics     AIPromptMetrics[]
+
+  @@unique([processId, version])
+  @@map("ai_prompts")
+}
+
+model AIPromptTestResult {
+  id              String   @id @default(cuid())
+  promptId        String
+  processId       String
+  testFileName    String   // Name of test file used
+  testFileId      String?  // Reference to static test file
+  inputData       Json     // Input data used for testing
+  outputData      Json     // AI response/output
+  metrics         Json     // Performance metrics (accuracy, confidence, etc.)
+  processingTime  Int      // Milliseconds
+  success         Boolean  // Whether test completed successfully
+  errorMessage    String?  // Error details if failed
+  testEnvironment String   // "development", "staging", "production"
+  createdAt       DateTime @default(now())
+
+  // Relations
+  prompt  AIPrompt  @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  process AIProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+
+  @@map("ai_prompt_test_results")
+}
+
+model AIPromptMetrics {
+  id               String   @id @default(cuid())
+  promptId         String
+  metricType       String   // "accuracy", "confidence", "processing_time", "user_satisfaction"
+  value            Float    // Metric value
+  sampleSize       Int      // Number of samples this metric is based on
+  calculatedAt     DateTime @default(now())
+  timeframeStart   DateTime // Start of measurement period
+  timeframeEnd     DateTime // End of measurement period
+
+  // Relations
+  prompt AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@map("ai_prompt_metrics")
+}
+
+model StaticTestFile {
+  id          String   @id @default(cuid())
+  fileName    String
+  originalName String
+  fileSize    Int
+  mimeType    String
+  dimensions  Json?    // { width: number, height: number }
+  complexity  String?  // "low", "medium", "high"
+  tags        String[] // ["landing-page", "ecommerce", "blog"]
+  description String?
+  uploadedBy  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("static_test_files")
+}
+
+// Indexes for performance
+// @@index([processId, isActive]) on AIPrompt
+// @@index([promptId, createdAt]) on AIPromptTestResult
+// @@index([promptId, metricType]) on AIPromptMetrics

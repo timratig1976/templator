@@ -24,8 +24,7 @@ export default function RootLayout({
               <a href="/" className="text-sm font-semibold text-gray-900">Templator</a>
               <nav className="flex items-center gap-4 text-sm">
                 <a href="/" className="text-gray-700 hover:text-black">Home</a>
-                <a href="/uploads" className="text-gray-700 hover:text-black">Uploads</a>
-                <a href="/prompts" className="text-gray-700 hover:text-black">Prompts</a>
+                <a href="/projects" className="text-gray-700 hover:text-black">Projects</a>
                 <a href="/maintenance" className="text-gray-700 hover:text-black">Maintenance</a>
               </nav>
             </div>

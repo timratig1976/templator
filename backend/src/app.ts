@@ -24,6 +24,8 @@ import logsRoutes from './routes/logs';
 // import htmlValidationRoutes from './routes/htmlValidation'; // Temporarily disabled due to TypeScript errors
 import layoutSplittingRoutes from './routes/layoutSplittingRoutes';
 import designUploadsRoutes from './routes/designUploads';
+import aiPromptManagementRoutes from './routes/aiPromptManagement';
+import staticFilesRoutes from './routes/staticFiles';
 
 export function createApp(): express.Application {
   const app = express();
@@ -561,6 +563,8 @@ export function createApp(): express.Application {
   // app.use('/api/html-validation', htmlValidationRoutes); // Temporarily disabled due to TypeScript errors
   app.use('/api/layout-splitting', layoutSplittingRoutes);
   app.use('/api/design-uploads', designUploadsRoutes);
+  app.use('/api/admin/ai-prompts', aiPromptManagementRoutes);
+  app.use('/api/admin/static-files', staticFilesRoutes);
 
   const { errorHandler } = require('./middleware/errorHandler');
   app.use(errorHandler);

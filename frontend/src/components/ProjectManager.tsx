@@ -191,6 +191,36 @@ export default function ProjectManager({ onLoadProject, onCreateNew, className =
                   </div>
                   
                   <div className="flex items-center space-x-2 ml-4">
+                    {(() => {
+                      const splitId = (project as any)?.designSplitId
+                        || (project as any)?.splitId
+                        || (project as any)?.metadata?.designSplitId
+                        || (project as any)?.metadata?.splitId;
+                      if (splitId) {
+                        const qp = new URLSearchParams({ splitId: String(splitId) });
+                        return (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); window.location.href = `/split-assets?${qp.toString()}`; }}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View parts (split assets)"
+                            aria-label="View parts"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        );
+                      }
+                      return (
+                        <button
+                          disabled
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2 text-gray-300 bg-gray-50 rounded-lg cursor-not-allowed"
+                          title="No split available for this project"
+                          aria-label="No parts available"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      );
+                    })()}
                     <button
                       onClick={(e) => handleExportProject(project, e)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

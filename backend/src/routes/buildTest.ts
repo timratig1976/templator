@@ -94,21 +94,37 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 
 /**
  * POST /api/build-test/run
- * Manually trigger a build test
+ * Manually trigger a build test (non-blocking)
  */
 router.post('/run', async (req: Request, res: Response, next: NextFunction) => {
   try {
     logger.info('Manual build test triggered');
-    
-    const result = await buildTestService.runBuildTest();
-    
-    res.json({
-      status: 'success',
-      message: 'Build test completed',
-      data: result
+
+    // Fire-and-forget to avoid blocking the HTTP response and risking socket collapse
+    // Progress and result are accessible via /status and /history endpoints
+    buildTestService
+      .runBuildTest()
+      .then((result) => {
+        logger.info('Manual build test finished', {
+          success: result.success,
+          duration: result.duration,
+          errors: result.errors?.length || 0,
+        });
+      })
+      .catch((err) => {
+        logger.error('Manual build test failed', err);
+      });
+
+    res.status(202).json({
+      status: 'accepted',
+      message: 'Build test started',
+      data: {
+        isRunning: true,
+        note: 'Check /api/build-test/status for progress and latest results.'
+      }
     });
   } catch (error) {
-    logger.error('Error running manual build test:', error);
+    logger.error('Error enqueuing manual build test:', error);
     next(error);
   }
 });

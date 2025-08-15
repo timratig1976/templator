@@ -57,7 +57,8 @@ export default function DesignUploadsManager() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({}); // id -> absolute signed URL
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [cropAvailability, setCropAvailability] = useState<Record<string, boolean>>({}); // id -> absolute signed URL
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryTitle, setGalleryTitle] = useState<string>('');
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -91,6 +92,31 @@ export default function DesignUploadsManager() {
     }
   };
 
+  async function checkHasCrops(upload: any): Promise<boolean> {
+    try {
+      const splitId = (upload as any).designSplitId
+        || (upload as any).lastSplitId
+        || (upload.meta && (upload.meta.designSplitId || upload.meta.lastSplitId));
+      if (!splitId) return false;
+      
+      const assetsRes = await listSplitAssets(String(splitId), 'image-crop');
+      const assets = assetsRes?.data?.assets || [];
+      return assets.length > 0;
+    } catch (e) {
+      console.warn('Failed to check crops for upload', upload.id, e);
+      return false;
+    }
+  }
+
+  async function handleGalleryClick(upload: any) {
+    const hasCrops = await checkHasCrops(upload);
+    if (!hasCrops) {
+      setToast('No image crops found. Please generate split parts first via the Split Assets Manager.');
+      return;
+    }
+    openGalleryForUpload(upload);
+  }
+
   async function openGalleryForUpload(upload: any) {
     // Heuristic: use the most recent split for this upload by hitting the recent endpoint and filtering by uploadId is not available here,
     // so we rely on server enrichment counts and a backend summary per split already implemented on selection flow.
@@ -117,37 +143,9 @@ export default function DesignUploadsManager() {
         } catch (e) {
           console.log('[Gallery] could not load split summary', e);
         }
-        // If no crops exist yet for this split, try to create them from split summary
-        if (!assets.length && sections.length) {
-          try {
-            const projectId = (upload as any)?.projectId || (upload as any)?.meta?.projectId;
-            const inputs = sections.map((s: any, i: number) => {
-              const bx = Number(s.bounds?.x ?? 0);
-              const by = Number(s.bounds?.y ?? 0);
-              const bw = Number(s.bounds?.width ?? 0);
-              const bh = Number(s.bounds?.height ?? 0);
-              // Detect if bounds are in 0..1 (fractions) or already 0..100 (percent)
-              const maxVal = Math.max(bx, by, bw, bh);
-              const factor = maxVal <= 1 ? 100 : 1;
-              return {
-                id: s.id,
-                index: i,
-                unit: 'percent' as const,
-                bounds: {
-                  x: bx * factor,
-                  y: by * factor,
-                  width: bw * factor,
-                  height: bh * factor,
-                },
-              };
-            });
-            const created = await createCrops(String(splitId), inputs, { force: true, projectId });
-            assets = (created?.data?.assets || []) as any[];
-            console.log('[Gallery] created crops', assets);
-          } catch (e) {
-            console.log('[Gallery] failed to create crops from summary', e);
-          }
-        }
+        // Note: Crops are not automatically regenerated here to respect user deletions
+        // Users can manually regenerate crops via the SplitAssetsManager if needed
+        console.log('[Gallery] found', assets.length, 'existing crops for', sections.length, 'sections');
         // Align assets to section set if available
         if (sections.length) {
           const sectionIds = new Set(sections.map((s: any) => s.id).filter(Boolean));
@@ -165,34 +163,8 @@ export default function DesignUploadsManager() {
           assets = filtered.slice(0, sections.length);
           console.log('[Gallery] filtered assets by sections (with order fallback)', { before: (assetsRes?.data?.assets || []).length, after: assets.length, sections: sections.length });
 
-          // If the crops look like lines (very thin), auto-regenerate once using corrected bounds scaling
-          const thinThreshold = 6; // px
-          const thinCount = assets.filter((a: any) => (a?.meta?.height ?? 0) < thinThreshold || (a?.meta?.width ?? 0) < thinThreshold).length;
-          if (thinCount >= Math.ceil(sections.length / 2)) {
-            console.log('[Gallery] detected thin crops; attempting one-time regeneration with corrected percent bounds', { thinCount, total: sections.length });
-            try {
-              const projectId = (upload as any)?.projectId || (upload as any)?.meta?.projectId;
-              const inputs = sections.map((s: any, i: number) => {
-                const bx = Number(s.bounds?.x ?? 0);
-                const by = Number(s.bounds?.y ?? 0);
-                const bw = Number(s.bounds?.width ?? 0);
-                const bh = Number(s.bounds?.height ?? 0);
-                const maxVal = Math.max(bx, by, bw, bh);
-                const factor = maxVal <= 1 ? 100 : 1;
-                return {
-                  id: s.id,
-                  index: i,
-                  unit: 'percent' as const,
-                  bounds: { x: bx * factor, y: by * factor, width: bw * factor, height: bh * factor },
-                };
-              });
-              const regen = await createCrops(String(splitId), inputs, { force: true, projectId });
-              assets = (regen?.data?.assets || []).slice(0, sections.length);
-              console.log('[Gallery] regenerated crops', assets);
-            } catch (e) {
-              console.log('[Gallery] regeneration failed', e);
-            }
-          }
+          // Note: Automatic thin crop regeneration removed to respect user deletions
+          console.log('[Gallery] using existing assets without auto-regeneration');
         }
         const urlsSet = new Set<string>();
         let idx = 0;
@@ -324,15 +296,81 @@ export default function DesignUploadsManager() {
     setLoading(true);
     try {
       const res = await listDesignUploads({ userId: userIdFilter || undefined, limit, offset });
-      setItems(res.data);
+      
+      // Enhance each item with dynamic split and part counts
+      const enhancedItems = await Promise.all(
+        res.data.map(async (item) => {
+          try {
+            // Get recent splits for this design upload
+            const recentSplits = await listRecentSplits(50); // Get more splits to find matches
+            const matchingSplits = recentSplits?.data?.items?.filter(
+              (split: any) => split.designUploadId === item.id
+            ) || [];
+            
+            let totalSections = 0;
+            let totalParts = 0;
+            
+            // For each matching split, get its assets and count sections/parts
+            for (const split of matchingSplits) {
+              try {
+                const assets = await listSplitAssets(split.designSplitId);
+                const assetList = assets?.data?.assets || [];
+                
+                // Count JSON assets (sections) and image-crop assets (parts)
+                const jsonAssets = assetList.filter((a: any) => a.kind === 'json');
+                const imageCropAssets = assetList.filter((a: any) => a.kind === 'image-crop');
+                
+                totalSections += jsonAssets.length;
+                totalParts += imageCropAssets.length;
+              } catch (e) {
+                console.warn(`Failed to load assets for split ${split.designSplitId}:`, e);
+              }
+            }
+            
+            return {
+              ...item,
+              splitCount: matchingSplits.length,
+              partCount: totalSections, // Use sections count as "parts" since that's more meaningful
+              sectionCount: totalSections,
+              imageCropCount: totalParts
+            };
+          } catch (e) {
+            console.warn(`Failed to enhance item ${item.id}:`, e);
+            return {
+              ...item,
+              splitCount: 0,
+              partCount: 0,
+              sectionCount: 0,
+              imageCropCount: 0
+            };
+          }
+        })
+      );
+      
+      setItems(enhancedItems);
       setCount(res.pagination?.count ?? res.data.length);
       setTotal(res.pagination?.total ?? res.data.length + offset);
       setHasMore(!!res.pagination?.hasMore);
       setError(null);
       // Reset selection on new data load
       setSelected({});
+      
+      // Check crop availability for each item
+      const cropAvailabilityMap: Record<string, boolean> = {};
+      await Promise.all(
+        enhancedItems.map(async (item) => {
+          try {
+            const hasCrops = await checkHasCrops(item);
+            cropAvailabilityMap[item.id] = hasCrops;
+          } catch (e) {
+            cropAvailabilityMap[item.id] = false;
+          }
+        })
+      );
+      setCropAvailability(cropAvailabilityMap);
+      
       // Resolve signed URLs for image items
-      const imageItems = res.data.filter((it) => isImageUpload(it) && !!it.storageUrl);
+      const imageItems = enhancedItems.filter((it) => isImageUpload(it) && !!it.storageUrl);
       const entries = await Promise.all(
         imageItems.map(async (it) => {
           try {
@@ -571,18 +609,38 @@ export default function DesignUploadsManager() {
               }}
             >Split</button>
             <button
-              className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
+              className={`px-2 py-0.5 rounded border ${
+                cropAvailability[it.id] 
+                  ? 'bg-white hover:bg-gray-50' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
               aria-label={`Open Plan (HTML) for ${it.filename}`}
+              disabled={!cropAvailability[it.id]}
+              title={cropAvailability[it.id] ? 'Generate HTML' : 'No split parts available. Generate split parts first.'}
               onClick={() => {
+                if (!cropAvailability[it.id]) {
+                  setToast('No split parts found. Please generate split parts first.');
+                  return;
+                }
                 const newId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `p_${Date.now()}`;
                 const qp = new URLSearchParams({ designUploadId: it.id });
                 router.push(`/projects/${newId}/plan?${qp.toString()}`);
               }}
             >HTML</button>
             <button
-              className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
+              className={`px-2 py-0.5 rounded border ${
+                cropAvailability[it.id] 
+                  ? 'bg-white hover:bg-gray-50' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
               aria-label={`Open Generate (Modules) for ${it.filename}`}
+              disabled={!cropAvailability[it.id]}
+              title={cropAvailability[it.id] ? 'Generate Modules' : 'No split parts available. Generate split parts first.'}
               onClick={() => {
+                if (!cropAvailability[it.id]) {
+                  setToast('No split parts found. Please generate split parts first.');
+                  return;
+                }
                 const newId = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? crypto.randomUUID() : `p_${Date.now()}`;
                 const qp = new URLSearchParams({ designUploadId: it.id });
                 router.push(`/projects/${newId}/generate?${qp.toString()}`);
@@ -593,22 +651,35 @@ export default function DesignUploadsManager() {
                 || (it as any)?.lastSplitId
                 || (it as any)?.meta?.designSplitId
                 || (it as any)?.meta?.lastSplitId;
-              if (splitId) {
+              const hasCrops = cropAvailability[it.id];
+              
+              if (splitId && hasCrops) {
                 const qp = new URLSearchParams({ splitId: String(splitId) });
                 return (
                   <button
                     className="px-2 py-0.5 rounded border bg-white hover:bg-gray-50"
                     aria-label={`Edit Parts for ${it.filename}`}
                     onClick={() => router.push(`/split-assets?${qp.toString()}`)}
+                    title="Edit split parts"
                   >Edit Parts</button>
                 );
               }
+              
+              const disabledReason = !splitId 
+                ? "No split available yet for this upload"
+                : "No split parts available. Generate split parts first.";
+              
               return (
                 <button
-                  className="px-2 py-0.5 rounded border bg-white text-gray-400 cursor-not-allowed"
+                  className="px-2 py-0.5 rounded border bg-gray-100 text-gray-400 cursor-not-allowed"
                   aria-label={`Edit Parts for ${it.filename}`}
-                  title="No split available yet for this upload"
+                  title={disabledReason}
                   disabled
+                  onClick={() => {
+                    if (!hasCrops) {
+                      setToast('No split parts found. Please generate split parts first.');
+                    }
+                  }}
                 >Edit Parts</button>
               );
             })()}
@@ -625,14 +696,37 @@ export default function DesignUploadsManager() {
       </td>
       <td className="px-2 py-1.5 text-[13px]">
         <div className="flex items-center gap-2">
-          <button
-            className="p-1 rounded hover:bg-gray-100"
-            onClick={() => openGalleryForUpload(it)}
-            aria-label={`Open gallery for ${it.filename}`}
-            title="Gallery"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="2.5"/><path d="M21 15l-5-5L5 21"/></svg>
-          </button>
+          {(() => {
+            const splitId = (it as any)?.designSplitId
+              || (it as any)?.lastSplitId
+              || (it as any)?.meta?.designSplitId
+              || (it as any)?.meta?.lastSplitId;
+            const hasCrops = cropAvailability[it.id];
+            const partCount = (it as any)?.partCount ?? 0;
+            const canOpenGallery = Boolean(splitId) && (Boolean(hasCrops) || partCount > 0);
+            if (canOpenGallery) {
+              return (
+                <button
+                  className="p-1 rounded hover:bg-gray-100"
+                  onClick={() => handleGalleryClick(it)}
+                  aria-label={`Show Splitted Parts in a Gallery for ${it.filename}`}
+                  title="Show Splitted Parts in a Gallery"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="2.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                </button>
+              );
+            }
+            return (
+              <button
+                disabled
+                className="p-1 rounded text-gray-300 cursor-not-allowed"
+                aria-label="No split parts available"
+                title="No split parts available yet for this upload"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="2.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              </button>
+            );
+          })()}
           {isImageUpload(it) && signedUrls[it.id] ? (
             <>
               <button
@@ -659,14 +753,7 @@ export default function DesignUploadsManager() {
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3h7v7"/><path d="M10 14L21 3"/><path d="M5 12v7a2 2 0 0 0 2 2h7"/></svg>
               </a>
-              <button
-                className="p-1 rounded hover:bg-gray-100"
-                onClick={() => handleCopy(signedUrls[it.id])}
-                aria-label={`Copy URL for ${it.filename}`}
-                title="Copy URL"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
+
             </>
           ) : (
             <span className="text-gray-400" aria-live="polite">No file</span>
@@ -776,7 +863,6 @@ export default function DesignUploadsManager() {
                     checked={allOnPageSelected}
                     onChange={(e) => toggleSelectAllOnPage(e.target.checked)}
                   />
-                  <span className="hidden sm:inline">Select</span>
                 </label>
               </th>
               <th className="px-2 py-1.5 text-left text-[11px] font-semibold text-gray-600 uppercase">

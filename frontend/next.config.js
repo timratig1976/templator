@@ -5,6 +5,15 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/uploads',
+        destination: '/projects',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

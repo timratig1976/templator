@@ -173,13 +173,53 @@ export default function SplitPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedImageFile]);
 
-  // When user confirms sections, navigate to Plan step with same IDs
-  const handleConfirmed = () => {
-    const qp = new URLSearchParams();
-    if (designUploadId) qp.set("designUploadId", designUploadId);
-    const nextSplitId = hybridAnalysisResult?.splitId || splitId;
-    if (nextSplitId) qp.set("splitId", nextSplitId);
-    router.push(`/projects/${projectId}/plan?${qp.toString()}`);
+  // When user confirms sections, save split lines to project and navigate to Plan step
+  const handleConfirmed = async (sections: any[], splitLines?: number[]) => {
+    try {
+      // Save split lines to the templator project
+      if (splitLines && splitLines.length > 0) {
+        console.log('💾 Saving split lines to project:', { projectId, splitLines, sectionsCount: sections.length });
+        
+        // Store split lines in the project metadata
+        const projectData = {
+          splitLines,
+          sections: sections.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            bounds: s.bounds
+          })),
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // Save to localStorage as fallback (until backend project API is implemented)
+        const projectKey = `templator_project_${projectId}`;
+        const existingData = localStorage.getItem(projectKey);
+        const currentProject = existingData ? JSON.parse(existingData) : {};
+        
+        localStorage.setItem(projectKey, JSON.stringify({
+          ...currentProject,
+          splitData: projectData
+        }));
+        
+        console.log('✅ Split lines saved to project:', projectData);
+      }
+      
+      // Navigate to Plan step with same IDs
+      const qp = new URLSearchParams();
+      if (designUploadId) qp.set("designUploadId", designUploadId);
+      const nextSplitId = hybridAnalysisResult?.splitId || splitId;
+      if (nextSplitId) qp.set("splitId", nextSplitId);
+      router.push(`/projects/${projectId}/plan?${qp.toString()}`);
+    } catch (error) {
+      console.error('❌ Failed to save split lines:', error);
+      // Continue navigation even if save fails
+      const qp = new URLSearchParams();
+      if (designUploadId) qp.set("designUploadId", designUploadId);
+      const nextSplitId = hybridAnalysisResult?.splitId || splitId;
+      if (nextSplitId) qp.set("splitId", nextSplitId);
+      router.push(`/projects/${projectId}/plan?${qp.toString()}`);
+    }
   };
 
   const handleBack = () => {

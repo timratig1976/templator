@@ -9,6 +9,7 @@ import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { EventEmitter } from 'events';
+import { WebSocketService } from '../core/websocket/WebSocketService';
 
 const logger = createLogger();
 
@@ -117,6 +118,22 @@ export class AutoBuildTestService extends EventEmitter {
     });
   }
 
+  private ws(): WebSocketService | null {
+    try {
+      return WebSocketService.getInstance();
+    } catch {
+      return null;
+    }
+  }
+
+  private emitProgress(phase: string, message: string, progress: number, details?: any) {
+    try {
+      this.ws()?.sendProgress('build-test', { phase, message, progress, details });
+    } catch {
+      // ignore socket errors
+    }
+  }
+
   /**
    * Start the auto build test service
    */
@@ -172,24 +189,92 @@ export class AutoBuildTestService extends EventEmitter {
    * Run a comprehensive build test
    */
   public async runBuildTest(): Promise<BuildTestResult> {
+    // Concurrency guard
+    if (this.isRunning) {
+      logger.warn('Build test already running, ignoring new request');
+      const now = new Date();
+      return {
+        success: false,
+        timestamp: now,
+        duration: 0,
+        errors: [{
+          file: 'system',
+          line: 0,
+          column: 0,
+          message: 'Build test already running',
+          code: 'ALREADY_RUNNING',
+          severity: 'warning',
+          category: 'unknown'
+        }],
+        warnings: [],
+        filesCounted: 0,
+        summary: {
+          totalFiles: 0,
+          errorFiles: 0,
+          warningFiles: 0,
+          newFiles: [],
+          modifiedFiles: [],
+          serviceHealth: {}
+        }
+      };
+    }
+
+    this.isRunning = true;
     const startTime = Date.now();
     logger.info('🔍 Starting comprehensive build test...');
+    this.emitProgress('start', 'Starting build test', 1);
+    // Emit config so UI can render suites/filters early
+    this.emitProgress('config', 'Build test configuration', 2, {
+      watchDirectories: this.config.watchDirectories,
+      excludePatterns: this.config.excludePatterns,
+      intervalMinutes: this.config.interval,
+      generateReport: this.config.generateReport
+    });
 
     try {
       // Scan for files
+      this.emitProgress('scan', 'Scanning TypeScript files', 5);
       const files = await this.scanTypeScriptFiles();
+      this.emitProgress('scan:done', 'File scan complete', 12, {
+        totalFiles: files.length,
+        sample: files.slice(0, 25),
+      });
       
       // Check for new/modified files
+      this.emitProgress('changes', 'Detecting file changes', 15);
       const fileChanges = await this.detectFileChanges(files);
+      this.emitProgress('changes:done', 'File change detection complete', 25, {
+        newFiles: fileChanges.newFiles,
+        modifiedFiles: fileChanges.modifiedFiles,
+        newCount: fileChanges.newFiles.length,
+        modifiedCount: fileChanges.modifiedFiles.length,
+      });
       
       // Run TypeScript compilation
+      this.emitProgress('compile', 'Running TypeScript compilation', 40, {
+        command: 'npx -y tsc --noEmit --pretty false'
+      });
       const compileResult = await this.runTypeScriptCompilation();
+      this.emitProgress('compile:done', 'TypeScript compilation finished', 60, {
+        success: compileResult.success,
+        errorCount: compileResult.errors?.length || 0,
+        warningCount: compileResult.warnings?.length || 0,
+      });
       
       // Analyze errors
+      this.emitProgress('analyze', 'Analyzing results', 70, { errorCount: compileResult.errors?.length || 0 });
       const analyzedErrors = this.analyzeErrors(compileResult.errors);
+      this.emitProgress('analyze:done', 'Analysis complete', 80, {
+        topErrors: analyzedErrors.slice(0, 10),
+      });
       
       // Generate service health report
+      this.emitProgress('health', 'Generating service health report', 85);
       const serviceHealth = await this.generateServiceHealthReport(analyzedErrors);
+      this.emitProgress('health:done', 'Service health computed', 90, {
+        phases: Object.keys(serviceHealth),
+        summary: serviceHealth,
+      });
       
       const duration = Date.now() - startTime;
       const result: BuildTestResult = {
@@ -235,7 +320,11 @@ export class AutoBuildTestService extends EventEmitter {
 
       // Generate report if configured
       if (this.config.generateReport) {
-        await this.generateBuildReport(result);
+        this.emitProgress('report', 'Writing build report', 92);
+        const reportFile = await this.generateBuildReport(result);
+        if (reportFile) {
+          this.emitProgress('report:done', 'Build report written', 95, { reportFile });
+        }
       }
 
       // Emit events
@@ -244,11 +333,20 @@ export class AutoBuildTestService extends EventEmitter {
         this.emit('buildError', result);
       }
 
+      this.emitProgress('complete', result.success ? 'Build test completed' : 'Build test completed with errors', 100, {
+        success: result.success,
+        errors: result.errors?.length || 0,
+        warnings: result.warnings?.length || 0,
+        files: result.filesCounted,
+        summary: result.summary,
+      });
+
       return result;
 
     } catch (error) {
       logger.error('Failed to run build test:', error);
       const duration = Date.now() - startTime;
+      this.emitProgress('error', 'Build test failed', 100, { error: String(error) });
       
       const errorResult: BuildTestResult = {
         success: false,
@@ -277,6 +375,9 @@ export class AutoBuildTestService extends EventEmitter {
 
       this.emit('error', error);
       return errorResult;
+    } finally {
+      this.isRunning = false;
+      logger.info('🧹 Build test run finished, isRunning reset');
     }
   }
 
@@ -385,49 +486,47 @@ export class AutoBuildTestService extends EventEmitter {
     warnings: BuildWarning[];
   }> {
     return new Promise((resolve) => {
-      const tscProcess = spawn('npx', ['tsc', '--noEmit', '--pretty', 'false'], {
+      const args = ['-y', 'tsc', '--noEmit', '--pretty', 'false'];
+      const timeoutMs = 120000; // 2 minutes hard timeout
+
+      logger.info('🧪 Running TypeScript compile check', { cmd: 'npx', args, timeoutMs });
+
+      const tscProcess: ChildProcess = spawn('npx', args, {
         cwd: process.cwd(),
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: process.platform === 'win32'
       });
 
       let stdout = '';
       let stderr = '';
 
-      tscProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+      const timer = setTimeout(() => {
+        try {
+          logger.error('TypeScript compilation timed out, terminating process', { timeoutMs });
+          tscProcess.kill('SIGKILL');
+        } catch {}
+      }, timeoutMs);
 
-      tscProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+      tscProcess.stdout?.on('data', (d) => { stdout += d.toString(); });
+      tscProcess.stderr?.on('data', (d) => { stderr += d.toString(); });
 
-      tscProcess.on('close', (code) => {
-        const success = code === 0;
-        const errors = this.parseTypeScriptErrors(stderr + stdout);
-        const warnings: BuildWarning[] = [];
+      const finalize = (successCode: number | null, errorOverride?: string) => {
+        clearTimeout(timer);
+        const output = (stderr || '') + (stdout || '');
+        let errors: any[] = [];
+        if (errorOverride) {
+          errors = [{
+            file: 'system', line: 0, column: 0,
+            message: errorOverride, code: 'TS_COMPILE_ERROR', severity: 'error' as const, category: 'unknown' as const
+          }];
+        } else {
+          errors = this.parseTypeScriptErrors(output);
+        }
+        resolve({ success: successCode === 0 && errors.length === 0, errors, warnings: [] });
+      };
 
-        resolve({
-          success,
-          errors,
-          warnings
-        });
-      });
-
-      tscProcess.on('error', (error) => {
-        resolve({
-          success: false,
-          errors: [{
-            file: 'system',
-            line: 0,
-            column: 0,
-            message: `TypeScript compilation failed: ${error.message}`,
-            code: 'TS_COMPILE_ERROR',
-            severity: 'error' as const,
-            category: 'unknown' as const
-          }],
-          warnings: []
-        });
-      });
+      tscProcess.on('close', (code) => finalize(code ?? 0));
+      tscProcess.on('error', (err) => finalize(1, `TypeScript compilation failed: ${err.message}`));
     });
   }
 
@@ -547,8 +646,8 @@ export class AutoBuildTestService extends EventEmitter {
   /**
    * Generate detailed build report
    */
-  private async generateBuildReport(result: BuildTestResult): Promise<void> {
-    const reportPath = path.join(process.cwd(), 'build-reports');
+  private async generateBuildReport(result: BuildTestResult): Promise<string | null> {
+    const reportPath = path.join(process.cwd(), 'backend', '.runtime', 'build-reports');
     
     try {
       await fs.mkdir(reportPath, { recursive: true });
@@ -559,8 +658,10 @@ export class AutoBuildTestService extends EventEmitter {
       await fs.writeFile(reportFile, JSON.stringify(result, null, 2));
       
       logger.info('📊 Build report generated', { reportFile });
+      return reportFile;
     } catch (error) {
       logger.error('Failed to generate build report:', error);
+      return null;
     }
   }
 

@@ -1,19 +1,16 @@
-"use client";
-
 import React from "react";
-import { useSearchParams } from "next/navigation";
-import SplitAssetsManager from "@/components/SplitAssetsManager";
+import SplitAssetsPageClient from "./SplitAssetsPageClient";
 
-export default function SplitAssetsPage() {
-  const search = useSearchParams();
-  const splitId = search.get("splitId") || undefined;
-  return (
-    <div className="p-4 space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">Split Assets Manager</h1>
-        <p className="text-sm text-gray-600">List, preview, and delete split parts.</p>
-      </div>
-      <SplitAssetsManager initialSplitId={splitId} />
-    </div>
-  );
+// Disable static prerendering for this route; relies on runtime/backend and client-only APIs
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export default function SplitAssetsPage({
+  searchParams
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const raw = searchParams?.splitId;
+  const splitId = Array.isArray(raw) ? raw[0] : raw;
+  return <SplitAssetsPageClient splitId={splitId} />;
 }

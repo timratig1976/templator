@@ -15,6 +15,7 @@ import { validateRequest } from './middleware/unifiedValidation';
 import apiRoutes from './routes/api';
 import { createApp } from './app';
 import { setSocketIO } from './utils/frontendLogger';
+import { WebSocketService } from './services/core/websocket/WebSocketService';
 
 const app = createApp();
 const PORT = process.env.PORT || 3009;
@@ -33,10 +34,17 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const devOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+const envOrigins = (process.env.FRONTEND_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? (envOrigins.length ? envOrigins : ['https://your-domain.com'])
+  : (envOrigins.length ? envOrigins : devOrigins);
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-domain.com'] 
-    : ['http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true,
 }));
 
@@ -105,9 +113,7 @@ app.use('*', (req, res) => {
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://your-domain.com'] 
-      : ['http://localhost:3000'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -135,6 +141,10 @@ io.on('connection', (socket: any) => {
 
 // Set socket.io instance in frontendLogger
 setSocketIO(io);
+// Attach io to central WebSocketService used by other services (e.g., build test)
+try {
+  WebSocketService.getInstance().setIO(io);
+} catch {}
 
 // Start HTTP server
 server.listen(PORT, () => {

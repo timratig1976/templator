@@ -22,6 +22,7 @@ import hybridLayoutRoutes from './hybridLayout';
 import aiEnhancementRoutes from './aiEnhancement';
 import generationRoutes from './generation';
 import designUploadsRoutes from './designUploads';
+import aiQualityRoutes from './aiQuality';
 
 const router = Router();
 const logger = createLogger();
@@ -82,6 +83,9 @@ router.use('/design-uploads', designUploadsRoutes);
 
 // Generation routes (section versions, prompts, selection)
 router.use('/generation', generationRoutes);
+
+// AI Quality System routes
+router.use('/ai-quality', aiQualityRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {

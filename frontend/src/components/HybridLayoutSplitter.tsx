@@ -26,7 +26,7 @@ interface Section {
 interface HybridLayoutSplitterProps {
   imageFile: File;
   aiDetectedSections: Section[];
-  onSectionsConfirmed: (sections: Section[]) => void;
+  onSectionsConfirmed: (sections: Section[], splitLines?: number[]) => void;
   onBack: () => void;
   enhancedAnalysis?: {
     recommendations: {
@@ -206,7 +206,7 @@ export default function HybridLayoutSplitter({
     if (!diff) {
       // Baseline not ready (e.g., initial refs or image height not resolved yet)
       // Treat as unchanged and proceed to keep UX smooth
-      onSectionsConfirmed(sections);
+      onSectionsConfirmed(sections, cutLines);
       return;
     }
     const noCount = !diff.countChanged;
@@ -215,7 +215,7 @@ export default function HybridLayoutSplitter({
     const noMoves = diff.movedCutLines === 0;
     const unchanged = noCount && noType && noName && noMoves;
     if (unchanged) {
-      onSectionsConfirmed(sections);
+      onSectionsConfirmed(sections, cutLines);
     } else {
       setPendingDiff(diff);
       setShowConfirmModal(true);
@@ -384,12 +384,14 @@ export default function HybridLayoutSplitter({
           // Load image to get dimensions
           const img = new Image();
           img.onload = () => {
-            setImageSize({ width: img.width, height: img.height });
+            // Set original image dimensions (for backend crop generation)
+            setImageDimensions({ width: img.width, height: img.height });
+            console.log('🖼️ Original image dimensions:', { width: img.width, height: img.height });
           };
           img.onerror = () => {
             console.error('Failed to load image from data URL');
             setImageUrl('');
-            setImageSize({ width: 0, height: 0 });
+            setImageDimensions({ width: 0, height: 0 });
           };
           img.src = result;
         }
@@ -821,7 +823,7 @@ export default function HybridLayoutSplitter({
                   return (
                     <div key={`band-${i}`} className={`absolute left-0 right-0 pointer-events-none ${alt ? 'bg-yellow-50/40' : 'bg-blue-50/40'} z-10`} style={{ top, height: h }}>
                       <div className="absolute left-2 top-2 text-[11px] px-2 py-0.5 rounded bg-black/50 text-white">
-                        Section {i + 1}: {Math.round(top)}px → {Math.round(bottom)}px
+                        {sections[i]?.name || `Section ${i + 1}`}: {Math.round(top)}px → {Math.round(bottom)}px
                       </div>
                     </div>
                   );
@@ -890,9 +892,13 @@ export default function HybridLayoutSplitter({
                   <div className="absolute left-2 -top-6 bg-white px-2 py-1 rounded shadow-sm border text-xs font-medium flex items-center gap-2 opacity-95 group-hover:opacity-100 transition-opacity z-30">
                     <span>
                       {(() => {
+                        // Show both above and below section names so the first split line displays the header name.
+                        const above = sections[index];
                         const below = sections[index + 1];
-                        const name = below?.name || `Section ${index + 2}`;
-                        return name;
+                        const aboveName = above?.name || `Section ${index + 1}`;
+                        const belowName = below?.name || `Section ${index + 2}`;
+                        // Prefer showing both; if one side is missing, show the other.
+                        return `${aboveName} ⇵ ${belowName}`;
                       })()}
                     </span>
                     <button
@@ -1168,7 +1174,7 @@ export default function HybridLayoutSplitter({
                   // If already generated, continue without regenerating
                   if (canContinueAfterGen) {
                     setShowConfirmModal(false);
-                    onSectionsConfirmed(sections);
+                    onSectionsConfirmed(sections, cutLines);
                     return;
                   }
                   try {
@@ -1194,20 +1200,52 @@ export default function HybridLayoutSplitter({
 
                       // Load generated assets and sign URLs for preview
                       try {
+                        console.log('🔍 Loading split assets for preview generation...', { splitId });
                         const assetsRes = await listSplitAssets(String(splitId), 'image-crop');
+                        console.log('📊 Assets response:', assetsRes);
+                        
                         const assets = assetsRes?.data?.assets || [];
+                        console.log(`📦 Found ${assets.length} assets:`, assets);
+                        
                         const urls: string[] = [];
                         for (const a of assets) {
                           const key = a?.meta?.key || a?.key;
-                          if (!key) continue;
-                          const signed = await getSignedUrl(key, 5 * 60 * 1000);
-                          if (signed?.data?.url) urls.push(signed.data.url);
+                          console.log('🔑 Processing asset key:', { key, asset: a });
+                          
+                          if (!key) {
+                            console.warn('⚠️ Asset missing key:', a);
+                            continue;
+                          }
+                          
+                          try {
+                            const signed = await getSignedUrl(key, 5 * 60 * 1000);
+                            console.log('✍️ Signed URL response:', { key, signed });
+                            
+                            if (signed?.data?.url) {
+                              urls.push(signed.data.url);
+                              console.log('✅ Added URL to previews:', signed.data.url);
+                            } else {
+                              console.warn('⚠️ No URL in signed response:', signed);
+                            }
+                          } catch (signError) {
+                            console.error('❌ Failed to sign URL for key:', key, signError);
+                          }
                         }
+                        
+                        console.log(`🎯 Final preview URLs (${urls.length}):`, urls);
                         setGeneratedPreviewUrls(urls);
-                        setToast({ visible: true, message: `Generated ${urls.length} parts successfully`, kind: 'success' });
+                        
+                        if (urls.length > 0) {
+                          setToast({ visible: true, message: `Generated ${urls.length} parts successfully`, kind: 'success' });
+                        } else {
+                          setToast({ visible: true, message: 'Generated crops but no preview URLs available', kind: 'error' });
+                        }
                         setTimeout(() => setToast(null), 3000);
                       } catch (e) {
-                        console.error('Failed to load preview assets', e);
+                        console.error('❌ Failed to load preview assets:', e);
+                        aiLogger.error('processing', 'Failed to load preview assets', { error: String(e), splitId });
+                        setToast({ visible: true, message: 'Failed to load section previews', kind: 'error' });
+                        setTimeout(() => setToast(null), 3000);
                       }
                       setCanContinueAfterGen(true);
                     } else {

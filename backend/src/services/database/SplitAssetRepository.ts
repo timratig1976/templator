@@ -28,6 +28,14 @@ export class SplitAssetRepository {
   async listBySplit(splitId: string) {
     return prisma.splitAsset.findMany({ where: { splitId }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] });
   }
+
+  async delete(id: string) {
+    return prisma.splitAsset.delete({ where: { id } });
+  }
+
+  async deleteMany(where: { splitId?: string; kind?: string }) {
+    return prisma.splitAsset.deleteMany({ where });
+  }
 }
 
 export default new SplitAssetRepository();

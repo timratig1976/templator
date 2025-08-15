@@ -274,7 +274,7 @@ model DesignSplit {
 
   // Relations
   designUpload   DesignUpload @relation(fields: [designUploadId], references: [id], onDelete: Cascade)
-  assets         SplitAsset[]
+  cutLines       SplitCutLine[] // Cut lines data (section definitions)
   generatedArtifacts GeneratedArtifact[]
   validationResults  ValidationResult[]
   reviewFeedback    ReviewFeedback[]
@@ -286,25 +286,137 @@ model DesignSplit {
   @@map("design_splits")
 }
 
-model SplitAsset {
-  id        String      @id @default(cuid())
-  splitId   String
-  kind      String      // image | html | css | json | other
-  storageUrl String?
-  meta      Json?       // arbitrary JSON (bounds, rationale, etc.)
-  order     Int?
-  createdAt DateTime    @default(now())
-  
-  // NEW: direct relational link to Project for filtering and joins
-  projectId String?
-  project   Project?    @relation(fields: [projectId], references: [id])
+// AI Process Management Models
+model AIProcess {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "split-detection", "html-generation"
+  displayName String   // e.g., "Split Detection", "HTML Generation"
+  description String
+  category    String   // "analysis", "generation", "enhancement", "validation"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  split     DesignSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  // Relations
+  prompts AIPrompt[]
 
+  @@map("ai_processes")
+}
+
+model AIPrompt {
+  id          String   @id @default(cuid())
+  processId   String
+  version     String   // e.g., "v1.0.0", "v1.1.0"
+  title       String?
+  description String?
+  content     String   // The actual prompt text
+  metadata    Json?    // Additional configuration, parameters, etc.
+  author      String?
+  tags        String[]
+  isActive    Boolean  @default(false) // Only one active prompt per process
+  isDefault   Boolean  @default(false) // Default template prompt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  process     AIProcess              @relation(fields: [processId], references: [id], onDelete: Cascade)
+  testResults AIPromptTestResult[]
+  metrics     AIPromptMetrics[]
+
+  @@unique([processId, version])
+  @@index([processId, isActive])
+  @@map("ai_prompts")
+}
+
+model AIPromptTestResult {
+  id           String   @id @default(cuid())
+  promptId     String
+  testFileId   String?
+  testFileName String?
+  input        Json?    // Test input data
+  output       Json?    // AI response/output
+  metrics      Json?    // Performance metrics (accuracy, response time, etc.)
+  status       String   // "success", "failure", "error"
+  errorMessage String?
+  executionTime Int?    // milliseconds
+  createdAt    DateTime @default(now())
+
+  // Relations
+  prompt AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([promptId])
+  @@index([testFileId])
+  @@map("ai_prompt_test_results")
+}
+
+model AIPromptMetrics {
+  id               String   @id @default(cuid())
+  promptId         String
+  metricType       String   // "accuracy", "response_time", "user_satisfaction", etc.
+  value            Float
+  unit             String?  // "percentage", "milliseconds", "score", etc.
+  context          Json?    // Additional context about the metric
+  calculatedAt     DateTime @default(now())
+
+  // Relations
+  prompt AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([promptId, metricType])
+  @@map("ai_prompt_metrics")
+}
+
+model StaticTestFile {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  complexity  String?  // "simple", "medium", "complex"
+  tags        String[]
+  description String?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@map("static_test_files")
+}
+
+// Cut lines data - section definitions and boundaries
+model SplitCutLine {
+  id          String   @id @default(cuid())
+  splitId     String
+  order       Int
+  sectionType String?  // header, hero, content, footer, etc.
+  sectionName String?  // user-friendly name
+  bounds      Json?    // x, y, width, height coordinates (cut line boundaries)
+  metadata    Json?    // additional section metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  split       DesignSplit    @relation(fields: [splitId], references: [id], onDelete: Cascade)
+  imageParts  SplitImagePart[] // Related cropped image parts
+
+  @@index([splitId, order])
   @@index([splitId])
-  @@index([kind])
-  @@index([projectId])
-  @@map("split_assets")
+  @@map("split_cut_lines")
+}
+
+// Split image parts - the actual cropped images you want to manage
+model SplitImagePart {
+  id         String   @id @default(cuid())
+  cutLineId  String   // Links to SplitCutLine
+  storageUrl String
+  size       Int?     // file size in bytes
+  width      Int?     // image width in pixels
+  height     Int?     // image height in pixels
+  format     String?  // png, jpg, webp, etc.
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  cutLine    SplitCutLine @relation(fields: [cutLineId], references: [id], onDelete: Cascade)
+
+  @@index([cutLineId])
+  @@map("split_image_parts")
 }
 
 // Generated outputs (HTML/CSS/preview) produced from splits or assemblies

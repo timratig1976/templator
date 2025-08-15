@@ -996,7 +996,7 @@ router.post('/detect-sections', async (req: Request, res: Response) => {
   const startTime = Date.now();
   
   try {
-    const { image, fileName } = req.body;
+    const { image, fileName, customPrompt, debug } = req.body;
     
     // Validate required fields
     if (!image) {
@@ -1068,7 +1068,13 @@ router.post('/detect-sections', async (req: Request, res: Response) => {
     });
 
     // Use AI to analyze the design and suggest intelligent section splits (always AI)
-    const suggestions = await SplittingService.generateSplittingSuggestions(image, fileName || 'design', requestId);
+    // Use custom prompt if provided (from AI Maintenance area), otherwise use default
+    const suggestions = await SplittingService.generateSplittingSuggestions(
+      image, 
+      fileName || 'design', 
+      requestId,
+      customPrompt // Pass custom prompt for AI Maintenance testing
+    );
     
     const duration = Date.now() - startTime;
     
@@ -1136,8 +1142,132 @@ router.post('/detect-sections', async (req: Request, res: Response) => {
       success: false, 
       error: 'Failed to detect sections', 
       details: errorMessage,
-      code: 'SECTION_DETECTION_ERROR'
+      code: 'SECTION_DETECTION_ERROR',
+      requestId
     });
+  }
+});
+
+/**
+ * POST /api/ai-enhancement/detect-sections/validation/run
+ * Runs a real validation suite over provided cases. No mocks.
+ * Body: {
+ *   cases: Array<{ id?: string, name?: string, fileName?: string, imageBase64: string, groundTruth?: { sections: Array<{ name?: string, type?: string, bounds: { x:number, y:number, width:number, height:number } }> } }>,
+ *   customPrompt?: string,
+ * }
+ */
+router.post('/detect-sections/validation/run', async (req: Request, res: Response) => {
+  const requestId = req.body.requestId || uuidv4();
+  const startTime = Date.now();
+
+  try {
+    const { cases, customPrompt } = req.body || {};
+    if (!Array.isArray(cases) || cases.length === 0) {
+      return res.status(400).json({ success: false, error: 'cases array is required', code: 'MISSING_CASES' });
+    }
+
+    const perCase: any[] = [];
+
+    const iou = (a: any, b: any): number => {
+      if (!a || !b) return 0;
+      const ax1 = a.x, ay1 = a.y, ax2 = a.x + a.width, ay2 = a.y + a.height;
+      const bx1 = b.x, by1 = b.y, bx2 = b.x + b.width, by2 = b.y + b.height;
+      const ix1 = Math.max(ax1, bx1), iy1 = Math.max(ay1, by1);
+      const ix2 = Math.min(ax2, bx2), iy2 = Math.min(ay2, by2);
+      const iw = Math.max(0, ix2 - ix1), ih = Math.max(0, iy2 - iy1);
+      const inter = iw * ih;
+      const areaA = Math.max(0, a.width) * Math.max(0, a.height);
+      const areaB = Math.max(0, b.width) * Math.max(0, b.height);
+      const union = areaA + areaB - inter;
+      return union > 0 ? inter / union : 0;
+    };
+
+    for (let idx = 0; idx < cases.length; idx++) {
+      const c = cases[idx];
+      const caseId = c?.id || String(idx + 1);
+      const fileName = c?.fileName || c?.name || `case-${caseId}.png`;
+      const image = c?.imageBase64;
+      if (!image) {
+        perCase.push({ id: caseId, name: c?.name || fileName, status: 'skipped', reason: 'missing_image' });
+        continue;
+      }
+
+      const localRequestId = `${requestId}:${caseId}`;
+      try {
+        if (!isValidBase64Image(image)) {
+          perCase.push({ id: caseId, name: c?.name || fileName, status: 'failed', error: 'INVALID_BASE64' });
+          continue;
+        }
+
+        // Generate suggestions directly without HTTP hop
+        const suggestions = await SplittingService.generateSplittingSuggestions(
+          image,
+          fileName,
+          localRequestId,
+          customPrompt
+        );
+
+        // Compute metrics if ground truth provided
+        let metrics: any = {};
+        const gtSections = c?.groundTruth?.sections || [];
+        if (Array.isArray(gtSections) && gtSections.length > 0) {
+          const preds = suggestions || [];
+          const matchedPreds = new Set<number>();
+          let tp = 0, fp = 0, fn = 0;
+
+          for (let gi = 0; gi < gtSections.length; gi++) {
+            const g = gtSections[gi];
+            let bestIdx = -1; let bestIoU = 0;
+            for (let pi = 0; pi < preds.length; pi++) {
+              if (matchedPreds.has(pi)) continue;
+              const p = preds[pi];
+              const overlap = iou(g.bounds, p.bounds);
+              if (overlap > bestIoU) { bestIoU = overlap; bestIdx = pi; }
+            }
+            if (bestIdx >= 0 && bestIoU >= 0.5) {
+              tp++; matchedPreds.add(bestIdx);
+            } else {
+              fn++;
+            }
+          }
+          fp = Math.max(0, (suggestions?.length || 0) - matchedPreds.size);
+          const precision = tp + fp > 0 ? tp / (tp + fp) : 0;
+          const recall = tp + fn > 0 ? tp / (tp + fn) : 0;
+          const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+          metrics = { tp, fp, fn, precision, recall, f1 };
+        }
+
+        perCase.push({ id: caseId, name: c?.name || fileName, status: 'success', suggestions, metrics });
+      } catch (err: any) {
+        perCase.push({ id: caseId, name: c?.name || fileName, status: 'failed', error: err?.message || 'UNKNOWN' });
+      }
+    }
+
+    // Aggregate summary
+    const succeeded = perCase.filter(x => x.status === 'success');
+    const failed = perCase.filter(x => x.status === 'failed');
+    const skipped = perCase.filter(x => x.status === 'skipped');
+    const withMetrics = succeeded.filter(x => x.metrics);
+    const avgF1 = withMetrics.length > 0 ? withMetrics.reduce((s, x) => s + (x.metrics.f1 || 0), 0) / withMetrics.length : 0;
+
+    const duration = Date.now() - startTime;
+    return res.status(200).json({
+      success: true,
+      requestId,
+      durationMs: duration,
+      summary: {
+        total: cases.length,
+        succeeded: succeeded.length,
+        failed: failed.length,
+        skipped: skipped.length,
+        averageF1: avgF1
+      },
+      results: perCase
+    });
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    logger.error(`[${requestId}] Validation run failed`, { error: error?.message || error, duration });
+    return res.status(500).json({ success: false, error: 'VALIDATION_RUN_FAILED', details: error?.message });
   }
 });
 
@@ -1456,8 +1586,13 @@ router.post('/splits/:splitId/crops', async (req: Request, res: Response) => {
       buffer = fs.readFileSync(src);
     } else if (src) {
       // treat as storage key
-      const stream = await storage.getStream(src);
-      buffer = await streamToBuffer(stream);
+      try {
+        const stream = await storage.getStream(src);
+        buffer = await streamToBuffer(stream);
+      } catch (error) {
+        logger.error('Failed to read image from storage', { src, error: error instanceof Error ? error.message : 'Unknown error' });
+        return res.status(404).json({ success: false, error: `Image file not found: ${src}` });
+      }
     } else {
       return res.status(400).json({ success: false, error: 'Missing source image for split' });
     }
@@ -1501,6 +1636,52 @@ router.get('/splits/:splitId/assets', async (req: Request, res: Response) => {
   } catch (e) {
     logger.error('Failed to list split assets', { error: getErrorMessage(e), splitId });
     res.status(500).json({ success: false, error: 'Failed to list assets' });
+  }
+});
+
+// DELETE /api/ai-enhancement/splits/:splitId/assets?key=...
+router.delete('/splits/:splitId/assets', async (req: Request, res: Response) => {
+  const { splitId } = req.params;
+  const key = req.query.key ? String(req.query.key) : undefined;
+  
+  if (!key) {
+    return res.status(400).json({ success: false, error: 'key parameter is required' });
+  }
+
+  try {
+    // Find the asset by splitId and key
+    const assets = await splitAssetRepo.listBySplit(splitId);
+    const asset = assets.find((a: any) => {
+      const assetKey = a.meta?.key || a.key || a.storageUrl;
+      return assetKey === key;
+    });
+
+    if (!asset) {
+      return res.status(404).json({ success: false, error: 'Asset not found' });
+    }
+
+    // Delete from storage if key exists
+    if (key) {
+      try {
+        await storage.delete(key);
+        logger.debug('Deleted asset from storage', { key, splitId });
+      } catch (storageError) {
+        logger.warn('Failed to delete from storage (continuing with DB cleanup)', { 
+          key, 
+          splitId, 
+          error: getErrorMessage(storageError) 
+        });
+      }
+    }
+
+    // Delete from database
+    await splitAssetRepo.delete(asset.id);
+    logger.info('Deleted split asset', { assetId: asset.id, key, splitId });
+
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('Failed to delete split asset', { error: getErrorMessage(e), splitId, key });
+    res.status(500).json({ success: false, error: 'Failed to delete asset' });
   }
 });
 

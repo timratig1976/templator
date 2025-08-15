@@ -1,0 +1,32 @@
+{
+  "entryFiles": [
+    "backend/src/index.ts",
+    "backend/src/server.ts",
+    "frontend/src/main.tsx",
+    "frontend/src/index.tsx"
+  ],
+  "ignorePatterns": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/__tests__/**",
+    "**/tests/**",
+    "**/scripts/**",
+    "**/.runtime/**",
+    "**/coverage/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.d.ts"
+  ],
+  "ignoreUnimported": [
+    "**/backend/src/tests/**",
+    "**/frontend/src/tests/**",
+    "**/backend/tests/**",
+    "**/frontend/tests/**"
+  ],
+  "ignoreUnresolved": [
+    "@types/*"
+  ],
+  "ignoreUnused": []
+}

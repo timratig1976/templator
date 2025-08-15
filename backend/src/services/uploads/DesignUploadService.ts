@@ -45,7 +45,17 @@ export class DesignUploadService {
       }
     }
 
-    await designUploadRepo.delete(id);
+    // Handle cascade deletion by deleting related records first
+    try {
+      await designUploadRepo.deleteWithCascade(id);
+    } catch (e) {
+      logger.error('Failed to delete DesignUpload with cascade', {
+        id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      throw e;
+    }
+    
     return true;
   }
 }

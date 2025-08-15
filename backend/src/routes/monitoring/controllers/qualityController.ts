@@ -160,19 +160,17 @@ export const generateQualityReport = async (req: Request, res: Response, next: N
       logger.warn('Failed to create TestRun (non-blocking)', { error: getErrorMessage(e) });
     }
 
-    // Generate quality report (mock implementation since method doesn't exist)
-    const report = {
-      id: `report_${Date.now()}`,
+    // Generate real quality report via dashboard service
+    const report = await qualityDashboard.generateQualityReport(
       pipelineId,
-      score: 85,
-      timestamp: new Date().toISOString(),
-      sections: Array.isArray(sectionData) ? sectionData.length : 1
-    };
+      Array.isArray(sectionData) ? sectionData : [sectionData],
+      Array.isArray(validationResults) ? validationResults : []
+    );
 
     logger.info('Quality report generated successfully', { 
       pipelineId, 
       reportId: report.id,
-      score: report.score 
+      score: report.overallScore 
     });
 
     // Append results to TestRun if available
@@ -182,7 +180,7 @@ export const generateQualityReport = async (req: Request, res: Response, next: N
           name: 'Quality Report Generation',
           status: 'passed',
           durationMs: 0,
-          details: { score: report.score, sections: report.sections },
+          details: { score: report.overallScore, metrics: report.metrics, grade: report.grade },
         });
 
         if (Array.isArray(validationResults)) {
@@ -205,7 +203,7 @@ export const generateQualityReport = async (req: Request, res: Response, next: N
 
         await testRunRepo.completeRun(runId, failed > 0 ? 'partial' : 'passed', {
           reportId: report.id,
-          score: report.score,
+          score: report.overallScore,
           total: (Array.isArray(validationResults) ? validationResults.length : 0) + 1,
           passed: passed + 1,
           failed,
@@ -222,9 +220,9 @@ export const generateQualityReport = async (req: Request, res: Response, next: N
         testRun: runId ? { id: runId } : null,
         summary: {
           reportId: report.id,
-          score: report.score,
-          generatedAt: report.timestamp,
-          sectionsAnalyzed: Array.isArray(sectionData) ? sectionData.length : 1,
+          score: report.overallScore,
+          generatedAt: report.generatedAt,
+          sectionsAnalyzed: report.sectionBreakdown.length,
           testRunId: runId || undefined,
         }
       }

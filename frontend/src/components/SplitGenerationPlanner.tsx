@@ -283,13 +283,27 @@ export default function SplitGenerationPlanner({
 
   // Trigger crop generation once we have split + sections (idempotent: prefer existing)
   useEffect(() => {
+    let isCancelled = false;
+    let currentRequest: Promise<any> | null = null;
+
     async function run() {
-      if (!designSplitId || !sections?.length) return;
+      if (!designSplitId || !sections?.length || isCancelled) return;
+      
+      // Prevent multiple simultaneous requests for the same splitId
+      const requestKey = `${designSplitId}-${sections.length}`;
+      if (currentRequest) {
+        console.log('🚫 Crop generation already in progress, skipping duplicate request');
+        return;
+      }
+
       try {
         setLoadingCrops(true);
         setCropError(null);
-        // First try to load existing image-crop assets
-        const existing = await listSplitAssets(designSplitId, 'image-crop');
+        
+        currentRequest = listSplitAssets(designSplitId, 'image-crop');
+        const existing = await currentRequest;
+        if (isCancelled) return;
+        
         let assets = (existing?.data?.assets || []) as any[];
 
         // Determine if assets match current sections (by sectionId count/coverage)
@@ -302,36 +316,87 @@ export default function SplitGenerationPlanner({
         }
 
         if (!assets.length || !coverageOk) {
-          // sections bounds here are 0..1 normalized -> convert to percent for backend
-          const inputs = sections.map((s, i) => ({
-            id: s.id,
-            index: i,
-            unit: 'percent' as const,
-            bounds: {
-              x: (s.bounds.x ?? 0) * 100,
-              y: (s.bounds.y ?? 0) * 100,
-              width: (s.bounds.width ?? 0) * 100,
-              height: (s.bounds.height ?? 0) * 100,
+          // sections bounds are in pixels from HybridSplit UI -> convert to percent for backend
+          const inputs = sections.map((s, i) => {
+            // Get the original image dimensions to convert pixels to percentages
+            const imgWidth = s.bounds.width > 1 ? s.bounds.width : 1920; // Fallback width
+            const imgHeight = s.bounds.height > 1 ? s.bounds.height : 1080; // Fallback height
+            
+            // For sections from HybridSplit, bounds are typically in pixels
+            // Convert to percentages relative to image dimensions
+            const isPixelBounds = s.bounds.y > 1 || s.bounds.height > 1;
+            
+            let boundsPercent;
+            if (isPixelBounds) {
+              // Convert pixels to percentages
+              boundsPercent = {
+                x: 0, // HybridSplit sections are full width
+                y: Math.max(0, Math.min(100, (s.bounds.y / imgHeight) * 100)),
+                width: 100, // HybridSplit sections are full width
+                height: Math.max(1, Math.min(100, (s.bounds.height / imgHeight) * 100))
+              };
+            } else {
+              // Already normalized (0-1), convert to percent
+              boundsPercent = {
+                x: (s.bounds.x ?? 0) * 100,
+                y: (s.bounds.y ?? 0) * 100,
+                width: (s.bounds.width ?? 100) * 100,
+                height: (s.bounds.height ?? 100) * 100,
+              };
             }
-          }));
-          const created = await createCrops(designSplitId, inputs, { force: true });
+            
+            console.log(`🎯 Section ${i + 1} bounds conversion:`, {
+              original: s.bounds,
+              converted: boundsPercent,
+              isPixelBounds,
+              imgDimensions: { width: imgWidth, height: imgHeight }
+            });
+            
+            return {
+              id: s.id,
+              index: i,
+              unit: 'percent' as const,
+              bounds: boundsPercent,
+              name: s.type ? s.type.charAt(0).toUpperCase() + s.type.slice(1) : `Section ${i + 1}`,
+              type: s.type || 'content'
+            };
+          });
+          console.log('🎯 Creating crops for sections that need coverage...');
+          currentRequest = createCrops(designSplitId, inputs, { force: true });
+          const created = await currentRequest;
+          if (isCancelled) return;
+          
           assets = (created?.data?.assets || []) as any[];
         }
 
-        setCropAssets(assets);
-        const map = await resolveThumbUrls(assets);
-        setThumbUrls(map);
-        // Default select first section
-        if (!selectedId || !sectionIds.has(selectedId)) {
-          if (sections[0]) setSelectedId(sections[0].id);
+        if (!isCancelled) {
+          setCropAssets(assets);
+          const map = await resolveThumbUrls(assets);
+          setThumbUrls(map);
+          // Default select first section
+          if (!selectedId || !sectionIds.has(selectedId)) {
+            if (sections[0]) setSelectedId(sections[0].id);
+          }
         }
       } catch (e) {
-        setCropError('Failed to prepare section thumbnails.');
+        if (!isCancelled) {
+          setCropError('Failed to prepare section thumbnails.');
+        }
       } finally {
-        setLoadingCrops(false);
+        currentRequest = null;
+        if (!isCancelled) {
+          setLoadingCrops(false);
+        }
       }
     }
+    
     run();
+    
+    // Cleanup function to cancel ongoing requests
+    return () => {
+      isCancelled = true;
+      currentRequest = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [designSplitId, sections]);
 
@@ -533,7 +598,24 @@ export default function SplitGenerationPlanner({
                 assetKey: key,
                 assetOrder: asset?.order,
                 thumbUrl: thumb,
+                fullThumbUrl: thumb, // Log full URL to see if it's truncated
               });
+              
+              // Test thumbnail URL accessibility
+              if (thumb && i === 0) { // Only test first thumbnail to avoid spam
+                console.log('[SplitGenerationPlanner] Testing thumbnail URL:', thumb);
+                fetch(thumb)
+                  .then(response => {
+                    console.log('[SplitGenerationPlanner] Thumbnail fetch response:', {
+                      status: response.status,
+                      statusText: response.statusText,
+                      url: response.url
+                    });
+                  })
+                  .catch(error => {
+                    console.error('[SplitGenerationPlanner] Thumbnail fetch error:', error);
+                  });
+              }
             } catch {}
           }
           const open = selectedId === p.id;

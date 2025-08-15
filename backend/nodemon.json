@@ -1,0 +1,16 @@
+{
+  "watch": ["src"],
+  "ignore": [
+    ".runtime/**",
+    ".runtime/build-reports/**",
+    ".reports/**",
+    "build-reports/**",
+    "storage/**",
+    "coverage/**",
+    "logs/**",
+    "tmp/**",
+    "**/*.log"
+  ],
+  "ext": "ts,json",
+  "exec": "ts-node src/server.ts"
+}

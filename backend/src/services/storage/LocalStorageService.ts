@@ -26,6 +26,14 @@ export default class LocalStorageService implements IStorageService {
     const filePath = path.isAbsolute(normalized)
       ? normalized
       : (normalized.startsWith(this.baseDir) ? normalized : path.join(this.baseDir, normalized));
+    
+    // Check if file exists before creating read stream
+    try {
+      await fs.promises.access(filePath);
+    } catch (error) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    
     return fs.createReadStream(filePath);
   }
 

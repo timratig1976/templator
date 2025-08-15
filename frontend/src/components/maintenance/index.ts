@@ -15,6 +15,8 @@ export type {
   MaintenanceData, 
   UseMaintenanceDataReturn 
 } from './hooks/useMaintenanceData';
+export { useBuildTestRealtime } from './hooks/useBuildTestRealtime';
+export type { BuildTestProgressEvent, UseBuildTestRealtime } from './hooks/useBuildTestRealtime';
 
 // UI Components
 export { default as Tooltip } from './ui/Tooltip';
@@ -30,6 +32,7 @@ export type { Tab, TabNavigationProps } from './ui/TabNavigation';
 export { default as SystemHealthCard } from './features/SystemHealthCard';
 export { default as BuildTestCard } from './features/BuildTestCard';
 export { default as QualityMetricsCard } from './features/QualityMetricsCard';
+export { default as BuildTestRealtimePanel } from './features/BuildTestRealtimePanel';
 export type { SystemHealthCardProps } from './features/SystemHealthCard';
 export type { BuildTestCardProps } from './features/BuildTestCard';
 export type { QualityMetricsCardProps } from './features/QualityMetricsCard';

@@ -97,9 +97,34 @@ class ProjectsService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const result: ProjectsApiResponse<{ projects: SavedProject[]; total: number }> = await response.json();
-      return result.data.projects;
+      // Support multiple possible shapes from backend for robustness
+      const raw = await response.json();
+      // Common shapes:
+      // 1) { success, data: { projects: [...], total } }
+      // 2) { success, data: { items: [...] } }
+      // 3) { success, data: [...] }
+      // 4) direct array: [...]
+      try {
+        if (Array.isArray(raw)) {
+          return raw as SavedProject[];
+        }
+        if (raw && typeof raw === 'object') {
+          const data = (raw as any).data ?? raw;
+          if (Array.isArray(data)) {
+            return data as SavedProject[];
+          }
+          if (data?.projects && Array.isArray(data.projects)) {
+            return data.projects as SavedProject[];
+          }
+          if (data?.items && Array.isArray(data.items)) {
+            return data.items as SavedProject[];
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Unexpected projects payload shape', e, raw);
+      }
+      console.warn('⚠️ Unrecognized projects response shape, returning empty list', raw);
+      return [];
     } catch (error) {
       console.error('❌ Failed to fetch projects:', error);
       throw error;

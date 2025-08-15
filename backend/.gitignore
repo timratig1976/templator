@@ -1,0 +1,11 @@
+# Runtime and transient artifacts
+.runtime/
+.reports/
+logs/
+tmp/
+coverage/
+**/*.log
+
+# Build outputs
+/node_modules/
+dist/

@@ -46,6 +46,7 @@ import PipelineProgressTracker from '../../services/pipeline/PipelineProgressTra
 import QualityMetricsDashboard from '../../services/quality/QualityMetricsDashboard';
 import ErrorRecoverySystem from '../../services/recovery/ErrorRecoverySystem';
 import { getPromptsSummary, getPromptDetail } from './controllers/promptController';
+import { getDeadCodeReport, runDeadCodeScan } from './controllers/deadCodeController';
 
 const router = Router();
 
@@ -113,6 +114,16 @@ router.get('/test-coverage/raw', getRawTestCoverage);
 router.get('/performance/raw', getRawPerformance);
 router.get('/security/raw', getRawSecurity);
 router.get('/trends/raw', getRawTrends);
+
+// ========================================
+// DEAD CODE ROUTES (Scaffold)
+// ========================================
+
+/**
+ * Dead Code Monitoring Endpoints (non-destructive)
+ */
+router.get('/dead-code/report', getDeadCodeReport);
+router.post('/dead-code/scan', runDeadCodeScan);
 
 // ========================================
 // HEALTH CHECK ROUTE
