@@ -33,6 +33,7 @@ interface TestResult {
   processingTime: number;
   accuracy?: number;
   sections: any[];
+  rawResponse?: string;
 }
 
 export default function SplitDetectionPage() {
@@ -90,7 +91,10 @@ export default function SplitDetectionPage() {
         ? row.metrics.processingTime
         : (typeof row?.executionTime === 'number' ? row.executionTime : 0),
       accuracy: (row?.metrics && typeof row.metrics.accuracy === 'number') ? row.metrics.accuracy : undefined,
-      sections: Array.isArray(row?.output?.sections) ? row.output.sections : []
+      sections: Array.isArray(row?.output?.sections) ? row.output.sections : [],
+      rawResponse: (typeof row?.output?._raw === 'string')
+        ? row.output._raw
+        : (() => { try { return row?.output ? JSON.stringify(row.output, null, 2) : undefined; } catch { return undefined; } })()
     };
   };
 
@@ -300,6 +304,7 @@ export default function SplitDetectionPage() {
     const requestId = `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     let status: 'success' | 'error' = 'error';
     let data: any = null;
+    let rawResponseStr: string | undefined;
     let errorMessage: string | undefined;
     try {
       const imageDataUrl = await fileToBase64(selectedFile);
@@ -326,6 +331,7 @@ export default function SplitDetectionPage() {
       }
       const json = await res.json();
       data = json?.data ?? json;
+      try { rawResponseStr = JSON.stringify(json, null, 2); } catch {}
       status = 'success';
 
       const sections = Array.isArray(data?.sections) ? data.sections : [];
@@ -340,7 +346,8 @@ export default function SplitDetectionPage() {
         averageConfidence: avgConf,
         processingTime: procTime,
         accuracy: typeof data?.metrics?.accuracy === 'number' ? data.metrics.accuracy : undefined,
-        sections
+        sections,
+        rawResponse: rawResponseStr
       };
 
       setTestResults(prev => [result, ...prev]);
@@ -348,7 +355,7 @@ export default function SplitDetectionPage() {
       setDebugInfo({
         request: { prompt: currentPrompt, fileName: selectedFile?.name },
         response: data,
-        rawResponse: JSON.stringify(json, null, 2)
+        rawResponse: rawResponseStr
       });
       setActiveTab('results');
     } catch (error: any) {
@@ -369,6 +376,8 @@ export default function SplitDetectionPage() {
           requestId,
           inputMeta: { fileName: selectedFile?.name },
           detectResponse: data,
+          // Persist the exact raw response for historical viewing in AI Debug
+          detectResponseRaw: rawResponseStr,
           groundTruth: validationMode && groundTruth && Array.isArray(groundTruth) ? { sections: groundTruth } : undefined,
           datasetCaseId: undefined,
           promptParts: {
@@ -1057,7 +1066,8 @@ export default function SplitDetectionPage() {
                               sections: result.sections,
                               processingTime: result.processingTime,
                               accuracy: result.accuracy
-                            }
+                            },
+                            rawResponse: result.rawResponse
                           });
                         }}
                       >

@@ -623,4 +623,44 @@ test.describe('Complete User Journey', () => {
 
 ---
 
+## 🧱 Additional Test Types
+
+### **Functional Tests (Feature-level)**
+- Scope: Validate a vertical slice (UI/API/DB) of a user capability
+- Focus: Happy-path + critical edge cases with realistic data
+- Patterns:
+  - Test via public interfaces: HTTP routes, UI flows
+  - Use factories/seed data; avoid over-mocking
+  - Verify side effects: DB writes, emitted events, logs
+
+Example structure:
+```
+tests/functional/
+  ├── auth/
+  ├── projects/
+  └── ai-maintenance/
+```
+
+### **Smoke Tests (Readiness/Health)**
+- Run post-deploy to validate essentials: app boot, key routes, DB/Redis, websockets
+- Keep <1 min, low flakiness
+- Include health endpoints: `/healthz`, `/readyz`, `/livez`
+
+### **Build Verification Tests (BVT)**
+- Gate merges/releases: minimal suite verifying core system contracts
+- Includes:
+  - API contract checks (Pact) for critical providers/consumers
+  - Auth flow sanity with Clerk (login → protected route)
+  - AI path sanity: prompt build → OpenAI call mocked → parse → validate
+
+### **Dead-code & Unused Imports Detection**
+- Static analysis to catch unused code paths early
+- Tooling suggestions:
+  - TypeScript: `tsc --noEmit`, ESLint rules (`no-unused-vars`, `@typescript-eslint/no-unused-vars`)
+  - Unused files: `unimported` or `ts-prune` in CI
+  - Bundle analysis to flag unreachable modules
+
+Recommended CI stages:
+- Lint/Typecheck → Unit → Integration → Contracts → Functional → Build → Smoke (post-deploy)
+
 *This testing strategy provides a comprehensive foundation for building reliable, maintainable test suites. Adapt the patterns to your specific requirements and maintain high test quality standards.*

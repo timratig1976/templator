@@ -10,7 +10,7 @@
 ### **Core Architecture**
 - **[📁 Project Structure](./01-project-structure.md)** - Complete monorepo organization with DDD
 - **[🏗️ Domain-Driven Design](./02-domain-driven-design.md)** - DDD patterns and implementation
-- **[🗄️ Database Architecture](./03-database-architecture.md)** - PostgreSQL + Prisma patterns
+- **[🗄️ Database Architecture](./03-database-architecture.md)** - Core DB platform (Postgres/Prisma, performance, migrations). Feature schemas live in thematic blueprints below.
 
 ### **Quality & Testing**
 - **[🧪 Testing Strategy](./04-testing-strategy.md)** - Comprehensive testing pyramid with mocks
@@ -20,9 +20,12 @@
 - **[🚀 Application Foundation](./06-application-foundation.md)** - Error handling, logging, API design, configuration
 - **[⚡ Performance & Real-time](./07-performance-realtime.md)** - Caching, WebSockets, background jobs, monitoring
 - **[🔧 DevOps & Deployment](./08-devops-deployment.md)** - CI/CD, infrastructure, development setup
+- **[🔗 Microservices & Integration](./12-microservices-and-integration.md)** - Service boundaries, contracts, messaging, gateway
 
 ### **AI & Intelligence**
-- **[🤖 AI Pipeline Architecture](./09-ai-pipeline-architecture.md)** - OpenAI integration, prompt engineering, RAG systems
+- **[🤖 AI Pipeline Architecture](./09-ai-pipeline-architecture.md)** - OpenAI integration, prompt engineering, orchestration — includes Database Integration notes
+- **[🧠 RAG Systems](./13-rag-systems.md)** - Retrieval strategies, chunking, vector stores, caching, evaluation — includes Database Integration (pgvector/external vector DB)
+- **[🧩 AI Maintenance & Quality](./11-ai-maintenance-and-quality.md)** - Prompt versioning, evaluation, A/B testing, rollback — includes Database Integration (prompt models)
 
 ---
 
@@ -31,10 +34,10 @@
 ### **For New Projects**
 1. Start with **Project Structure** for overall organization
 2. Implement **Domain-Driven Design** for business logic
-3. Set up **Database Architecture** for data persistence
+3. Set up **Database Architecture** for core data platform
 4. Add **Testing Strategy** for quality assurance
 5. Implement **Security** patterns from day one
-6. Add specialized features (AI, Real-time) as needed
+6. Add specialized features (AI, Real-time) as needed. Consult each blueprint's **Database Integration** section for schema guidance.
 
 ### **For Existing Projects**
 - Use individual blueprints to enhance specific areas

@@ -5,6 +5,8 @@
 
 ---
 
+Quick links: [Database Integration](#db-integration)
+
 ## 🎯 **AI Architecture Principles**
 
 ### **Core Components**
@@ -545,6 +547,21 @@ Please use the context information above to provide a more accurate and detailed
 - [ ] Set up comprehensive logging and monitoring
 - [ ] Create cost optimization strategies
 - [ ] Implement quality assurance checks
+
+---
+
+<a id="db-integration"></a>
+## 🗄️ Database Integration
+- Prompt operations: use `PromptTemplate`, `PromptVersion`, `PromptRun`, `PromptABTest`, `ABExposure`, `PromptFeedback` (see AI Maintenance blueprint for schema and ownership)
+- Telemetry: log pipeline spans and outcomes to `AnalyticsEvent` and link via `requestId`/`sessionId`
+- Caching: metadata (keys, TTLs) can live in Redis; DB used for durable runs/metrics only
+- Migration ownership: AI service owns prompt/quality tables; platform owns analytics tables
+
+---
+
+## 🔗 Related Blueprints
+- `11-ai-maintenance-and-quality.md` — Prompt versioning, evaluation, A/B testing, rollback
+- `13-rag-systems.md` — Retrieval strategies, embeddings, vector stores, evaluation
 
 ---
 

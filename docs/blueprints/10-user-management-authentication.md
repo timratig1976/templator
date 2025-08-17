@@ -2,7 +2,7 @@
 
 ## 🎯 **Overview**
 
-Comprehensive blueprint for implementing enterprise-grade user management, authentication, and role-based access control (RBAC) system for the Templator platform.
+Comprehensive blueprint for implementing enterprise-grade user management, authentication, and role-based access control (RBAC) system for the Templator platform if using next.js / next.auth
 
 ## 🏗️ **Architecture Overview**
 
@@ -17,6 +17,93 @@ Comprehensive blueprint for implementing enterprise-grade user management, authe
 │ • Profile Mgmt  │    │ • Session Store  │    │ • Sessions      │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
+
+## 🔌 **Clerk Integration (Next.js)**
+
+Clerk provides hosted authentication, sessions, MFA, and profiles. We map Clerk identities to our internal RBAC and auditing.
+
+### **Key Concepts**
+- Clerk as IdP (OAuth providers, email/passwordless, MFA)
+- Clerk JWT templates include `org_id`, `role`, `permissions` claims
+- Backend validates Clerk JWT; resolves internal `User`, `Role`, `Permissions`
+- Organizations/Teams via Clerk Organizations mapped to internal orgs/projects
+
+### **Frontend (App Router)**
+- Wrap app with `ClerkProvider` in `app/layout.tsx`
+- Protect routes via `withClerkMiddleware` and server `auth()` checks
+- Read session on server for SSR-safe authorization
+
+```tsx
+// app/layout.tsx
+import { ClerkProvider } from '@clerk/nextjs';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ClerkProvider>
+      <html lang="en"><body>{children}</body></html>
+    </ClerkProvider>
+  );
+}
+```
+
+```ts
+// middleware.ts
+import { withClerkMiddleware } from '@clerk/nextjs/server';
+
+export default withClerkMiddleware();
+
+export const config = {
+  matcher: [
+    '/((?!_next|.*\\.\n*|api/public|favicon.ico).*)',
+  ],
+};
+```
+
+### **Backend Authorization Flow**
+1. API receives request with Clerk session/JWT (Authorization header or cookies)
+2. Verify token using Clerk SDK; extract `sub`, `org_id`, claims
+3. Upsert internal `User` by Clerk `sub`
+4. Map Clerk org/role to internal `Role` and `Permissions`
+5. Enforce RBAC via `requirePermission()`
+
+```ts
+// Pseudocode: auth middleware using Clerk server SDK
+import { Clerk } from '@clerk/clerk-sdk-node';
+
+export async function clerkAuth(req, res, next) {
+  try {
+    const token = extractBearerToken(req);
+    const session = await Clerk.sessions.verifySession({ token });
+    const { userId, orgId, claims } = session;
+
+    req.user = await userService.upsertFromClerk({
+      clerkUserId: userId,
+      orgId,
+      email: claims.email,
+      firstName: claims.first_name,
+      lastName: claims.last_name,
+    });
+
+    req.permissions = await authService.resolvePermissions(req.user, orgId);
+    return next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+}
+```
+
+### **Organizations & Teams**
+- Enable Clerk Organizations
+- Store `organizationId` on `Session` and `AuditLog`
+- Map Clerk Org roles to internal `Role` per org
+
+### **MFA & Webhooks**
+- Use Clerk MFA (TOTP/SMS/email)
+- Subscribe to webhooks: `user.created`, `user.updated`, `organizationMembership.created`
+- Sync to local DB (create/link users, deactivate on membership removal)
+
+### **Audit Logging**
+- Log `clerk_session_id`, `clerk_user_id`, `organizationId`, token `jti`
 
 ## 📊 **Database Schema Design**
 

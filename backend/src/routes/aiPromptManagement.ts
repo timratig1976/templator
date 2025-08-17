@@ -7,6 +7,7 @@ import LocalStorageService from '../services/storage/LocalStorageService';
 import path from 'path';
 import fs from 'fs';
 import { createHash } from 'crypto';
+import AIMetricsService, { BaseMetrics, DetectionKpis } from '../services/ai/metrics/AIMetricsService';
 
 const router = express.Router();
 const logger = createLogger();
@@ -105,6 +106,13 @@ router.post('/processes/:processName/backfill-jsonl', async (req, res) => {
 
           // Create test result
           try {
+            // Combine detectResponse with _raw when available (preserve original text)
+            const outputForDb = entry?.detectResponse
+              ? {
+                  ...entry.detectResponse,
+                  _raw: entry?.detectResponseRaw || (() => { try { return JSON.stringify(entry.detectResponse); } catch { return null; } })()
+                }
+              : null;
             await p.aIPromptTestResult.create({
               data: {
                 promptId: resolvedPromptId,
@@ -121,7 +129,7 @@ router.post('/processes/:processName/backfill-jsonl', async (req, res) => {
                   status: entry?.status || 'success',
                   errorMessage: entry?.errorMessage || null
                 },
-                output: entry?.detectResponse || null,
+                output: outputForDb,
                 metrics: mergedMetrics,
                 status: entry?.status || 'success',
                 errorMessage: entry?.errorMessage || null,
@@ -175,60 +183,17 @@ router.post('/processes/:processName/record-run', async (req, res) => {
       datasetCaseId            // if this run came from a known validation case
     } = body;
 
-    // Compute KPIs only when feasible. For split-detection, use IoU >= 0.5.
-    let kpis: any = null;
+    // Compute validation KPIs when feasible using the centralized service
+    let kpis: DetectionKpis | null = null;
     if (processName === 'split-detection' && groundTruth && Array.isArray(groundTruth.sections)) {
       const preds = Array.isArray(detectResponse?.sections) ? detectResponse.sections : [];
       const gts = groundTruth.sections || [];
-      const iou = (a: any, b: any): number => {
-        if (!a || !b) return 0;
-        const ax1 = a.x, ay1 = a.y, ax2 = a.x + a.width, ay2 = a.y + a.height;
-        const bx1 = b.x, by1 = b.y, bx2 = b.x + b.width, by2 = b.y + b.height;
-        const ix1 = Math.max(ax1, bx1), iy1 = Math.max(ay1, by1);
-        const ix2 = Math.min(ax2, bx2), iy2 = Math.min(ay2, by2);
-        const iw = Math.max(0, ix2 - ix1), ih = Math.max(0, iy2 - iy1);
-        const inter = iw * ih;
-        const areaA = Math.max(0, a.width) * Math.max(0, a.height);
-        const areaB = Math.max(0, b.width) * Math.max(0, b.height);
-        const union = areaA + areaB - inter;
-        return union > 0 ? inter / union : 0;
-      };
-      const matchedGts = new Set<number>();
-      let tp = 0;
-      for (const p of preds) {
-        let best = -1; let bestIou = 0; let idx = -1;
-        for (let i = 0; i < gts.length; i++) {
-          if (matchedGts.has(i)) continue;
-          const gt = gts[i];
-          if (p.type && gt.type && p.type !== gt.type) continue;
-          const score = iou(p.bounds || p, gt.bounds || gt);
-          if (score > bestIou) { bestIou = score; best = i; }
-        }
-        if (best >= 0 && bestIou >= 0.5) {
-          tp++;
-          matchedGts.add(best);
-        }
-      }
-      const fp = Math.max(0, preds.length - tp);
-      const fn = Math.max(0, gts.length - tp);
-      const precision = preds.length ? tp / (tp + fp) : 0;
-      const recall = gts.length ? tp / (tp + fn) : 0;
-      const f1 = (precision + recall) ? (2 * precision * recall) / (precision + recall) : 0;
-      const avgIoU = (() => {
-        const ious: number[] = [];
-        matchedGts.forEach((gi) => {
-          const gt = gts[gi];
-          // find matched pred again for IoU calc
-          let best = 0;
-          for (const p of preds) {
-            const score = iou(p.bounds || p, gt.bounds || gt);
-            if (score > best) best = score;
-          }
-          ious.push(best);
-        });
-        return ious.length ? ious.reduce((a, b) => a + b, 0) / ious.length : 0;
-      })();
-      kpis = { precision, recall, f1, tp, fp, fn, avgIoU };
+      kpis = AIMetricsService.computeValidationKpis({
+        predictions: preds,
+        groundTruth: gts,
+        matchThreshold: 0.5,
+        matchByType: true,
+      });
     }
 
     const statusFromBody: 'success' | 'error' = (req.body?.status === 'error') ? 'error' : 'success';
@@ -247,6 +212,8 @@ router.post('/processes/:processName/record-run', async (req, res) => {
       promptContent: promptContent || null,
       promptParts: promptPartsFromBody,
       detectResponse,
+      // Preserve the exact raw AI response when provided by client
+      detectResponseRaw: (typeof body?.detectResponseRaw === 'string') ? body.detectResponseRaw : null,
       datasetCaseId: datasetCaseId || null,
       groundTruthPresent: !!groundTruth,
       status: statusFromBody,
@@ -254,14 +221,34 @@ router.post('/processes/:processName/record-run', async (req, res) => {
       kpis
     };
 
-    // Always capture base metrics even without ground truth
+    // Always capture base metrics even without ground truth (prefer normalized payload if present)
     const preds = Array.isArray(detectResponse?.sections) ? detectResponse.sections : [];
-    const baseMetrics: any = {
-      sectionsDetected: preds.length,
-      averageConfidence: typeof detectResponse?.averageConfidence === 'number' ? detectResponse.averageConfidence : null,
-      processingTime: typeof detectResponse?.processingTime === 'number' ? detectResponse.processingTime : null
-    };
-    const mergedMetrics = { ...baseMetrics, ...(kpis || {}) };
+    let baseMetrics: BaseMetrics;
+    const normalized = (detectResponse && typeof detectResponse === 'object' && (detectResponse as any).metrics)
+      ? (detectResponse as any).metrics as Partial<BaseMetrics>
+      : null;
+    if (normalized && typeof normalized.sectionsDetected === 'number' && typeof normalized.processingTimeMs === 'number') {
+      baseMetrics = {
+        sectionsDetected: normalized.sectionsDetected,
+        averageConfidence: normalized.averageConfidence ?? AIMetricsService.computeAverageConfidence(preds),
+        processingTimeMs: normalized.processingTimeMs,
+        tokensUsed: normalized.tokensUsed,
+        estimatedCostUsd: normalized.estimatedCostUsd,
+      };
+    } else {
+      const processingTimeMs = typeof (detectResponse as any)?.processingTimeMs === 'number'
+        ? (detectResponse as any).processingTimeMs
+        : (typeof (detectResponse as any)?.processingTime === 'number' ? (detectResponse as any).processingTime : 0);
+      const averageConfidenceOverride = typeof (detectResponse as any)?.averageConfidence === 'number'
+        ? (detectResponse as any).averageConfidence
+        : undefined;
+      baseMetrics = AIMetricsService.computeBaseMetrics({
+        sections: preds,
+        processingTimeMs,
+        averageConfidenceOverride: averageConfidenceOverride as number | undefined,
+      });
+    }
+    const mergedMetrics: BaseMetrics & Partial<DetectionKpis> = { ...baseMetrics, ...(kpis || {}) };
 
     // Optional JSONL backup log; never required for app correctness
     const enableJsonl = process.env.AI_RUNS_JSONL_ENABLED !== 'false';
@@ -325,29 +312,81 @@ router.post('/processes/:processName/record-run', async (req, res) => {
 
     try {
       if (resolvedPromptId) {
-        await p.aIPromptTestResult.create({
-          data: {
-            promptId: resolvedPromptId,
-            testFileName: inputMeta?.fileName || null,
-            input: {
-              promptMode,
-              promptHash: entry.promptHash,
-              promptPartsPresent: !!promptContent,
-              requestId,
-              inputMeta,
-              datasetCaseId: datasetCaseId || null,
-              groundTruthPresent: !!groundTruth,
-              promptParts: promptPartsFromBody,
-              status: statusFromBody,
-              errorMessage: errorMessageFromBody
+        // Merge output with a preserved _raw field for historical visibility
+        const outputForDb = detectResponse
+          ? {
+              ...(detectResponse as any),
+              _raw: (typeof body?.detectResponseRaw === 'string')
+                ? body.detectResponseRaw
+                : (() => { try { return JSON.stringify(detectResponse); } catch { return null; } })()
+            }
+          : null;
+        // De-dup guard: avoid duplicate rows for same promptId + requestId
+        try {
+          const existing = await p.aIPromptTestResult.findFirst({
+            where: {
+              promptId: resolvedPromptId,
+              input: { path: ['requestId'], equals: requestId }
             },
-            output: detectResponse || null,
-            metrics: mergedMetrics,
-            status: statusFromBody,
-            errorMessage: errorMessageFromBody,
-            executionTime: typeof detectResponse?.processingTime === 'number' ? detectResponse.processingTime : null
+            select: { id: true }
+          });
+          if (existing?.id) {
+            logger.warn('record-run: duplicate detected; skipping insert', { promptId: resolvedPromptId, requestId });
+          } else {
+            await p.aIPromptTestResult.create({
+              data: {
+                promptId: resolvedPromptId,
+                testFileName: inputMeta?.fileName || null,
+                input: {
+                  promptMode,
+                  promptHash: entry.promptHash,
+                  promptPartsPresent: !!promptContent,
+                  requestId,
+                  inputMeta,
+                  datasetCaseId: datasetCaseId || null,
+                  groundTruthPresent: !!groundTruth,
+                  promptParts: promptPartsFromBody,
+                  status: statusFromBody,
+                  errorMessage: errorMessageFromBody
+                },
+                output: outputForDb,
+                metrics: mergedMetrics,
+                status: statusFromBody,
+                errorMessage: errorMessageFromBody,
+                executionTime: typeof baseMetrics.processingTimeMs === 'number' ? baseMetrics.processingTimeMs : null
+              }
+            });
           }
-        });
+        } catch (dupCheckErr) {
+          // If dedup check fails for any reason, fallback to insert but catch unique errors
+          try {
+            await p.aIPromptTestResult.create({
+              data: {
+                promptId: resolvedPromptId,
+                testFileName: inputMeta?.fileName || null,
+                input: {
+                  promptMode,
+                  promptHash: entry.promptHash,
+                  promptPartsPresent: !!promptContent,
+                  requestId,
+                  inputMeta,
+                  datasetCaseId: datasetCaseId || null,
+                  groundTruthPresent: !!groundTruth,
+                  promptParts: promptPartsFromBody,
+                  status: statusFromBody,
+                  errorMessage: errorMessageFromBody
+                },
+                output: outputForDb,
+                metrics: mergedMetrics,
+                status: statusFromBody,
+                errorMessage: errorMessageFromBody,
+                executionTime: typeof baseMetrics.processingTimeMs === 'number' ? baseMetrics.processingTimeMs : null
+              }
+            });
+          } catch (e2) {
+            logger.warn('record-run: insert failed post-dedup check', { error: (e2 as Error).message });
+          }
+        }
       } else {
         logger.warn('record-run: no promptId resolved; skipping DB insert');
       }
@@ -402,6 +441,38 @@ router.get('/processes/:processName/runs', async (req, res) => {
   } catch (error) {
     logger.error('Failed to list prompt runs', { processName, error });
     return res.status(500).json({ success: false, error: 'Failed to list prompt runs' });
+  }
+});
+
+/**
+ * Get a single prompt run by id
+ * GET /api/admin/ai-prompts/runs/:runId
+ */
+router.get('/runs/:runId', async (req, res) => {
+  const { runId } = req.params as { runId: string };
+  const p: any = prisma as any;
+  try {
+    const run = await p.aIPromptTestResult.findUnique({
+      where: { id: runId },
+      select: {
+        id: true,
+        promptId: true,
+        testFileName: true,
+        input: true,
+        output: true,
+        metrics: true,
+        status: true,
+        errorMessage: true,
+        executionTime: true,
+        createdAt: true,
+        prompt: { select: { id: true, version: true, title: true, isActive: true, process: { select: { name: true } } } },
+      }
+    });
+    if (!run) return res.status(404).json({ success: false, error: 'Run not found' });
+    return res.json({ success: true, data: run });
+  } catch (error) {
+    logger.error('Failed to get run by id', { error, runId });
+    return res.status(500).json({ success: false, error: 'Failed to get run by id' });
   }
 });
 
@@ -527,6 +598,44 @@ router.get('/processes', async (req, res) => {
       success: false,
       error: 'Failed to get AI processes'
     });
+  }
+});
+
+/**
+ * Get process Readme (stored in AIProcess.description)
+ * GET /api/admin/ai-prompts/processes/:processName/readme
+ */
+router.get('/processes/:processName/readme', async (req, res) => {
+  try {
+    const { processName } = req.params;
+    const p: any = prisma as any;
+    const proc = await p.aIProcess.findUnique({ where: { name: processName }, select: { id: true, description: true } });
+    if (!proc) return res.status(404).json({ success: false, error: 'Process not found' });
+    return res.json({ success: true, data: { markdown: proc.description || '' } });
+  } catch (error) {
+    logger.error('Failed to get process readme', { error, processName: req.params.processName });
+    return res.status(500).json({ success: false, error: 'Failed to get process readme' });
+  }
+});
+
+/**
+ * Update process Readme (stores into AIProcess.description)
+ * PUT /api/admin/ai-prompts/processes/:processName/readme
+ * Body: { markdown: string }
+ */
+router.put('/processes/:processName/readme', async (req, res) => {
+  try {
+    const { processName } = req.params;
+    const { markdown } = req.body || {};
+    if (typeof markdown !== 'string') {
+      return res.status(400).json({ success: false, error: 'markdown must be a string' });
+    }
+    const p: any = prisma as any;
+    const updated = await p.aIProcess.update({ where: { name: processName }, data: { description: markdown } });
+    return res.json({ success: true, data: { id: updated.id } });
+  } catch (error) {
+    logger.error('Failed to update process readme', { error, processName: req.params.processName });
+    return res.status(500).json({ success: false, error: 'Failed to update process readme' });
   }
 });
 
@@ -856,11 +965,26 @@ async function testImageAnalysisPrompt(promptContent: string, inputData: any) {
 function extractMetrics(result: any, processName: string): Record<string, number> {
   switch (processName) {
     case 'split-detection':
-      return {
-        sectionsDetected: result.sections?.length || 0,
-        averageConfidence: result.detectionMetrics?.averageConfidence || 0,
-        accuracy: 85 // Mock accuracy for now
-      };
+      {
+        const sectionsDetected = Array.isArray(result?.sections) ? result.sections.length : 0;
+        const avgFromMetrics = typeof result?.metrics?.averageConfidence === 'number' ? result.metrics.averageConfidence : undefined;
+        const avgFromDetection = typeof result?.detectionMetrics?.averageConfidence === 'number' ? result.detectionMetrics.averageConfidence : undefined;
+        const avgFromSections = (() => {
+          try {
+            return AIMetricsService.computeAverageConfidence(result?.sections || []) ?? undefined;
+          } catch { return undefined; }
+        })();
+        const averageConfidence = (avgFromMetrics ?? avgFromDetection ?? avgFromSections ?? 0) as number;
+        return {
+          sectionsDetected,
+          averageConfidence,
+          // snake_case alias for UI compatibility
+          avg_confidence: averageConfidence,
+          // Keep compatibility fields used by some UIs
+          processingTimeMs: typeof result?.metrics?.processingTimeMs === 'number' ? result.metrics.processingTimeMs
+            : (typeof result?.processingTime === 'number' ? result.processingTime : undefined) as any,
+        } as any;
+      }
     case 'html-generation':
       return {
         codeQuality: 90,

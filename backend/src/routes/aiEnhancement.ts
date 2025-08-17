@@ -21,6 +21,9 @@ import imageCropService from '../services/ai/ImageCropService';
 import { createHmac } from 'crypto';
 import { Readable } from 'stream';
 import fs from 'fs';
+import AIMetricsService from '../services/ai/metrics/AIMetricsService';
+import { aiPromptRepository } from '../services/ai/AIPromptRepository';
+import axios from 'axios';
 
 // Interface for layout analysis response
 interface LayoutAnalysisResult {
@@ -996,7 +999,7 @@ router.post('/detect-sections', async (req: Request, res: Response) => {
   const startTime = Date.now();
   
   try {
-    const { image, fileName, customPrompt, debug } = req.body;
+    const { image, fileName, customPrompt, debug, groundTruth } = req.body;
     
     // Validate required fields
     if (!image) {
@@ -1060,90 +1063,135 @@ router.post('/detect-sections', async (req: Request, res: Response) => {
       checksum,
       meta: { requestId, source: 'detect-sections' }
     });
-
+    // Create a DesignSplit record to group detected sections
     const split = await designSplitRepo.create({
       designUploadId: designUpload.id,
       status: 'processing',
-      metrics: { analysisType: 'ai' }
+      metrics: { source: 'detect-sections' }
     });
 
-    // Use AI to analyze the design and suggest intelligent section splits (always AI)
-    // Use custom prompt if provided (from AI Maintenance area), otherwise use default
-    const suggestions = await SplittingService.generateSplittingSuggestions(
-      image, 
-      fileName || 'design', 
-      requestId,
-      customPrompt // Pass custom prompt for AI Maintenance testing
-    );
-    
-    const duration = Date.now() - startTime;
-    
-    logger.info(`[${requestId}] Section detection completed`, {
-      requestId,
-      duration,
-      suggestionsCount: suggestions.length
+    // Run real AI detection
+    const suggestions = await generateAISplittingSuggestions(image, inferredFileName, requestId);
+
+    // Compute metrics
+    const durationMs = Date.now() - startTime;
+    const baseMetrics = AIMetricsService.computeBaseMetrics({
+      sections: suggestions,
+      processingTimeMs: durationMs,
     });
-    
-    logToFrontend('success', 'processing', `✅ AI section detection completed in ${duration}ms with ${suggestions.length} suggestions`, { suggestionsCount: suggestions.length, analysisType: 'ai' }, requestId);
-    
-    // Persist suggestions as SplitAssets and mark split completed
+
+    // Persist detected sections as assets
     try {
       for (let i = 0; i < suggestions.length; i++) {
         const s = suggestions[i] as any;
         await splitAssetRepo.create({
           splitId: split.id,
           kind: 'json',
-          meta: ({
+          meta: {
+            id: s.id,
             name: s.name,
             type: s.type,
             bounds: s.bounds,
             confidence: s.confidence,
             splittingRationale: s.splittingRationale,
-            reusability: s.reusability,
-          } as unknown) as any,
+          },
           order: i,
         });
       }
-      await designSplitRepo.addMetrics(split.id, { durationMs: duration, suggestionCount: suggestions.length });
+      await designSplitRepo.addMetrics(split.id, { durationMs, sectionCount: suggestions.length });
       await designSplitRepo.updateStatus(split.id, 'completed');
     } catch (persistErr) {
-      logger.error(`[${requestId}] Failed to persist split assets`, { error: getErrorMessage(persistErr) });
-      await designSplitRepo.updateStatus(split.id, 'failed');
+      logger.error(`[${requestId}] Failed to persist detected sections`, { error: getErrorMessage(persistErr), splitId: split.id });
+      try { await designSplitRepo.updateStatus(split.id, 'failed'); } catch {}
     }
-    
-    return res.status(200).json({
+
+    // Fire-and-forget: record this run for prompt metrics + JSONL backup
+    (async () => {
+      try {
+        const port = process.env.PORT ? Number(process.env.PORT) : 3009;
+        const url = `http://127.0.0.1:${port}/api/admin/ai-prompts/processes/split-detection/record-run`;
+        const detectResponse = {
+          sections: suggestions,
+          averageConfidence: baseMetrics.averageConfidence,
+          // snake_case alias for Maintenance UI
+          avg_confidence: baseMetrics.averageConfidence,
+          processingTimeMs: baseMetrics.processingTimeMs,
+          // Provide snake_case friendly alias some UIs may read
+          processingTime: baseMetrics.processingTimeMs,
+          sectionsDetected: suggestions.length,
+          metrics: baseMetrics,
+        };
+        const inputMeta = {
+          fileName: inferredFileName,
+          designUploadId: designUpload.id,
+          designSplitId: split.id,
+          sizeBytes: approxSizeBytes,
+          sizeKb: Math.round((approxSizeBytes / 1024) * 10) / 10,
+        };
+        // Resolve active prompt details for better Maintenance display
+        let activePromptId: string | undefined;
+        let promptContent: string | undefined;
+        try {
+          const active = await aiPromptRepository.getActivePrompt('split-detection');
+          if (active) {
+            activePromptId = active.id;
+            promptContent = active.content;
+          }
+        } catch {}
+
+        const body = {
+          promptMode: 'active',
+          requestId,
+          inputMeta,
+          detectResponse,
+          groundTruth: (groundTruth && Array.isArray(groundTruth.sections)) ? { sections: groundTruth.sections } : undefined,
+          activePromptId,
+          promptContent,
+          // Preserve exact payload as string as well
+          detectResponseRaw: (() => { try { return JSON.stringify(detectResponse); } catch { return null; } })(),
+          status: 'success',
+        };
+        await axios.post(url, body, { timeout: 5000 });
+      } catch (e) {
+        logger.warn('record-run call failed (non-fatal)', { error: getErrorMessage(e) });
+      }
+    })();
+
+    logger.info(`[${requestId}] Section detection completed`, {
+      requestId,
+      designUploadId: designUpload.id,
+      designSplitId: split.id,
+      sectionsDetected: suggestions.length,
+      averageConfidence: baseMetrics.averageConfidence,
+      durationMs,
+    });
+    logToFrontend('success', 'processing', `✅ Detected ${suggestions.length} sections`, { fileName: inferredFileName, sections: suggestions.length }, requestId, durationMs);
+
+    return res.json({
       success: true,
-      suggestions,
-      splitId: split.id,
-      meta: {
-        processingTime: duration,
+      data: {
         requestId,
-        analysisType: 'ai',
-        timestamp: new Date().toISOString()
+        designUploadId: designUpload.id,
+        designSplitId: split.id,
+        sections: suggestions,
+        detectionMetrics: {
+          averageConfidence: baseMetrics.averageConfidence,
+          processingTime: baseMetrics.processingTimeMs,
+        },
+        metrics: baseMetrics,
       }
     });
-    
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
     const duration = Date.now() - startTime;
-    const errorMessage = error.message || 'Unknown error';
-    
-    logger.error(`[${requestId}] Error in section detection: ${errorMessage}`, { 
-      error: { 
-        message: errorMessage,
-        stack: error.stack
-      },
-      requestId,
-      duration
-    });
-    
+    logger.error(`[${requestId}] Error in section detection`, { error: errorMessage, requestId, duration });
     logToFrontend('error', 'processing', `❌ Section detection failed: ${errorMessage}`, { error: errorMessage }, requestId, duration);
-    
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to detect sections', 
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to detect sections',
       details: errorMessage,
       code: 'SECTION_DETECTION_ERROR',
-      requestId
+      requestId,
     });
   }
 });

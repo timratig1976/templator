@@ -5,6 +5,12 @@
 
 ---
 
+> Scope: This blueprint defines the core database platform (Postgres, Prisma, conventions, performance, migrations, backups). Feature-specific schemas and tables are documented in their thematic blueprints:
+> - `11-ai-maintenance-and-quality.md` (prompt ops, A/B testing, feedback)
+> - `13-rag-systems.md` (RAG metadata, embeddings/vector storage guidance)
+> - `12-microservices-and-integration.md` (outbox, idempotency, event store)
+> - `09-ai-pipeline-architecture.md` (integration notes linking to prompt/telemetry tables)
+
 ## 🎯 **Database Design Principles**
 
 ### **Core Architecture**
@@ -439,6 +445,7 @@ model AnalyticsEvent {
   @@index([eventType])
   @@index([timestamp])
 }
+
 ```
 
 ---
