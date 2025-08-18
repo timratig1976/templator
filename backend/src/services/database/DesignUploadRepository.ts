@@ -41,14 +41,14 @@ export class DesignUploadRepository {
 
   async deleteWithCascade(id: string) {
     // Use transaction to ensure all related records are deleted in the correct order
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // First, find all related design splits
       const splits = await tx.designSplit.findMany({
         where: { designUploadId: id },
         select: { id: true }
       });
 
-      const splitIds = splits.map(s => s.id);
+      const splitIds = splits.map((s: { id: string }) => s.id);
 
       if (splitIds.length > 0) {
         // Delete split-specific assets and generated content

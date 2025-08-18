@@ -1,25 +1,42 @@
-// Templator MVP Database Schema
-// Simplified schema for core storage services migration
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// Automated or manual test runs with aggregated status
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SplitAsset {
+  id         String      @id @default(cuid())
+  splitId    String
+  kind       String
+  storageUrl String?
+  meta       Json?
+  order      Int?
+  createdAt  DateTime    @default(now())
+  projectId  String?
+  projects   Project?    @relation(fields: [projectId], references: [id])
+  split      DesignSplit @relation(fields: [splitId], references: [id])
+
+  @@index([splitId])
+  @@index([kind])
+  @@index([projectId])
+  @@map("split_assets")
+}
+
 model TestRun {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   designSplitId String?
   artifactId    String?
   moduleId      String?
-  type          String   // 'unit' | 'integration' | 'e2e' | 'accessibility' | 'performance' | 'security' | 'custom'
-  status        String   // 'queued' | 'running' | 'passed' | 'failed' | 'partial' | 'cancelled'
-  startedAt     DateTime @default(now())
+  type          String
+  status        String
+  startedAt     DateTime     @default(now())
   completedAt   DateTime?
   summary       Json?
-
-  // Relations
-  DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
   results       TestResult[]
+  DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
 
   @@index([designSplitId])
   @@index([artifactId])
@@ -27,38 +44,32 @@ model TestRun {
   @@map("test_run")
 }
 
-// Individual test case result
 model TestResult {
-  id        String   @id @default(cuid())
-  testRunId String
-  name      String
-  status    String   // 'passed' | 'failed' | 'skipped' | 'flaky'
+  id         String   @id @default(cuid())
+  testRunId  String
+  name       String
+  status     String
   durationMs Int
-  details   Json?
-  createdAt DateTime @default(now())
-
-  // Relations
-  TestRun   TestRun  @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  details    Json?
+  createdAt  DateTime @default(now())
+  TestRun    TestRun  @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
   @@index([testRunId])
   @@map("test_result")
 }
 
-// Expert review feedback attached to artifacts or splits
 model ReviewFeedback {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   designSplitId String?
   artifactId    String?
   moduleId      String?
   reviewer      String
-  status        String   // 'pending' | 'submitted' | 'approved' | 'revisions_requested'
-  ratings       Json?    // e.g., { accessibility: 4, performance: 3 }
+  status        String
+  ratings       Json?
   comments      String
   findings      Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
 
   @@index([designSplitId])
@@ -67,73 +78,49 @@ model ReviewFeedback {
   @@map("review_feedback")
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// Templator Projects (aligns with frontend SavedProject)
 model Project {
-  id               String   @id @default(cuid())
+  id               String        @id @default(cuid())
   name             String
   originalFileName String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  // Optional metadata similar to frontend shape
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   metadata         Json?
-
-  // Relations
   splits           DesignSplit[]
-  assets           SplitAsset[]
+  split_assets     SplitAsset[]
 
   @@map("projects")
 }
 
-// Template Library Models (replaces TemplateLibraryService Map storage)
 model ModuleTemplate {
   id          String   @id @default(cuid())
   name        String
   description String?
-  category    String   // TemplateCategory enum as string
-  complexity  String   // TemplateComplexity enum as string
-  
-  // Template content
+  category    String
+  complexity  String
   htmlContent String
   cssContent  String?
   jsContent   String?
-  
-  // Metadata
   tags        String[]
   version     String   @default("1.0.0")
   usageCount  Int      @default(0)
   rating      Float?
-  
-  // Timestamps
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@map("module_templates")
 }
 
-// Prompt Storage Models (replaces PromptStorageService JSON files)
 model PromptData {
-  id          String   @id @default(cuid())
-  pipelineId  String
-  sectionId   String?
-  
-  // Prompt content
-  prompt      String
-  context     Json?    // Flexible JSON for context data
-  metadata    Json?    // Additional metadata
-  
-  // Results
-  results     PromptResult[]
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id         String         @id @default(cuid())
+  pipelineId String
+  sectionId  String?
+  prompt     String
+  context    Json?
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  results    PromptResult[]
+
   @@unique([pipelineId, sectionId])
   @@map("prompt_data")
 }
@@ -141,71 +128,47 @@ model PromptData {
 model PromptResult {
   id           String     @id @default(cuid())
   promptDataId String
-  
-  // Result content
   result       String
   qualityScore Float?
-  metrics      Json?      // Quality metrics as JSON
-  
-  // Relationships
-  promptData   PromptData @relation(fields: [promptDataId], references: [id], onDelete: Cascade)
-  
-  // Timestamps
+  metrics      Json?
   createdAt    DateTime   @default(now())
-  
+  promptData   PromptData @relation(fields: [promptDataId], references: [id], onDelete: Cascade)
+
   @@map("prompt_results")
 }
 
-// Interactive Prompt Models (replaces InteractivePromptService JSON files)
 model PromptTemplate {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
   description String?
   category    String
-  
-  // Template content
   basePrompt  String
-  contexts    Json     // Array of PromptContext objects
-  
-  // Metadata
+  contexts    Json
   tags        String[]
   rating      Float?
-  usageCount  Int      @default(0)
-  
-  // Relationships
+  usageCount  Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
   generations PromptGeneration[]
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+
   @@map("prompt_templates")
 }
 
 model PromptGeneration {
-  id               String         @id @default(cuid())
-  templateId       String
-  
-  // Generation data
-  enhancedPrompt   String
-  result           String?
-  rating           Float?
-  feedback         String?
-  
-  // Context used
-  contextData      Json           // Context data used for generation
-  
-  // Relationships
-  template         PromptTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  
-  // Timestamps
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  
+  id             String         @id @default(cuid())
+  templateId     String
+  enhancedPrompt String
+  result         String?
+  rating         Float?
+  feedback       String?
+  contextData    Json
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  template       PromptTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
   @@map("prompt_generations")
 }
 
-// Module Components (DB-backed replacement for in-memory ModuleComponentRepository)
 model ModuleComponent {
   id                            String   @id @default(cuid())
   name                          String
@@ -214,24 +177,19 @@ model ModuleComponent {
   type                          String
   complexity_level              String
   hubspot_version_compatibility String[]
-
   html_template                 String
   css_styles                    String?
   javascript_code               String?
-  fields_definition             Json     // Array of ComponentField
-
+  fields_definition             Json
   version                       String   @default("1.0.0")
   author                        String
   tags                          String[]
-
   quality_score                 Float    @default(0)
   usage_count                   Int      @default(0)
-  validation_status             String   // validated | pending | failed
-
-  rating                        Json     // ComponentRating
-  dependencies                  Json     // Array of ComponentDependency
-  interfaces                    Json     // Array of ComponentInterface
-
+  validation_status             String
+  rating                        Json
+  dependencies                  Json
+  interfaces                    Json
   created_at                    DateTime @default(now())
   updated_at                    DateTime @updatedAt
 
@@ -240,45 +198,37 @@ model ModuleComponent {
   @@map("module_components")
 }
 
-// Design intake and AI splitting persistence
 model DesignUpload {
-  id          String   @id @default(cuid())
-  userId      String?
-  filename    String
-  mime        String
-  size        Int
-  checksum    String?
-  storageUrl  String?  // URL or path to stored file (S3/disk)
-  meta        Json?
-
-  createdAt   DateTime @default(now())
-
-  // Relationships
-  splits      DesignSplit[]
+  id         String        @id @default(cuid())
+  userId     String?
+  filename   String
+  mime       String
+  size       Int
+  checksum   String?
+  storageUrl String?
+  meta       Json?
+  createdAt  DateTime      @default(now())
+  splits     DesignSplit[]
 
   @@index([userId])
   @@map("design_uploads")
 }
 
 model DesignSplit {
-  id             String       @id @default(cuid())
-  designUploadId String
-  status         String       // pending | processing | completed | failed
-  metrics        Json?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  
-  // NEW: relational link to Project
-  projectId      String?
-  project        Project?     @relation(fields: [projectId], references: [id])
-
-  // Relations
-  designUpload   DesignUpload @relation(fields: [designUploadId], references: [id], onDelete: Cascade)
-  cutLines       SplitCutLine[] // Cut lines data (section definitions)
+  id                 String              @id @default(cuid())
+  designUploadId     String
+  status             String
+  metrics            Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  projectId          String?
+  designUpload       DesignUpload        @relation(fields: [designUploadId], references: [id], onDelete: Cascade)
+  project            Project?            @relation(fields: [projectId], references: [id])
   generatedArtifacts GeneratedArtifact[]
+  reviewFeedback     ReviewFeedback[]
+  assets             SplitAsset[]
+  testRuns           TestRun[]
   validationResults  ValidationResult[]
-  reviewFeedback    ReviewFeedback[]
-  testRuns          TestRun[]
 
   @@index([designUploadId])
   @@index([status])
@@ -286,42 +236,37 @@ model DesignSplit {
   @@map("design_splits")
 }
 
-// AI Process Management Models
 model AIProcess {
-  id          String   @id @default(cuid())
-  name        String   @unique // e.g., "split-detection", "html-generation"
-  displayName String   // e.g., "Split Detection", "HTML Generation"
+  id          String     @id @default(cuid())
+  name        String     @unique
+  displayName String
   description String
-  category    String   // "analysis", "generation", "enhancement", "validation"
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  prompts AIPrompt[]
+  category    String
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  prompts     AIPrompt[]
 
   @@map("ai_processes")
 }
 
 model AIPrompt {
-  id          String   @id @default(cuid())
+  id          String               @id @default(cuid())
   processId   String
-  version     String   // e.g., "v1.0.0", "v1.1.0"
+  version     String
   title       String?
   description String?
-  content     String   // The actual prompt text
-  metadata    Json?    // Additional configuration, parameters, etc.
+  content     String
+  metadata    Json?
   author      String?
   tags        String[]
-  isActive    Boolean  @default(false) // Only one active prompt per process
-  isDefault   Boolean  @default(false) // Default template prompt
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  process     AIProcess              @relation(fields: [processId], references: [id], onDelete: Cascade)
-  testResults AIPromptTestResult[]
+  isActive    Boolean              @default(false)
+  isDefault   Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
   metrics     AIPromptMetrics[]
+  testResults AIPromptTestResult[]
+  process     AIProcess            @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@unique([processId, version])
   @@index([processId, isActive])
@@ -329,20 +274,18 @@ model AIPrompt {
 }
 
 model AIPromptTestResult {
-  id           String   @id @default(cuid())
-  promptId     String
-  testFileId   String?
-  testFileName String?
-  input        Json?    // Test input data
-  output       Json?    // AI response/output
-  metrics      Json?    // Performance metrics (accuracy, response time, etc.)
-  status       String   // "success", "failure", "error"
-  errorMessage String?
-  executionTime Int?    // milliseconds
-  createdAt    DateTime @default(now())
-
-  // Relations
-  prompt AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  promptId      String
+  testFileId    String?
+  testFileName  String?
+  input         Json?
+  output        Json?
+  metrics       Json?
+  status        String
+  errorMessage  String?
+  executionTime Int?
+  createdAt     DateTime @default(now())
+  prompt        AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
   @@index([promptId])
   @@index([testFileId])
@@ -350,88 +293,45 @@ model AIPromptTestResult {
 }
 
 model AIPromptMetrics {
-  id               String   @id @default(cuid())
-  promptId         String
-  metricType       String   // "accuracy", "response_time", "user_satisfaction", etc.
-  value            Float
-  unit             String?  // "percentage", "milliseconds", "score", etc.
-  context          Json?    // Additional context about the metric
-  calculatedAt     DateTime @default(now())
-
-  // Relations
-  prompt AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  promptId     String
+  metricType   String
+  value        Float
+  unit         String?
+  context      Json?
+  calculatedAt DateTime @default(now())
+  prompt       AIPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
   @@index([promptId, metricType])
   @@map("ai_prompt_metrics")
 }
 
 model StaticTestFile {
-  id          String   @id @default(cuid())
-  filename    String
+  id           String   @id @default(cuid())
+  filename     String
   originalName String
-  mimeType    String
-  size        Int
-  complexity  String?  // "simple", "medium", "complex"
-  tags        String[]
-  description String?
-  uploadedBy  String?
-  createdAt   DateTime @default(now())
+  mimeType     String
+  size         Int
+  complexity   String?
+  tags         String[]
+  description  String?
+  uploadedBy   String?
+  createdAt    DateTime @default(now())
 
   @@map("static_test_files")
 }
 
-// Cut lines data - section definitions and boundaries
-model SplitCutLine {
-  id          String   @id @default(cuid())
-  splitId     String
-  order       Int
-  sectionType String?  // header, hero, content, footer, etc.
-  sectionName String?  // user-friendly name
-  bounds      Json?    // x, y, width, height coordinates (cut line boundaries)
-  metadata    Json?    // additional section metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  split       DesignSplit    @relation(fields: [splitId], references: [id], onDelete: Cascade)
-  imageParts  SplitImagePart[] // Related cropped image parts
-
-  @@index([splitId, order])
-  @@index([splitId])
-  @@map("split_cut_lines")
-}
-
-// Split image parts - the actual cropped images you want to manage
-model SplitImagePart {
-  id         String   @id @default(cuid())
-  cutLineId  String   // Links to SplitCutLine
-  storageUrl String
-  size       Int?     // file size in bytes
-  width      Int?     // image width in pixels
-  height     Int?     // image height in pixels
-  format     String?  // png, jpg, webp, etc.
-  createdAt  DateTime @default(now())
-  
-  // Relations
-  cutLine    SplitCutLine @relation(fields: [cutLineId], references: [id], onDelete: Cascade)
-
-  @@index([cutLineId])
-  @@map("split_image_parts")
-}
-
-// Generated outputs (HTML/CSS/preview) produced from splits or assemblies
 model GeneratedArtifact {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   designSplitId String?
-  moduleId      String?  // optional linkage to a module/component if applicable
-  type          String   // 'html' | 'css' | 'bundle' | 'preview'
+  moduleId      String?
+  type          String
   contentUrl    String?
   content       String?
   meta          Json?
-  status        String   // 'pending' | 'completed' | 'failed'
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
+  status        String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
 
   @@index([designSplitId])
@@ -439,18 +339,15 @@ model GeneratedArtifact {
   @@map("generated_artifacts")
 }
 
-// Validation results produced by validators/services
 model ValidationResult {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   artifactId    String?
   designSplitId String?
   validator     String
-  status        String   // 'passed' | 'warning' | 'failed'
+  status        String
   message       String
   details       Json?
-  createdAt     DateTime @default(now())
-
-  // Relations
+  createdAt     DateTime     @default(now())
   DesignSplit   DesignSplit? @relation(fields: [designSplitId], references: [id])
 
   @@index([designSplitId])

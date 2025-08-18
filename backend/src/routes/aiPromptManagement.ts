@@ -81,7 +81,8 @@ router.post('/processes/:processName/backfill-jsonl', async (req, res) => {
             if (!resolvedPromptId) {
               let processRec = await p.aIProcess.findUnique({ where: { name: processName } });
               if (!processRec) {
-                processRec = await p.aIProcess.create({ data: { name: processName, title: processName } });
+                // Prisma schema requires description and category (no defaults). Provide safe fallbacks.
+                processRec = await p.aIProcess.create({ data: { name: processName, displayName: processName, description: '', category: 'analysis' } });
               }
               const existingAny = await p.aIPrompt.findFirst({ where: { processId: processRec.id }, select: { id: true } });
               if (existingAny?.id) {
@@ -287,7 +288,8 @@ router.post('/processes/:processName/record-run', async (req, res) => {
       try {
         let processRec = await p.aIProcess.findUnique({ where: { name: processName } });
         if (!processRec) {
-          processRec = await p.aIProcess.create({ data: { name: processName, title: processName } });
+          // Prisma schema requires description and category (no defaults). Provide safe fallbacks.
+          processRec = await p.aIProcess.create({ data: { name: processName, displayName: processName, description: '', category: 'analysis' } });
         }
         const existingAny = await p.aIPrompt.findFirst({ where: { processId: processRec.id }, select: { id: true } });
         if (existingAny?.id) {
@@ -675,6 +677,25 @@ router.get('/processes/:processName/active', async (req, res) => {
 router.get('/processes/:processName/versions', async (req, res) => {
   try {
     const { processName } = req.params;
+    // Ensure process exists to avoid repository throwing 'AI process not found'
+    try {
+      const pAny: any = prisma as any;
+      await pAny.aIProcess.upsert({
+        where: { name: processName },
+        update: {},
+        create: {
+          name: processName,
+          displayName: processName,
+          description: '',
+          category: 'analysis',
+          isActive: true
+        }
+      });
+    } catch (ensureErr) {
+      // Log but proceed; if DB unavailable, repository call will handle
+      logger.warn('Ensure process exists before fetching versions failed', { processName, error: (ensureErr as Error).message });
+    }
+
     const versions = await aiPromptRepository.getPromptVersions(processName);
     
     res.json({

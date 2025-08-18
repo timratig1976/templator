@@ -1,8 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { createLogger } from '../../utils/logger';
+import prisma from '../database/prismaClient';
 
 const logger = createLogger();
-const prisma = new PrismaClient();
 // Type workaround: Prisma client exposes models with camel-cased 'aI*' names at runtime,
 // but TypeScript types may not include them. Use an any-cast alias.
 const p = prisma as any;
@@ -193,21 +192,28 @@ export class AIPromptRepository {
    * Get all AI processes
    */
   async getAllProcesses(): Promise<any[]> {
-    return await p.aIProcess.findMany({
-      include: {
-        prompts: {
-          where: { isActive: true },
-          take: 1,
-          orderBy: { createdAt: 'desc' }
-        },
-        _count: {
-          select: {
-            prompts: true,
+    try {
+      return await p.aIProcess.findMany({
+        include: {
+          prompts: {
+            where: { isActive: true },
+            take: 1,
+            orderBy: { createdAt: 'desc' }
+          },
+          _count: {
+            select: {
+              prompts: true,
+            }
           }
-        }
-      },
-      orderBy: { displayName: 'asc' }
-    });
+        },
+        orderBy: { displayName: 'asc' }
+      });
+    } catch (error) {
+      logger.error('AIPromptRepository.getAllProcesses failed', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
   }
 
   /**
