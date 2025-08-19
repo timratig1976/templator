@@ -9,7 +9,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createApp } from '../../app';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '../../../../backend/src/utils/logger';
 import apiRoutes from '../../routes/api';
 
 const logger = createLogger();

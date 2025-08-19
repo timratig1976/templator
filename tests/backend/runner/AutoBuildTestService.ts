@@ -4,12 +4,12 @@
  * Detects build issues, import problems, and dependency conflicts
  */
 
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '../../../backend/src/utils/logger';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { EventEmitter } from 'events';
-import { WebSocketService } from '../core/websocket/WebSocketService';
+import { WebSocketService } from '../../../backend/src/services/core/websocket/WebSocketService';
 
 const logger = createLogger();
 

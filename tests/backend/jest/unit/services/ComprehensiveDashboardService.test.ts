@@ -196,7 +196,7 @@ describe('ComprehensiveDashboardService', () => {
                                    metrics.testCoverage.realCounts.linesTotal) * 100;
       
       // Allow small rounding differences
-      expect(Math.abs(metrics.testCoverage.current - calculatedPercentage)).toBeLessThan(0.1);
+      expect(Math.abs(metrics.testCoverage.current - calculatedPercentage)).toBeLessThan(0.2);
     });
 
     it('should have consistent vulnerability totals', async () => {

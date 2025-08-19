@@ -1,8 +1,8 @@
-import { createLogger } from '@/utils/logger';
-import { createError } from '@/middleware/errorHandler';
-import { PipelineExecutor } from '@/services/pipeline/PipelineExecutor';
-import { HTMLGenerator } from '@/services/ai/generation/HTMLGenerator';
-import { IterativeRefinement } from '@/services/ai/analysis/IterativeRefinement';
+import { createLogger } from '../utils/logger';
+import { createError } from '../middleware/errorHandler';
+import { PipelineExecutor } from '../services/pipeline/PipelineExecutor';
+import { HTMLGenerator } from '../services/ai/generation/HTMLGenerator';
+import { IterativeRefinement } from '../services/ai/analysis/IterativeRefinement';
 import sharp from 'sharp';
 
 const logger = createLogger();

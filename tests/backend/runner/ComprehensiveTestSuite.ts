@@ -1,4 +1,4 @@
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '../../../backend/src/utils/logger';
 import { ModuleComponent } from '../module/ModuleComponentRepository';
 import ModuleComponentPrismaRepository from '../module/ModuleComponentPrismaRepository';
 import { ComponentAssemblyEngine, AssembledModule } from '../module/ComponentAssemblyEngine';

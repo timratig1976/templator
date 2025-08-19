@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=3009 nodemon src/server.ts",
+    "dev": "PORT=3009 nodemon -r ts-node/register -r tsconfig-paths/register src/server.ts",
     "build": "tsc",
     "start": "PORT=3009 node dist/server.js",
     "lint": "eslint src/**/*.ts",
@@ -78,6 +78,7 @@
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.1",
     "ts-prune": "^0.10.3",
+    "tsconfig-paths": "^3.15.0",
     "typescript": "^5.0.0",
     "unimported": "^1.31.0"
   }

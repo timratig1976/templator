@@ -74,7 +74,7 @@ export const mockErrorRecoverySystem = {
 
 export const mockHubSpotAPIService = {
   uploadModule: jest.fn() as jest.MockedFunction<any>,
-  validateModule: jest.fn() as jest.MockedFunction<any>,
+  validateModuleWithAPI: jest.fn() as jest.MockedFunction<any>,
   getPortalInfo: jest.fn() as jest.MockedFunction<any>,
   getInstance: jest.fn() as jest.MockedFunction<any>
 };
@@ -227,9 +227,18 @@ export function setupDomainServiceMocks() {
     success: true,
     moduleId: 'test_module_123'
   });
-  mockHubSpotAPIService.validateModule.mockResolvedValue({
-    isValid: true,
-    errors: []
+  mockHubSpotAPIService.validateModuleWithAPI.mockResolvedValue({
+    valid: true,
+    score: 90,
+    errors: [],
+    warnings: [],
+    suggestions: [],
+    metrics: {
+      complexity_score: 90,
+      accessibility_score: 95,
+      performance_score: 92,
+      maintainability_score: 93
+    }
   });
   
   mockOpenAIClient.getInstance.mockReturnValue(mockOpenAIClient);

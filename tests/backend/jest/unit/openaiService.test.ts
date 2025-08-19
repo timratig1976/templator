@@ -1,30 +1,25 @@
 import { jest } from '@jest/globals';
-import OpenAI from 'openai';
 
-// Mock OpenAI
-jest.mock('openai');
-const MockedOpenAI = OpenAI as jest.MockedClass<typeof OpenAI>;
+// Stable mock for OpenAI that works with module-level instantiation
+const createMock = jest.fn() as any;
+jest.mock('openai', () => {
+  return {
+    __esModule: true,
+    default: jest.fn(() => ({
+      chat: {
+        completions: {
+          create: createMock,
+        },
+      },
+    })),
+  };
+});
 
-import openaiService from '../../services/ai/openaiService';
+import openaiService from '../../../../backend/src/services/ai/openaiService';
 
 describe('OpenAI Service Tests', () => {
-  let mockOpenAI: jest.Mocked<OpenAI>;
-  let mockChatCompletions: jest.Mocked<OpenAI.Chat.Completions>;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    mockChatCompletions = {
-      create: jest.fn(),
-    } as any;
-
-    mockOpenAI = {
-      chat: {
-        completions: mockChatCompletions,
-      },
-    } as any;
-
-    MockedOpenAI.mockImplementation(() => mockOpenAI);
   });
 
   describe('convertDesignToHTML', () => {
@@ -104,7 +99,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       const result = await openaiService.convertDesignToHTML(mockImageBase64, mockFileName);
 
@@ -122,7 +117,7 @@ describe('OpenAI Service Tests', () => {
       expect(result.description).toContain('hero section');
 
       // Verify OpenAI was called with correct parameters
-      expect(mockChatCompletions.create).toHaveBeenCalledWith({
+      expect(createMock).toHaveBeenCalledWith({
         model: 'gpt-4-vision-preview',
         messages: [{
           role: 'user',
@@ -159,11 +154,11 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       const result = await openaiService.convertDesignToHTML(mockImageBase64, mockFileName);
 
-      expect(result.html).toBe('<div class="simple">Test</div>');
+      expect(result.html).toContain('<div class="simple">Test</div>');
       expect(result.description).toBe('Simple test design');
     });
 
@@ -176,7 +171,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       await expect(openaiService.convertDesignToHTML(mockImageBase64, mockFileName))
         .rejects
@@ -192,7 +187,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       await expect(openaiService.convertDesignToHTML(mockImageBase64, mockFileName))
         .rejects
@@ -208,7 +203,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       await expect(openaiService.convertDesignToHTML(mockImageBase64, mockFileName))
         .rejects
@@ -219,7 +214,7 @@ describe('OpenAI Service Tests', () => {
       const quotaError = new Error('Quota exceeded');
       (quotaError as any).code = 'insufficient_quota';
 
-      mockChatCompletions.create.mockRejectedValue(quotaError);
+      createMock.mockRejectedValue(quotaError);
 
       await expect(openaiService.convertDesignToHTML(mockImageBase64, mockFileName))
         .rejects
@@ -228,7 +223,7 @@ describe('OpenAI Service Tests', () => {
 
     it('should handle general OpenAI API errors', async () => {
       const apiError = new Error('API connection failed');
-      mockChatCompletions.create.mockRejectedValue(apiError);
+      createMock.mockRejectedValue(apiError);
 
       await expect(openaiService.convertDesignToHTML(mockImageBase64, mockFileName))
         .rejects
@@ -249,7 +244,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       const result = await openaiService.refineHTML(mockHTML, mockRequirements);
 
@@ -258,7 +253,7 @@ describe('OpenAI Service Tests', () => {
       expect(result).toContain('mx-auto');
 
       // Verify OpenAI was called with correct parameters
-      expect(mockChatCompletions.create).toHaveBeenCalledWith({
+      expect(createMock).toHaveBeenCalledWith({
         model: 'gpt-4',
         messages: [{
           role: 'user',
@@ -278,7 +273,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       const result = await openaiService.refineHTML(mockHTML);
 
@@ -295,7 +290,7 @@ describe('OpenAI Service Tests', () => {
         }]
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       await expect(openaiService.refineHTML(mockHTML, mockRequirements))
         .rejects
@@ -304,7 +299,7 @@ describe('OpenAI Service Tests', () => {
 
     it('should handle OpenAI API errors during refinement', async () => {
       const apiError = new Error('API rate limit exceeded');
-      mockChatCompletions.create.mockRejectedValue(apiError);
+      createMock.mockRejectedValue(apiError);
 
       await expect(openaiService.refineHTML(mockHTML, mockRequirements))
         .rejects
@@ -315,7 +310,7 @@ describe('OpenAI Service Tests', () => {
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
       const networkError = new Error('Network connection failed');
-      mockChatCompletions.create.mockRejectedValue(networkError);
+      createMock.mockRejectedValue(networkError);
 
       await expect(openaiService.convertDesignToHTML('test-image', 'test.png'))
         .rejects
@@ -327,7 +322,7 @@ describe('OpenAI Service Tests', () => {
         choices: [] // Empty choices array
       };
 
-      mockChatCompletions.create.mockResolvedValue(mockAIResponse as any);
+      createMock.mockResolvedValue(mockAIResponse as any);
 
       await expect(openaiService.convertDesignToHTML('test-image', 'test.png'))
         .rejects

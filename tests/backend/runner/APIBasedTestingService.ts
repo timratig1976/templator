@@ -4,7 +4,7 @@
  * Ensures generated modules work correctly in the HubSpot environment
  */
 
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '../../../backend/src/utils/logger';
 import { createError } from '../../middleware/errorHandler';
 import { HubSpotAPIService } from '../deployment/HubSpotAPIService';
 import { HubSpotValidationService, ValidationResult } from '../quality/HubSpotValidationService';

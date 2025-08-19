@@ -6,7 +6,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { createLogger } from '../utils/logger';
-import { getBuildTestConfig } from '@tests-config/build-test-config';
+import { getBuildTestConfig } from '../../../tests/backend/config/build-test-config';
 
 const router = Router();
 const logger = createLogger();
@@ -17,7 +17,7 @@ function getBuildTestService(): any {
   if (!buildTestService) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     // @ts-ignore - runtime alias resolution handled by tsconfig paths
-    const AutoBuildTestService: any = require('@tests/AutoBuildTestService').default;
+    const AutoBuildTestService: any = require('../../../tests/backend/runner/AutoBuildTestService').default;
     buildTestService = new AutoBuildTestService(getBuildTestConfig());
 
     // Attach event listeners once

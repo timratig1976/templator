@@ -10,7 +10,7 @@
  * @version 1.0.0
  */
 
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '../../../backend/src/utils/logger';
 import {
   CoverageReport,
   PerformanceReport,

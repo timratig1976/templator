@@ -16,8 +16,12 @@ import { spawn, exec, ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
-import { createApp } from '../../app';
+import { createApp } from '../../../../backend/src/app';
 import http from 'http';
+// Use CommonJS require to avoid needing @types/eslint in test env
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const eslintLib: any = require('eslint');
+const ESLint = eslintLib.ESLint || eslintLib;
 
 const execAsync = promisify(exec);
 const PORT = process.env.TEST_PORT ? parseInt(process.env.TEST_PORT) : 0; // Use dynamic port
@@ -199,7 +203,10 @@ describe('System Stability Test Suite', () => {
         transports: ['polling', 'websocket']
       });
 
+      let timeoutId: NodeJS.Timeout;
+
       clientSocket.on('connect', () => {
+        if (timeoutId) clearTimeout(timeoutId);
         expect(clientSocket.connected).toBe(true);
         expect(clientSocket.id).toBeDefined();
         console.log(`✅ Socket.IO connected: ${clientSocket.id}`);
@@ -207,13 +214,14 @@ describe('System Stability Test Suite', () => {
       });
 
       clientSocket.on('connect_error', (error) => {
-        fail(`Socket.IO connection failed: ${error.message}`);
+        if (timeoutId) clearTimeout(timeoutId);
+        done(new Error(`Socket.IO connection failed: ${error.message}`));
       });
 
       // Timeout after 5 seconds
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         if (!clientSocket.connected) {
-          fail('Socket.IO connection timeout');
+          done(new Error('Socket.IO connection timeout'));
         }
       }, 5000);
     });
@@ -324,21 +332,21 @@ describe('System Stability Test Suite', () => {
     });
 
     test('should have no linting errors in critical files', async () => {
+      // Resolve against repo root to be robust in workspaces where cwd may be backend/
+      const repoRoot = path.resolve(__dirname, '../../../../');
       const criticalFiles = [
-        'src/server.ts',
-        'src/routes/api.ts',
-        'src/services/input/ImageHandlingService.ts',
-        'src/routes/layoutSplitting.ts'
-      ];
+        'backend/src/server.ts',
+        'backend/src/routes/api.ts',
+        'backend/src/services/input/ImageHandlingService.ts',
+        'backend/src/routes/layoutSplittingRoutes.ts'
+      ].map((p) => path.resolve(repoRoot, p));
+
+      const eslint = new ESLint({ useEslintrc: true, extensions: ['.ts', '.js'], ignore: false });
 
       for (const file of criticalFiles) {
         try {
-          const { stdout, stderr } = await execAsync(`npx eslint ${file} --format json`);
-          const results = JSON.parse(stdout);
-          
-          const errorCount = results.reduce((sum: number, result: any) => 
-            sum + result.errorCount, 0);
-          
+          const results: any[] = await eslint.lintFiles([file]);
+          const errorCount = results.reduce((sum: number, r: any) => sum + (r.errorCount || 0), 0 as number);
           expect(errorCount).toBe(0);
           console.log(`✅ ${file}: No linting errors`);
         } catch (error: any) {

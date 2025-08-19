@@ -134,7 +134,7 @@ export default function UniversalAIProcessManager() {
   };
 
   const navigateToProcess = (processName: string) => {
-    router.push(`/admin/ai-maintenance/${processName}`);
+    router.push(`/ai/${processName}/editor`);
   };
 
   if (loading) {

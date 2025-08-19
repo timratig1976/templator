@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { executePipeline as executePipelineFn, regenerateSectionHTML as regenerateSectionHTMLFn, getSupportedFileTypes } from '@/pipeline/api';
-import { createError } from '@/middleware/errorHandler';
-import { createLogger } from '@/utils/logger';
+import { executePipeline as executePipelineFn, regenerateSectionHTML as regenerateSectionHTMLFn, getSupportedFileTypes } from '../pipeline/api';
+import { createError } from '../middleware/errorHandler';
+import { createLogger } from '../utils/logger';
 
 const router = Router();
 const logger = createLogger();

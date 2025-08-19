@@ -5,7 +5,7 @@
  * Now uses modular components for better maintainability
  */
 
-import { TestRunnerCLI, TestRunnerCLIConfig } from '@tests/TestRunnerCLI';
+import { TestRunnerCLI, TestRunnerCLIConfig } from '../../tests/backend/runner/TestRunnerCLI';
 import { createLogger } from './utils/logger';
 
 const logger = createLogger();
