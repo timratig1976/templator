@@ -1,16 +1,22 @@
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { PipelineController } from '../controllers/PipelineController';
+import { PipelineController, executePipeline as executePipelineFn } from '../controllers/PipelineController';
 import { createError } from '../middleware/errorHandler';
 import { createLogger } from '../utils/logger';
 
 const router = Router();
 const logger = createLogger();
-let pipelineController: PipelineController;
 
-export function setPipelineController(controller: PipelineController) {
-  pipelineController = controller;
+// Back-compat injection: allow tests to set a controller-like object
+type PipelineControllerLike = {
+  executePipeline?: (designFile: Express.Multer.File, options?: any) => Promise<any>;
+  regenerateSectionHTML?: (params: { sectionId: string; originalImage?: string; customPrompt?: string }) => Promise<any>;
+};
+let injectedController: PipelineControllerLike | undefined;
+
+export function setPipelineController(controller: PipelineControllerLike) {
+  injectedController = controller;
 }
 
 // Configure multer for pipeline uploads
@@ -60,12 +66,11 @@ router.post('/execute', upload.single('design'), async (req: Request, res: Respo
       timestamp: new Date().toISOString()
     });
 
-    // Execute the quality-focused pipeline
-    if (!pipelineController) {
-      pipelineController = new PipelineController();
-    }
+    // Execute the quality-focused pipeline using function-based handler by default
     const startedAt = Date.now();
-    const raw = await pipelineController.executePipeline(req.file);
+    const raw = injectedController?.executePipeline
+      ? await injectedController.executePipeline(req.file)
+      : await executePipelineFn(req.file);
     // Provide safe defaults if some fields are missing from pipeline output
     const sections = Array.isArray((raw as any)?.sections) ? (raw as any).sections : [];
     const qualityScore = typeof (raw as any)?.qualityScore === 'number' ? (raw as any).qualityScore : 0;
@@ -257,11 +262,9 @@ router.post('/regenerate-html', async (req: Request, res: Response, next: NextFu
       timestamp: new Date().toISOString()
     });
 
-    // Use the pipeline controller to regenerate HTML for the section
-    if (!pipelineController) {
-      pipelineController = new PipelineController();
-    }
-    const regeneratedSection = await pipelineController.regenerateSectionHTML({
+    // Use injected controller if provided; otherwise instantiate class for this legacy-only endpoint
+    const controller = (injectedController as PipelineControllerLike) || new PipelineController();
+    const regeneratedSection = await controller.regenerateSectionHTML!({
       sectionId,
       originalImage,
       customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'

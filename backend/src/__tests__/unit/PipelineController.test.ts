@@ -42,7 +42,7 @@ jest.mock('../../services/ai/splitting/SplittingService', () => ({
 
 jest.mock('../../middleware/errorHandler');
 
-import { PipelineController } from '../../controllers/PipelineController';
+import { executePipeline } from '../../controllers/PipelineController';
 import { createError } from '../../middleware/errorHandler';
 import { setupDomainServiceMocks, mockPipelineExecutor, mockHTMLGenerator, mockIterativeRefinement } from '../setup/domainServiceMocks';
 jest.mock('../../utils/logger', () => ({
@@ -54,8 +54,8 @@ jest.mock('../../utils/logger', () => ({
   })
 }));
 
-describe('PipelineController', () => {
-  let pipelineController: PipelineController;
+describe('PipelineController (function-based API)', () => {
+  // Function-based API, no class instance needed
 
   const mockDesignFile = {
     buffer: Buffer.from('fake-image-data'),
@@ -95,13 +95,12 @@ describe('PipelineController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setupDomainServiceMocks();
-    pipelineController = new PipelineController();
   });
 
-  describe('executePipeline', () => {
+  describe('executePipeline()', () => {
 
     test('should execute pipeline successfully with valid design file', async () => {
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('status');
@@ -112,7 +111,7 @@ describe('PipelineController', () => {
     });
 
     test('should handle section detection correctly', async () => {
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
       expect(result.finalResult).toHaveProperty('sections');
@@ -121,7 +120,7 @@ describe('PipelineController', () => {
     });
 
     test('should calculate quality scores for each section', async () => {
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
       expect(result.finalResult).toHaveProperty('sections');
@@ -129,7 +128,7 @@ describe('PipelineController', () => {
     });
 
     test('should generate editable fields for sections', async () => {
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
       expect(result.finalResult).toHaveProperty('sections');
@@ -139,7 +138,7 @@ describe('PipelineController', () => {
     test('should handle OpenAI service errors gracefully', async () => {
       mockPipelineExecutor.executePipeline.mockRejectedValueOnce(new Error('Pipeline execution failed'));
 
-      await expect(pipelineController.executePipeline(mockDesignFile))
+      await expect(executePipeline(mockDesignFile))
         .rejects
         .toThrow('Pipeline execution failed');
     });
@@ -158,7 +157,7 @@ describe('PipelineController', () => {
         endTime: Date.now()
       });
 
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
       expect(result.status).toBe('completed');
@@ -177,7 +176,7 @@ describe('PipelineController', () => {
         endTime: startTime + 50
       });
       
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
       const endTime = Date.now();
 
       expect(result.totalDuration).toBeGreaterThan(0);
@@ -185,8 +184,8 @@ describe('PipelineController', () => {
     });
 
     test('should generate unique pipeline IDs', async () => {
-      const result1 = await pipelineController.executePipeline(mockDesignFile);
-      const result2 = await pipelineController.executePipeline(mockDesignFile);
+      const result1 = await executePipeline(mockDesignFile);
+      const result2 = await executePipeline(mockDesignFile);
 
       expect(result1.id).not.toBe(result2.id);
       expect(result1.id).toMatch(/^pipeline_\d+_[a-z0-9]+$/);
@@ -199,8 +198,8 @@ describe('PipelineController', () => {
       const smallFile = { ...mockDesignFile, size: 100 * 1024 }; // 100KB
       const largeFile = { ...mockDesignFile, size: 5 * 1024 * 1024 }; // 5MB
 
-      const smallResult = await pipelineController.executePipeline(smallFile);
-      const largeResult = await pipelineController.executePipeline(largeFile);
+      const smallResult = await executePipeline(smallFile);
+      const largeResult = await executePipeline(largeFile);
 
       expect(smallResult).toHaveProperty('status', 'completed');
       expect(largeResult).toHaveProperty('status', 'completed');
@@ -211,7 +210,7 @@ describe('PipelineController', () => {
 
   describe('calculateQualityScore', () => {
     test('should calculate quality score based on HTML content', async () => {
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
 
       expect(result).toHaveProperty('finalResult');
       expect(result.finalResult).toHaveProperty('sections');
@@ -219,7 +218,7 @@ describe('PipelineController', () => {
     });
 
     test('should handle empty or invalid HTML', async () => {
-      const result = await pipelineController.executePipeline(mockDesignFile);
+      const result = await executePipeline(mockDesignFile);
       
       expect(result).toHaveProperty('status', 'completed');
       expect(result.totalDuration).toBeGreaterThan(0);
@@ -242,7 +241,7 @@ describe('PipelineController', () => {
       } as Express.Multer.File;
 
       // Should still process but may have lower quality scores
-      const result = await pipelineController.executePipeline(invalidFile);
+      const result = await executePipeline(invalidFile);
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('finalResult');
     });
@@ -261,7 +260,7 @@ describe('PipelineController', () => {
         path: ''
       } as Express.Multer.File;
 
-      const result = await pipelineController.executePipeline(largeFile);
+      const result = await executePipeline(largeFile);
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('finalResult');
     });

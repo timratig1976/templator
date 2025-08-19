@@ -1,17 +1,35 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PipelineController } from '../controllers/PipelineController';
 import { validateRequest, refineHTMLSchema, createFileUploadValidator } from '../middleware/unifiedValidation';
 import { createError } from '../middleware/errorHandler';
 import multer from 'multer';
 import storage from '../services/storage';
 import { sha256 } from '../utils/checksum';
 import designUploadRepo from '../services/database/DesignUploadRepository';
+import { 
+  getSupportedFileTypes as getSupportedFileTypesFn,
+  convertDesignToHTMLFromUpload,
+  refineHTMLHandler
+} from './designController';
 
 const router = Router();
-let pipelineController: PipelineController;
+// Back-compat: allow tests to inject a controller while defaulting to function-based handlers
+type PipelineControllerLike = {
+  getSupportedFileTypes?: () => any;
+  convertDesignToHTML?: (designFile: { buffer: Buffer; originalname: string; mimetype: string; }) => Promise<{
+    fileName: string;
+    fileSize: number;
+    analysis: { html: string; sections: any[]; components: any[]; description: string };
+  }>;
+  refineHTML?: (params: { html: string; requirements?: string }) => Promise<{
+    originalHTML: string;
+    refinedHTML: string;
+    requirements: string | null;
+  }>;
+} | undefined;
 
-export function setPipelineController(controller: PipelineController) {
-  pipelineController = controller;
+let injectedController: PipelineControllerLike;
+export function setPipelineController(controller: any) {
+  injectedController = controller as PipelineControllerLike;
 }
 
 // Configure multer for design uploads (migrated from designController)
@@ -52,10 +70,9 @@ const upload = multer({
  * Get supported file types (Legacy API - now uses PipelineController)
  */
 router.get('/supported-types', (req: Request, res: Response) => {
-  if (!pipelineController) {
-    pipelineController = new PipelineController();
-  }
-  const supportedTypes = pipelineController.getSupportedFileTypes();
+  const supportedTypes = injectedController?.getSupportedFileTypes
+    ? injectedController.getSupportedFileTypes()
+    : getSupportedFileTypesFn();
   res.json({
     success: true,
     data: supportedTypes,
@@ -68,10 +85,9 @@ router.get('/supported-types', (req: Request, res: Response) => {
  * Alternative endpoint name for supported file types (for backward compatibility)
  */
 router.get('/supported-formats', (req: Request, res: Response) => {
-  if (!pipelineController) {
-    pipelineController = new PipelineController();
-  }
-  const supportedTypes = pipelineController.getSupportedFileTypes();
+  const supportedTypes = injectedController?.getSupportedFileTypes
+    ? injectedController.getSupportedFileTypes()
+    : getSupportedFileTypesFn();
   res.json({
     success: true,
     data: supportedTypes,
@@ -94,7 +110,7 @@ router.post('/upload', upload.single('design'), async (req: Request, res: Respon
     let storageUrl: string | null = null;
     let checksum: string | null = null;
     try {
-      const put = await storage.put(buffer, { mime: mimetype, extension: originalname.split('.').pop() || 'bin' });
+      const put = await storage.put(buffer, { mime: mimetype, extension: originalname.split('.')?.pop() || 'bin' });
       storageUrl = put.url;
       checksum = sha256(buffer);
       await designUploadRepo.create({
@@ -108,36 +124,28 @@ router.post('/upload', upload.single('design'), async (req: Request, res: Respon
     } catch (e) {
       // non-blocking
     }
-    
-    // Use PipelineController's legacy method
-    if (!pipelineController) {
-      pipelineController = new PipelineController();
-    }
-    const result = await pipelineController.convertDesignToHTML({
-      buffer,
-      originalname,
-      mimetype
-    });
 
-    res.json({
-      success: true,
-      data: {
-        packagedModule: {
-          name: originalname,
-          id: result.fileName || originalname,
-          status: 'completed'
+    if (injectedController?.convertDesignToHTML) {
+      const result = await injectedController.convertDesignToHTML({ buffer, originalname, mimetype });
+      res.json({
+        success: true,
+        data: {
+          packagedModule: { name: originalname, id: result.fileName || originalname, status: 'completed' },
+          fileName: result.fileName || originalname,
+          fileSize: result.fileSize || buffer.length,
+          analysis: result.analysis || {
+            html: '<div>Generated HTML</div>',
+            sections: [],
+            components: [],
+            description: 'Design converted to HTML'
+          }
         },
-        fileName: result.fileName || originalname,
-        fileSize: result.fileSize || buffer.length,
-        analysis: result.analysis || {
-          html: '<div>Generated HTML</div>',
-          sections: [],
-          components: [],
-          description: 'Design converted to HTML'
-        }
-      },
-      message: 'Design successfully converted to HTML'
-    });
+        message: 'Design successfully converted to HTML'
+      });
+    } else {
+      // Delegate to function-based handler which constructs the response
+      await convertDesignToHTMLFromUpload(req, res, next);
+    }
 
   } catch (error) {
     next(error);
@@ -150,22 +158,13 @@ router.post('/upload', upload.single('design'), async (req: Request, res: Respon
  */
 router.post('/refine', validateRequest(refineHTMLSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { html, requirements } = req.body;
-    
-    // Use PipelineController's legacy method
-    if (!pipelineController) {
-      pipelineController = new PipelineController();
+    if (injectedController?.refineHTML) {
+      const { html, requirements } = req.body;
+      const result = await injectedController.refineHTML({ html, requirements });
+      res.json({ success: true, data: result, message: 'HTML successfully refined' });
+    } else {
+      await refineHTMLHandler(req, res, next);
     }
-    const result = await pipelineController.refineHTML({
-      html,
-      requirements
-    });
-
-    res.json({
-      success: true,
-      data: result,
-      message: 'HTML successfully refined'
-    });
 
   } catch (error) {
     next(error);

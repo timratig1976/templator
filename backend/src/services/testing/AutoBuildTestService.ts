@@ -153,6 +153,12 @@ export class AutoBuildTestService extends EventEmitter {
 
     // Set up periodic testing
     if (this.config.enabled) {
+      // Avoid background timers during Jest to prevent open handle leaks
+      if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+        logger.debug('Skipping AutoBuildTestService interval in test environment');
+        this.emit('started');
+        return;
+      }
       this.intervalId = setInterval(async () => {
         try {
           await this.runBuildTest();
@@ -647,7 +653,11 @@ export class AutoBuildTestService extends EventEmitter {
    * Generate detailed build report
    */
   private async generateBuildReport(result: BuildTestResult): Promise<string | null> {
-    const reportPath = path.join(process.cwd(), 'backend', '.runtime', 'build-reports');
+    const baseReports = process.env.REPORTS_DIR || 'reports';
+    const basePath = path.isAbsolute(baseReports)
+      ? baseReports
+      : path.resolve(process.cwd(), '..', baseReports);
+    const reportPath = path.join(basePath, 'build');
     
     try {
       await fs.mkdir(reportPath, { recursive: true });

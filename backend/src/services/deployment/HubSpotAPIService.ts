@@ -561,6 +561,12 @@ export class HubSpotAPIService {
 
   private initializeRateLimiting(): void {
     // Set up periodic cleanup of rate limit status
+    // Avoid background timers during Jest to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping HubSpotAPIService rate limit interval in test environment');
+      return;
+    }
+
     setInterval(() => {
       const now = new Date();
       for (const [portalId, status] of this.rateLimitStatus.entries()) {

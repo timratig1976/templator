@@ -17,7 +17,15 @@ export class TestReportGenerator extends BaseService {
   private fileOps: FileOperationMixin;
 
   constructor(config: TestReportGeneratorConfig) {
-    super('TestReportGenerator', config);
+    const baseReports = process.env.REPORTS_DIR || 'reports';
+    const basePath = path.isAbsolute(baseReports)
+      ? baseReports
+      : path.resolve(process.cwd(), '..', baseReports);
+    const withDefaultDir = {
+      ...config,
+      outputDir: config.outputDir || path.join(basePath, 'tests'),
+    } as TestReportGeneratorConfig;
+    super('TestReportGenerator', withDefaultDir);
     this.fileOps = new FileOperationMixin();
   }
 

@@ -575,6 +575,12 @@ export class QualityMetricsDashboard extends EventEmitter {
 
   private setupTrendAnalysis(): void {
     // Analyze global trends every hour
+    // Avoid background timers during Jest to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping QualityMetricsDashboard trend analysis interval in test environment');
+      return;
+    }
+
     setInterval(() => {
       this.analyzeGlobalTrends();
     }, 60 * 60 * 1000);

@@ -475,6 +475,12 @@ export class PipelineProgressTracker extends EventEmitter {
 
   private setupCleanupInterval(): void {
     // Clean up completed pipelines older than 1 hour
+    // Avoid starting background timers during Jest tests to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping PipelineProgressTracker cleanup interval in test environment');
+      return;
+    }
+
     setInterval(() => {
       const oneHourAgo = Date.now() - (60 * 60 * 1000);
       

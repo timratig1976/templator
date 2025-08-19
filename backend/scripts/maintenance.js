@@ -51,7 +51,6 @@ class MaintenanceScript {
         this.log('║  6. 💓 System Health Monitor   - Check system status        ║', 'blue');
         this.log('║  7. 📈 Comprehensive Dashboard - Full system overview       ║', 'blue');
         this.log('║                                                              ║', 'cyan');
-        this.log('║  8. 🌐 Open Visual Dashboard   - Launch web interface       ║', 'magenta');
         this.log('║  9. 🔄 Refresh All Data        - Update all metrics         ║', 'yellow');
         this.log('║  0. ❌ Exit                     - Close maintenance tool     ║', 'red');
         this.log('╚══════════════════════════════════════════════════════════════╝', 'cyan');
@@ -271,34 +270,7 @@ class MaintenanceScript {
         }
     }
 
-    // Function 8: Open Visual Dashboard
-    async openVisualDashboard() {
-        this.log('\n🌐 OPENING VISUAL DASHBOARD', 'cyan');
-        this.log('═══════════════════════════════', 'cyan');
-        
-        const dashboardURL = 'http://localhost:3009/api/dashboard';
-        
-        this.log(`🚀 Dashboard URL: ${dashboardURL}`, 'blue');
-        this.log(`📱 Opening in your default browser...`, 'yellow');
-        
-        // Try to open in browser
-        const { exec } = require('child_process');
-        const platform = process.platform;
-        
-        let command;
-        if (platform === 'darwin') command = `open ${dashboardURL}`;
-        else if (platform === 'win32') command = `start ${dashboardURL}`;
-        else command = `xdg-open ${dashboardURL}`;
-        
-        exec(command, (error) => {
-            if (error) {
-                this.log(`❌ Could not open browser automatically`, 'red');
-                this.log(`📋 Please manually navigate to: ${dashboardURL}`, 'yellow');
-            } else {
-                this.log(`✅ Dashboard opened successfully!`, 'green');
-            }
-        });
-    }
+    // (Removed) Function 8: Open Visual Dashboard
 
     // Function 9: Refresh All Data
     async refreshAllData() {
@@ -377,9 +349,6 @@ class MaintenanceScript {
                     break;
                 case '7':
                     await this.comprehensiveDashboard();
-                    break;
-                case '8':
-                    await this.openVisualDashboard();
                     break;
                 case '9':
                     await this.refreshAllData();

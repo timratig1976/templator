@@ -239,6 +239,12 @@ export class SchemaUpdateService {
   startAutoUpdate(intervalHours: number = 24): void {
     logger.info('Starting automatic schema updates', { intervalHours });
     
+    // Avoid background timers during Jest to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping SchemaUpdateService auto-update interval in test environment');
+      return;
+    }
+
     setInterval(async () => {
       try {
         logger.info('Running scheduled schema update');

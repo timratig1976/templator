@@ -21,21 +21,20 @@
 
 ---
 
-## 📁 **Test Structure Organization**
+## 📁 **Test Structure Organization (Multi-project)**
 
 ```
-tests/
+src/__tests__/
 ├── setup/                    # Test configuration
-│   ├── unit.setup.ts        # Unit test mocks (80% of tests)
-│   ├── integration.setup.ts # Integration test mocks (15%)
-│   ├── e2e.setup.ts         # E2E test setup (5%)
-│   ├── contracts.setup.ts   # Contract test setup (Pact)
-│   └── jest.setup.ts        # Global Jest configuration
+│   ├── unit.setup.ts        # Unit test setup/mocks (80%)
+│   ├── integration.setup.ts # Integration setup/mocks (15%)
+│   ├── e2e.setup.ts         # E2E setup (5%)
+│   └── jest.setup.ts        # Global Jest hooks/config
 ├── fixtures/                 # Test data and factories
 │   ├── data/                # Static test data
 │   ├── factories/           # Test data factories
 │   └── mocks/               # Mock implementations
-├── unit/                    # Unit tests (80% of test suite)
+├── unit/                    # Unit tests (80% of suite)
 │   ├── domains/
 │   ├── services/
 │   ├── controllers/
@@ -44,50 +43,56 @@ tests/
 │   ├── routes/
 │   ├── database/
 │   └── external/
-├── e2e/                     # End-to-end tests (5%)
-│   ├── user-journeys/
-│   └── critical-paths/
-├── contracts/               # Contract tests (Pact)
-└── performance/             # Performance tests
+└── e2e/                     # End-to-end tests (5%)
+    ├── user-journeys/
+    └── critical-paths/
 ```
 
 ---
 
-## ⚙️ **Jest Configuration**
+## ⚙️ **Jest Configuration (Multi-project)**
 
-### **Complete Jest Setup**
 ```typescript
-// jest.config.js
+// backend/jest.config.js
 module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
-  testMatch: [
-    '**/tests/unit/**/*.test.ts',
-    '**/tests/integration/**/*.test.ts',
-    '**/tests/e2e/**/*.test.ts'
-  ],
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/types/**/*',
-    '!src/**/*.interface.ts'
+  projects: [
+    {
+      displayName: { name: 'UNIT', color: 'green' },
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      roots: ['<rootDir>/src'],
+      testMatch: ['<rootDir>/src/__tests__/unit/**/*.test.ts'],
+      transform: { '^.+\\.ts$': 'ts-jest' },
+      setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/unit.setup.ts'],
+      moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+      collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/__tests__/**', '!src/server.ts']
+    },
+    {
+      displayName: { name: 'E2E', color: 'blue' },
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      roots: ['<rootDir>/src'],
+      testMatch: ['<rootDir>/src/__tests__/e2e/**/*.test.ts'],
+      transform: { '^.+\\.ts$': 'ts-jest' },
+      setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/e2e.setup.ts'],
+      moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+      maxWorkers: 1
+    },
+    {
+      displayName: { name: 'INTEGRATION', color: 'yellow' },
+      preset: 'ts-jest',
+      testEnvironment: 'node',
+      roots: ['<rootDir>/src'],
+      testMatch: ['<rootDir>/src/__tests__/integration/**/*.test.ts'],
+      transform: { '^.+\\.ts$': 'ts-jest' },
+      moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
+      maxWorkers: 1
+    }
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html', 'json'],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
-    }
-  },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
-  testTimeout: 60000,
-  clearMocks: true,
-  restoreMocks: true,
-  resetMocks: true
+  coverageReporters: ['text', 'lcov', 'html'],
+  verbose: true,
+  testTimeout: 30000
 };
 ```
 
@@ -579,17 +584,16 @@ test.describe('Complete User Journey', () => {
 
 ## 📊 **Test Scripts & Commands**
 
-### **Package.json Scripts**
-```json
+### **Package.json Scripts (Multi-project)**
+```jsonc
 {
   "scripts": {
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
     "test:coverage": "jest --config jest.config.js --coverage",
-    "test:unit": "jest --config jest.config.js --testPathPattern=unit",
-    "test:integration": "jest --config jest.config.js --testPathPattern=integration",
-    "test:e2e": "jest --config jest.config.js --testPathPattern=e2e",
-    "test:contracts": "jest --config jest.config.js --testPathPattern=contracts",
+    "test:unit": "jest --config jest.config.js --selectProjects UNIT",
+    "test:integration": "jest --config jest.config.js --selectProjects INTEGRATION",
+    "test:e2e": "jest --config jest.config.js --selectProjects E2E",
     "test:pyramid": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:ci": "jest --config jest.config.js --coverage --watchAll=false --passWithNoTests"
   }

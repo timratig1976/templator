@@ -7,6 +7,211 @@ import sharp from 'sharp';
 
 const logger = createLogger();
 
+// ===== Modern function-based API =====
+type Services = {
+  pipelineExecutor: any;
+  htmlGenerator: any;
+  iterativeRefinement: any;
+};
+
+function resolveServices(overrides?: Partial<Services>): Services {
+  const resolvedPE =
+    overrides?.pipelineExecutor ||
+    (typeof (PipelineExecutor as any)?.getInstance === 'function'
+      ? (PipelineExecutor as any).getInstance()
+      : undefined) ||
+    (PipelineExecutor as any)?.default ||
+    (PipelineExecutor as any);
+
+  const resolvedHG =
+    overrides?.htmlGenerator ||
+    (typeof (HTMLGenerator as any)?.getInstance === 'function'
+      ? (HTMLGenerator as any).getInstance()
+      : undefined) ||
+    (HTMLGenerator as any)?.default ||
+    (HTMLGenerator as any);
+
+  const resolvedIR =
+    overrides?.iterativeRefinement ||
+    (typeof (IterativeRefinement as any)?.getInstance === 'function'
+      ? (IterativeRefinement as any).getInstance()
+      : undefined) ||
+    (IterativeRefinement as any)?.default ||
+    (IterativeRefinement as any);
+
+  return {
+    pipelineExecutor: resolvedPE,
+    htmlGenerator: resolvedHG,
+    iterativeRefinement: resolvedIR,
+  } as Services;
+}
+
+export async function executePipeline(
+  designFile: Express.Multer.File,
+  options: any = {},
+  deps?: Partial<Services>
+): Promise<any> {
+  const startTime = Date.now();
+  const { pipelineExecutor } = resolveServices(deps);
+
+  logger.info('🚀 Starting modular pipeline execution', {
+    fileName: designFile.originalname,
+    fileSize: designFile.size,
+    mimeType: designFile.mimetype,
+    options
+  });
+
+  try {
+    const pipelineInput = {
+      designFile: designFile.buffer,
+      fileName: designFile.originalname,
+      options: {
+        generateModule: options.generateModule !== false,
+        includeValidation: options.includeValidation !== false,
+        optimizeForPerformance: options.optimizeForPerformance !== false
+      }
+    };
+
+    const result = await pipelineExecutor.executePipeline(pipelineInput);
+
+    const processingTime = Date.now() - startTime;
+    logger.info('✅ Pipeline execution completed successfully', {
+      pipelineId: result.id,
+      totalTime: processingTime,
+      status: result.status,
+      phasesCompleted: result.phases?.filter((p: any) => p.status === 'completed').length || 0,
+      totalDuration: result.totalDuration
+    });
+
+    return result;
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    logger.error('❌ Pipeline execution failed', {
+      error: (error as Error).message,
+      stack: (error as Error).stack,
+      processingTime,
+      fileName: designFile.originalname
+    });
+
+    const msg = `Pipeline execution failed: ${(error as Error).message}`;
+    const maybeErr = createError(msg, 500, 'INTERNAL_ERROR') as unknown;
+    if (maybeErr instanceof Error) throw maybeErr;
+    throw new Error(msg);
+  }
+}
+
+export async function convertDesignToHTML(
+  designFile: { buffer: Buffer; originalname: string; mimetype: string },
+  deps?: Partial<Services>
+): Promise<{
+  fileName: string;
+  fileSize: number;
+  analysis: { html: string; sections: any[]; components: any[]; description: string };
+}> {
+  const { htmlGenerator } = resolveServices(deps);
+  const { buffer, originalname, mimetype } = designFile;
+
+  logger.info(`Processing design file: ${originalname} (${mimetype})`);
+
+  try {
+    if (mimetype === 'application/pdf') {
+      throw createError(
+        'PDF conversion not yet supported. Please upload an image file (PNG, JPG, etc.)',
+        400,
+        'INPUT_INVALID'
+      );
+    }
+
+    const processedImage = await sharp(buffer)
+      .resize(1920, null, { withoutEnlargement: true, fit: 'inside' })
+      .jpeg({ quality: 85 })
+      .toBuffer();
+
+    const imageBase64 = processedImage.toString('base64');
+
+    const analysis = await htmlGenerator.generateHTML({
+      sectionType: 'hero',
+      imageBase64,
+      designDescription: `Design file: ${originalname}`,
+      requirements: ['Convert this design to modern HTML with Tailwind CSS'],
+      framework: 'tailwind'
+    });
+
+    return {
+      fileName: originalname,
+      fileSize: buffer.length,
+      analysis: {
+        html: analysis.html,
+        sections: [],
+        components: [],
+        description: 'Design converted to HTML using AI'
+      }
+    };
+  } catch (error) {
+    logger.error('Design conversion failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      fileName: originalname
+    });
+    throw error;
+  }
+}
+
+export async function refineHTML(
+  params: { html: string; requirements?: string },
+  deps?: Partial<Services>
+): Promise<{ originalHTML: string; refinedHTML: string; requirements: string | null }> {
+  const { iterativeRefinement } = resolveServices(deps);
+  const { html, requirements } = params;
+
+  if (!html) {
+    throw createError('HTML code is required', 400, 'INPUT_INVALID');
+  }
+
+  try {
+    const refinementResult = await iterativeRefinement.refineCode({
+      html,
+      css: '',
+      feedback: requirements || 'Improve HTML quality, accessibility, and Tailwind CSS styling',
+      maxIterations: 2,
+      targetQualityScore: 85
+    });
+
+    return {
+      originalHTML: html,
+      refinedHTML: refinementResult.html,
+      requirements: requirements || null
+    };
+  } catch (error) {
+    logger.error('HTML refinement failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      htmlLength: html.length
+    });
+    throw error;
+  }
+}
+
+export function getSupportedFileTypes(): {
+  supportedTypes: Array<{ type: string; extensions: string[]; description: string }>;
+  maxFileSize: string;
+  recommendations: string[];
+} {
+  return {
+    supportedTypes: [
+      { type: 'image/jpeg', extensions: ['.jpg', '.jpeg'], description: 'JPEG images' },
+      { type: 'image/png', extensions: ['.png'], description: 'PNG images' },
+      { type: 'image/gif', extensions: ['.gif'], description: 'GIF images' },
+      { type: 'image/webp', extensions: ['.webp'], description: 'WebP images' }
+    ],
+    maxFileSize: '10MB',
+    recommendations: [
+      'Use high-resolution images for better AI analysis',
+      'Ensure design elements are clearly visible',
+      'PNG format recommended for designs with text',
+      'JPEG format recommended for photographs'
+    ]
+  };
+}
+
 /**
  * PipelineController - Unified pipeline controller using domain-driven services
  * Uses PipelineExecutor as single source of truth for pipeline orchestration
@@ -53,63 +258,13 @@ export class PipelineController {
     this.iterativeRefinement = resolvedIR;
   }
 
-  /**
-   * Main pipeline execution - delegates to PipelineExecutor
-   */
   async executePipeline(
     designFile: Express.Multer.File,
     options: any = {}
   ): Promise<any> {
-    const startTime = Date.now();
-    
-    logger.info('🚀 Starting modular pipeline execution', {
-      fileName: designFile.originalname,
-      fileSize: designFile.size,
-      mimeType: designFile.mimetype,
-      options
+    return executePipeline(designFile, options, {
+      pipelineExecutor: this.pipelineExecutor,
     });
-
-    try {
-      const pipelineInput = {
-        designFile: designFile.buffer,
-        fileName: designFile.originalname,
-        options: {
-          generateModule: options.generateModule !== false,
-          includeValidation: options.includeValidation !== false,
-          optimizeForPerformance: options.optimizeForPerformance !== false
-        }
-      };
-      
-      const result = await this.pipelineExecutor.executePipeline(pipelineInput);
-
-      const processingTime = Date.now() - startTime;
-      
-      logger.info('✅ Pipeline execution completed successfully', {
-        pipelineId: result.id,
-        totalTime: processingTime,
-        status: result.status,
-        phasesCompleted: result.phases?.filter(p => p.status === 'completed').length || 0,
-        totalDuration: result.totalDuration
-      });
-
-      return result;
-
-    } catch (error) {
-      const processingTime = Date.now() - startTime;
-      
-      logger.error('❌ Pipeline execution failed', {
-        error: (error as Error).message,
-        stack: (error as Error).stack,
-        processingTime,
-        fileName: designFile.originalname
-      });
-
-      throw createError(
-        `Pipeline execution failed: ${(error as Error).message}`,
-        500,
-        'INTERNAL_ERROR'
-      );
-    }
   }
 
   /**
@@ -231,19 +386,14 @@ export class PipelineController {
     }
   }
 
-  /**
-   * Get supported file types (for compatibility with existing API)
-   */
+  /** Get supported file types (for compatibility with existing API) */
   getSupportedTypes(): string[] {
     return ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
   }
 
   // ===== LEGACY DESIGN CONTROLLER METHODS (MIGRATED) =====
 
-  /**
-   * Convert uploaded design file to HTML/Tailwind CSS (Legacy API)
-   * Uses new domain-driven services instead of old openaiService
-   */
+  /** Convert uploaded design file to HTML/Tailwind CSS (Legacy API) */
   async convertDesignToHTML(designFile: {
     buffer: Buffer;
     originalname: string;
@@ -258,67 +408,10 @@ export class PipelineController {
       description: string;
     };
   }> {
-    const { buffer, originalname, mimetype } = designFile;
-    
-    logger.info(`Processing design file: ${originalname} (${mimetype})`);
-
-    try {
-      // Convert file to base64 image using Sharp (same as legacy)
-      let imageBase64: string;
-      
-      if (mimetype === 'application/pdf') {
-        throw createError(
-          'PDF conversion not yet supported. Please upload an image file (PNG, JPG, etc.)',
-          400,
-          'INPUT_INVALID'
-        );
-      } else {
-        // Process image file with Sharp
-        const processedImage = await sharp(buffer)
-          .resize(1920, null, { 
-            withoutEnlargement: true,
-            fit: 'inside'
-          })
-          .jpeg({ quality: 85 })
-          .toBuffer();
-        
-        imageBase64 = processedImage.toString('base64');
-      }
-
-      // Use new HTMLGenerator service instead of old openaiService
-      const analysis = await this.htmlGenerator.generateHTML({
-        sectionType: 'hero', // Use valid section type
-        imageBase64: imageBase64, // Fix: should be string
-        designDescription: `Design file: ${originalname}`,
-        requirements: ['Convert this design to modern HTML with Tailwind CSS'], // Fix: should be array
-        framework: 'tailwind'
-      });
-
-      // Transform to legacy format for API compatibility
-      return {
-        fileName: originalname,
-        fileSize: buffer.length,
-        analysis: {
-          html: analysis.html,
-          sections: [], // Legacy format - sections not provided by new service
-          components: [], // Legacy format - components not provided by new service
-          description: 'Design converted to HTML using AI'
-        }
-      };
-
-    } catch (error) {
-      logger.error('Design conversion failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        fileName: originalname
-      });
-      throw error;
-    }
+    return convertDesignToHTML(designFile, { htmlGenerator: this.htmlGenerator });
   }
 
-  /**
-   * Refine generated HTML code (Legacy API)
-   * Uses new IterativeRefinement service instead of old openaiService
-   */
+  /** Refine generated HTML code (Legacy API) */
   async refineHTML(params: {
     html: string;
     requirements?: string;
@@ -327,40 +420,10 @@ export class PipelineController {
     refinedHTML: string;
     requirements: string | null;
   }> {
-    const { html, requirements } = params;
-
-    if (!html) {
-      throw createError('HTML code is required', 400, 'INPUT_INVALID');
-    }
-
-    try {
-      // Use new IterativeRefinement service
-      const refinementResult = await this.iterativeRefinement.refineCode({
-        html,
-        css: '', // Empty CSS for HTML-only refinement
-        feedback: requirements || 'Improve HTML quality, accessibility, and Tailwind CSS styling',
-        maxIterations: 2,
-        targetQualityScore: 85
-      });
-
-      return {
-        originalHTML: html,
-        refinedHTML: refinementResult.html,
-        requirements: requirements || null
-      };
-
-    } catch (error) {
-      logger.error('HTML refinement failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        htmlLength: html.length
-      });
-      throw error;
-    }
+    return refineHTML(params, { iterativeRefinement: this.iterativeRefinement });
   }
 
-  /**
-   * Get supported file types with detailed information (Legacy API)
-   */
+  /** Get supported file types with detailed information (Legacy API) */
   getSupportedFileTypes(): {
     supportedTypes: Array<{
       type: string;
@@ -370,36 +433,6 @@ export class PipelineController {
     maxFileSize: string;
     recommendations: string[];
   } {
-    return {
-      supportedTypes: [
-        {
-          type: 'image/jpeg',
-          extensions: ['.jpg', '.jpeg'],
-          description: 'JPEG images'
-        },
-        {
-          type: 'image/png', 
-          extensions: ['.png'],
-          description: 'PNG images'
-        },
-        {
-          type: 'image/gif',
-          extensions: ['.gif'], 
-          description: 'GIF images'
-        },
-        {
-          type: 'image/webp',
-          extensions: ['.webp'],
-          description: 'WebP images'
-        }
-      ],
-      maxFileSize: '10MB',
-      recommendations: [
-        'Use high-resolution images for better AI analysis',
-        'Ensure design elements are clearly visible',
-        'PNG format recommended for designs with text',
-        'JPEG format recommended for photographs'
-      ]
-    };
+    return getSupportedFileTypes();
   }
 }

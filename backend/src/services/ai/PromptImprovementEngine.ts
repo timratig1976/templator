@@ -263,6 +263,12 @@ export class PromptImprovementEngine {
   // Private implementation methods
   private initializeLearningLoop(): void {
     // Set up periodic learning and optimization
+    // Avoid background timers during Jest to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping PromptImprovementEngine learning loop in test environment');
+      return;
+    }
+
     setInterval(() => {
       this.performPeriodicLearning();
     }, 3600000); // Every hour

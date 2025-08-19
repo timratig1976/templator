@@ -146,6 +146,9 @@ export function setupDomainServiceMocks() {
         }
       ],
       finalResult: { sections: [], qualityScore: 85 },
+      validationPassed: true,
+      enhancementsApplied: [],
+      packagedModule: { files: [] },
       metadata: {
         phaseTimes: {
           'Input Processing': 100,
@@ -157,6 +160,18 @@ export function setupDomainServiceMocks() {
         failedPhases: 0
       }
     });
+  });
+  
+  mockPipelineExecutor.getPipelineStatus.mockResolvedValue({
+    pipelineId: 'test-pipeline-id',
+    status: 'completed',
+    phases: [
+      { name: 'Input Processing', status: 'completed', progress: 100 },
+      { name: 'AI Analysis', status: 'completed', progress: 100 },
+      { name: 'HTML Generation', status: 'completed', progress: 100 },
+      { name: 'Validation', status: 'completed', progress: 100 },
+      { name: 'Packaging', status: 'completed', progress: 100 }
+    ]
   });
   
   mockHTMLValidator.validateHTML.mockResolvedValue({
@@ -228,6 +243,28 @@ export function setupDomainServiceMocks() {
   mockQualityMetricsDashboard.getInstance.mockReturnValue(mockQualityMetricsDashboard);
   mockErrorRecoverySystem.getInstance.mockReturnValue(mockErrorRecoverySystem);
   mockHubSpotAPIService.getInstance.mockReturnValue(mockHubSpotAPIService);
+
+  // Also ensure the module-level singleton getters return our mocks
+  try {
+    const peModule = require('../../services/pipeline/PipelineExecutor');
+    if (peModule?.PipelineExecutor?.getInstance?.mockReturnValue) {
+      peModule.PipelineExecutor.getInstance.mockReturnValue(mockPipelineExecutor);
+    }
+  } catch {}
+
+  try {
+    const hgModule = require('../../services/ai/generation/HTMLGenerator');
+    if (hgModule?.HTMLGenerator?.getInstance?.mockReturnValue) {
+      hgModule.HTMLGenerator.getInstance.mockReturnValue(mockHTMLGenerator);
+    }
+  } catch {}
+
+  try {
+    const irModule = require('../../services/ai/analysis/IterativeRefinement');
+    if (irModule?.IterativeRefinement?.getInstance?.mockReturnValue) {
+      irModule.IterativeRefinement.getInstance.mockReturnValue(mockIterativeRefinement);
+    }
+  } catch {}
 
   try {
     const PipelineControllerModule = jest.requireActual('../../controllers/PipelineController') as any;

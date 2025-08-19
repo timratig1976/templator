@@ -29,6 +29,13 @@ print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
+# Reports directory (configurable via REPORTS_DIR, defaults to project-root reports/)
+REPORTS_DIR=${REPORTS_DIR:-"reports"}
+LOG_DIR="$REPORTS_DIR/logs"
+
+# Ensure reports/logs directory exists
+mkdir -p "$LOG_DIR"
+
 # Function to check if port is available
 check_port() {
     local port=$1
@@ -126,28 +133,28 @@ fi
 # Start backend server
 print_info "📡 Starting backend server on port 3009..."
 cd backend
-PORT=3009 npm run dev > ../backend.log 2>&1 &
+PORT=3009 npm run dev > ../$LOG_DIR/backend.dev.log 2>&1 &
 BACKEND_PID=$!
 cd ..
 
 # Wait for backend to be ready
 if ! wait_for_server "http://localhost:3009/health" "Backend server"; then
-    print_error "Backend server failed to start. Check backend.log for details."
-    tail -20 backend.log
+    print_error "Backend server failed to start. Check $LOG_DIR/backend.dev.log for details."
+    tail -20 "$LOG_DIR/backend.dev.log"
     exit 1
 fi
 
 # Start frontend server
 print_info "🎨 Starting frontend server on port 3000..."
 cd frontend
-npm run dev > ../frontend.log 2>&1 &
+npm run dev > ../$LOG_DIR/frontend.dev.log 2>&1 &
 FRONTEND_PID=$!
 cd ..
 
 # Wait for frontend to be ready
 if ! wait_for_server "http://localhost:3000" "Frontend server"; then
-    print_error "Frontend server failed to start. Check frontend.log for details."
-    tail -20 frontend.log
+    print_error "Frontend server failed to start. Check $LOG_DIR/frontend.dev.log for details."
+    tail -20 "$LOG_DIR/frontend.dev.log"
     exit 1
 fi
 
@@ -155,7 +162,7 @@ print_success "🎉 Development servers started successfully!"
 print_info "📱 Frontend: http://localhost:3000"
 print_info "🔧 Backend API: http://localhost:3009"
 print_info "📊 Backend Health: http://localhost:3009/health"
-print_info "📝 Logs: backend.log and frontend.log"
+print_info "📝 Logs: $LOG_DIR/backend.dev.log and $LOG_DIR/frontend.dev.log"
 echo ""
 print_warning "Press Ctrl+C to stop both servers"
 

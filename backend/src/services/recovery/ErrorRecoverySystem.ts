@@ -595,6 +595,12 @@ export class ErrorRecoverySystem extends EventEmitter {
 
   private setupCleanupInterval(): void {
     // Clean up old error records every hour
+    // Avoid background timers during Jest to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping ErrorRecoverySystem cleanup interval in test environment');
+      return;
+    }
+
     setInterval(() => {
       const oneHourAgo = Date.now() - (60 * 60 * 1000);
       

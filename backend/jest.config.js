@@ -13,6 +13,11 @@ module.exports = {
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
+      globals: {
+        'ts-jest': {
+          tsconfig: '<rootDir>/tsconfig.jest.json'
+        }
+      },
       setupFilesAfterEnv: ['<rootDir>/src/__tests__/unit/setup.ts'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1'
@@ -37,6 +42,11 @@ module.exports = {
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
+      globals: {
+        'ts-jest': {
+          tsconfig: '<rootDir>/tsconfig.jest.json'
+        }
+      },
       setupFilesAfterEnv: ['<rootDir>/src/__tests__/unit/setup.ts'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1'
@@ -51,10 +61,15 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/tests'],
-      testMatch: ['<rootDir>/tests/**/*.test.ts'],
+      roots: ['<rootDir>/src'],
+      testMatch: ['<rootDir>/src/__tests__/integration/**/*.test.ts'],
       transform: {
         '^.+\.ts$': 'ts-jest',
+      },
+      globals: {
+        'ts-jest': {
+          tsconfig: '<rootDir>/tsconfig.jest.json'
+        }
       },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1'

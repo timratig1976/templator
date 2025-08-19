@@ -7,10 +7,35 @@ import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { createLogger } from '../../utils/logger';
-import { TestConfig, loadTestConfig } from '../../config/test-config';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();
+
+// Local TestConfig definition and loader replacing removed '../../config/test-config'
+export interface TestConfig {
+  testTimeout: number;
+  maxConcurrentTests: number;
+  logLevel: 'debug' | 'info' | 'warn' | 'error' | string;
+  reportOutputDir: string;
+  categories: Record<string, boolean>;
+}
+
+function loadTestConfig(): TestConfig {
+  return {
+    testTimeout: 30000,
+    maxConcurrentTests: 5,
+    logLevel: process.env.TEST_LOG_LEVEL || 'info',
+    reportOutputDir: 'build-reports',
+    categories: {
+      unit: true,
+      integration: true,
+      e2e: true,
+      performance: false,
+      validation: false,
+      api: false
+    }
+  };
+}
 
 export interface TestExecutionResult {
   id: string;

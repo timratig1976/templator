@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "types": ["node"],
     "paths": {
+      "@/*": ["./src/*"],
       "@/shared/*": ["../shared/*"],
       "@/packages/*": ["../packages/*"]
     }

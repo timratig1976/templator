@@ -93,5 +93,8 @@ Thumbs.db
 logs
 *.log
 
+# Generated reports
+reports/
+
 # Test files
 test-image.png

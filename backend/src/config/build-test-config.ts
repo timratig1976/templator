@@ -15,7 +15,6 @@ export const defaultBuildTestConfig: AutoBuildTestConfig = {
   // Directories to watch for TypeScript files - COMPREHENSIVE COVERAGE
   watchDirectories: [
     'src', // Watch entire src directory to catch ALL files
-    'tests', // Include test files for comprehensive validation
     'scripts', // Include build and utility scripts
     'config' // Include configuration files
   ],

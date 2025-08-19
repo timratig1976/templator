@@ -6,6 +6,7 @@ export default function MaintenanceLayout({ children }: { children: React.ReactN
     { href: '/maintenance', label: 'Overview', icon: '📊' },
     { href: '/admin/ai-maintenance', label: 'AI System', icon: '🤖' },
     { href: '/maintenance/build-tests', label: 'Build Tests', icon: '🧪' },
+    { href: '/maintenance/jest-tests', label: 'JEST Tests', icon: '✅' },
     { href: '/maintenance/dead-code', label: 'Dead Code', icon: '🧹' },
   ];
 

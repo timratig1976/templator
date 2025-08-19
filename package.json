@@ -22,7 +22,7 @@
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "type-check": "npm run type-check --workspaces",
-    "clean": "rm -rf backend/dist frontend/.next backend.log frontend.log backend-prod.log frontend-prod.log",
+    "clean": "rm -rf backend/dist frontend/.next reports backend.log frontend.log backend-prod.log frontend-prod.log",
     "install:all": "npm install && npm install --workspaces"
   },
   "devDependencies": {

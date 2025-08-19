@@ -160,6 +160,12 @@ export class PipelineWebSocketService {
 
   private setupCleanupInterval(): void {
     // Clean up inactive clients every 5 minutes
+    // Avoid background timers during Jest to prevent open handle leaks
+    if (process.env.JEST_WORKER_ID || process.env.NODE_ENV === 'test') {
+      logger.debug('Skipping PipelineWebSocketService cleanup interval in test environment');
+      return;
+    }
+
     setInterval(() => {
       const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
       

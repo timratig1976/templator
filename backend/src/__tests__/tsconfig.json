@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.jest.json",
+  "compilerOptions": {
+    "baseUrl": "../../",
+    "moduleResolution": "node",
+    "types": ["jest", "node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/shared/*": ["../../shared/*"],
+      "@/packages/*": ["../../packages/*"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "../**/*.ts"
+  ]
+}

@@ -63,11 +63,16 @@ export default class DeadCodeScanner {
     'lint-staged',
   ];
 
-  constructor(reportDir = path.resolve(process.cwd(), 'backend/.runtime/reports')) {
-    this.reportPath = path.join(reportDir, 'dead-code.json');
+  constructor(reportDir?: string) {
+    const baseReports = process.env.REPORTS_DIR || 'reports';
+    const basePath = path.isAbsolute(baseReports)
+      ? baseReports
+      : path.resolve(process.cwd(), '..', baseReports);
+    const finalDir = reportDir || path.join(basePath, 'maintenance');
+    this.reportPath = path.join(finalDir, 'dead-code.json');
     // Ensure directory exists
     try {
-      fs.mkdirSync(reportDir, { recursive: true });
+      fs.mkdirSync(finalDir, { recursive: true });
     } catch {}
   }
 
