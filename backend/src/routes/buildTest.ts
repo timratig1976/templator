@@ -6,14 +6,43 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { createLogger } from '../utils/logger';
-import AutoBuildTestService from '../services/testing/AutoBuildTestService';
-import { getBuildTestConfig } from '../config/build-test-config';
+import { getBuildTestConfig } from '../../tests/config/build-test-config';
 
 const router = Router();
 const logger = createLogger();
 
-// Initialize build test service
-const buildTestService = new AutoBuildTestService(getBuildTestConfig());
+// Lazily initialize the build test service on first access to avoid pulling test-suite runner during app import
+let buildTestService: any | null = null;
+function getBuildTestService(): any {
+  if (!buildTestService) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // @ts-ignore - runtime alias resolution handled by tsconfig paths
+    const AutoBuildTestService: any = require('@tests/AutoBuildTestService').default;
+    buildTestService = new AutoBuildTestService(getBuildTestConfig());
+
+    // Attach event listeners once
+    buildTestService.on('buildTestComplete', (result: any) => {
+      logger.info('Build test completed', {
+        success: result.success,
+        errors: result.errors.length,
+        warnings: result.warnings.length,
+        duration: result.duration,
+      });
+    });
+
+    buildTestService.on('buildError', (result: any) => {
+      logger.error('Build test detected errors', {
+        errors: result.errors.length,
+        errorFiles: result.summary.errorFiles,
+      });
+    });
+
+    buildTestService.on('error', (error: any) => {
+      logger.error('AutoBuildTestService error:', error);
+    });
+  }
+  return buildTestService;
+}
 
 //  // Start the service automatically
 // TEMPORARILY DISABLED: autoBuildTestService.start(); // Causing Socket.IO connection issues.
@@ -27,9 +56,10 @@ const buildTestService = new AutoBuildTestService(getBuildTestConfig());
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const latestResult = buildTestService.getLatestBuildResult();
-    const serviceHealth = buildTestService.getServiceHealthSummary();
-    const isHealthy = buildTestService.isServiceHealthy();
+    const svc = getBuildTestService();
+    const latestResult = svc.getLatestBuildResult();
+    const serviceHealth = svc.getServiceHealthSummary();
+    const isHealthy = svc.isServiceHealthy();
     
     res.json({
       status: 'success',
@@ -38,7 +68,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         system: {
           name: 'Templator Test Suite Dashboard',
           version: '1.0.0',
-          isRunning: buildTestService['isRunning'],
+          isRunning: svc['isRunning'],
           isHealthy,
           lastBuildTime: latestResult?.timestamp || null
         },
@@ -102,16 +132,17 @@ router.post('/run', async (req: Request, res: Response, next: NextFunction) => {
 
     // Fire-and-forget to avoid blocking the HTTP response and risking socket collapse
     // Progress and result are accessible via /status and /history endpoints
-    buildTestService
+    const svc = getBuildTestService();
+    svc
       .runBuildTest()
-      .then((result) => {
+      .then((result: any) => {
         logger.info('Manual build test finished', {
           success: result.success,
           duration: result.duration,
           errors: result.errors?.length || 0,
         });
       })
-      .catch((err) => {
+      .catch((err: any) => {
         logger.error('Manual build test failed', err);
       });
 
@@ -136,7 +167,8 @@ router.post('/run', async (req: Request, res: Response, next: NextFunction) => {
 router.get('/history', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
-    const history = buildTestService.getBuildHistory();
+    const svc = getBuildTestService();
+    const history = svc.getBuildHistory();
     
     // Return most recent results first
     const limitedHistory = history.slice(-limit).reverse();
@@ -160,8 +192,9 @@ router.get('/history', async (req: Request, res: Response, next: NextFunction) =
  */
 router.get('/health', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const serviceHealth = buildTestService.getServiceHealthSummary();
-    const latestResult = buildTestService.getLatestBuildResult();
+    const svc = getBuildTestService();
+    const serviceHealth = svc.getServiceHealthSummary();
+    const latestResult = svc.getLatestBuildResult();
     
     // Calculate overall health metrics
     const healthMetrics = calculateHealthMetrics(serviceHealth, latestResult);
@@ -186,7 +219,8 @@ router.get('/health', async (req: Request, res: Response, next: NextFunction) =>
  */
 router.get('/errors', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const latestResult = buildTestService.getLatestBuildResult();
+    const svc = getBuildTestService();
+    const latestResult = svc.getLatestBuildResult();
     const category = req.query.category as string;
     const severity = req.query.severity as string;
     const service = req.query.service as string;
@@ -205,15 +239,15 @@ router.get('/errors', async (req: Request, res: Response, next: NextFunction) =>
     
     // Apply filters
     if (category) {
-      errors = errors.filter(error => error.category === category);
+      errors = errors.filter((error: any) => error.category === category);
     }
     
     if (severity) {
-      errors = errors.filter(error => error.severity === severity);
+      errors = errors.filter((error: any) => error.severity === severity);
     }
     
     if (service) {
-      errors = errors.filter(error => error.file.includes(`/services/${service}/`));
+      errors = errors.filter((error: any) => error.file.includes(`/services/${service}/`));
     }
     
     // Group errors by category for better analysis
@@ -228,7 +262,7 @@ router.get('/errors', async (req: Request, res: Response, next: NextFunction) =>
         filteredCount: errors.length
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error getting build errors:', error);
     next(error);
   }
@@ -354,26 +388,5 @@ function groupErrorsByCategory(errors: any[]) {
   
   return grouped;
 }
-
-// Event listeners for build test service
-buildTestService.on('buildTestComplete', (result) => {
-  logger.info('Build test completed', {
-    success: result.success,
-    errors: result.errors.length,
-    warnings: result.warnings.length,
-    duration: result.duration
-  });
-});
-
-buildTestService.on('buildError', (result) => {
-  logger.error('Build test detected errors', {
-    errors: result.errors.length,
-    errorFiles: result.summary.errorFiles
-  });
-});
-
-buildTestService.on('error', (error) => {
-  logger.error('AutoBuildTestService error:', error);
-});
 
 export default router;

@@ -86,7 +86,8 @@ class ModulePackagingService {
 
   private constructor() {
     this.validationService = HubSpotValidationService.getInstance();
-    this.packagesDir = path.join(process.cwd(), 'temp', 'packages');
+    const baseStorage = process.env.STORAGE_PATH || path.join(process.cwd(), 'storage');
+    this.packagesDir = path.join(baseStorage, 'temp', 'packages');
     this.ensurePackagesDirectory();
   }
 

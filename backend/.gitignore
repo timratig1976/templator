@@ -4,6 +4,8 @@
 logs/
 tmp/
 coverage/
+tests/.artifacts/
+tests/.artifacts/**
 **/*.log
 
 # Build outputs

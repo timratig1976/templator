@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { PipelineController, executePipeline as executePipelineFn } from '../controllers/PipelineController';
-import { createError } from '../middleware/errorHandler';
-import { createLogger } from '../utils/logger';
+import { executePipeline as executePipelineFn, regenerateSectionHTML as regenerateSectionHTMLFn, getSupportedFileTypes } from '@/pipeline/api';
+import { createError } from '@/middleware/errorHandler';
+import { createLogger } from '@/utils/logger';
 
 const router = Router();
 const logger = createLogger();
@@ -262,13 +262,18 @@ router.post('/regenerate-html', async (req: Request, res: Response, next: NextFu
       timestamp: new Date().toISOString()
     });
 
-    // Use injected controller if provided; otherwise instantiate class for this legacy-only endpoint
-    const controller = (injectedController as PipelineControllerLike) || new PipelineController();
-    const regeneratedSection = await controller.regenerateSectionHTML!({
-      sectionId,
-      originalImage,
-      customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'
-    });
+    // Use injected controller if provided; otherwise use function-based API
+    const regeneratedSection = injectedController?.regenerateSectionHTML
+      ? await injectedController.regenerateSectionHTML({
+          sectionId,
+          originalImage,
+          customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'
+        })
+      : await regenerateSectionHTMLFn({
+          sectionId,
+          originalImage,
+          customPrompt: customPrompt || 'Please regenerate this section with improved HTML quality, better Tailwind 4 styling, and enhanced accessibility.'
+        });
 
     logger.info('✅ HTML regeneration completed successfully', {
       sectionId,
@@ -304,39 +309,11 @@ router.post('/regenerate-html', async (req: Request, res: Response, next: NextFu
  * Get supported file types and requirements
  */
 router.get('/supported-types', (req: Request, res: Response) => {
+  const info = getSupportedFileTypes();
   res.json({
     success: true,
     data: {
-      supportedTypes: [
-        {
-          type: 'image/jpeg',
-          extensions: ['.jpg', '.jpeg'],
-          description: 'JPEG images'
-        },
-        {
-          type: 'image/png', 
-          extensions: ['.png'],
-          description: 'PNG images (recommended for designs with text)'
-        },
-        {
-          type: 'image/gif',
-          extensions: ['.gif'], 
-          description: 'GIF images'
-        },
-        {
-          type: 'image/webp',
-          extensions: ['.webp'],
-          description: 'WebP images'
-        }
-      ],
-      maxFileSize: '10MB',
-      recommendations: [
-        'Use high-resolution images for better AI analysis',
-        'Ensure design elements are clearly visible',
-        'PNG format recommended for designs with text',
-        'JPEG format recommended for photographs',
-        'Avoid very complex designs for better section detection'
-      ],
+      ...info,
       qualityGuidelines: [
         'Designs should have clear visual sections',
         'Text should be readable and well-contrasted',

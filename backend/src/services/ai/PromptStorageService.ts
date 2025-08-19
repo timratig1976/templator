@@ -51,7 +51,9 @@ class PromptStorageService {
   private dataDir: string;
 
   constructor() {
-    this.dataDir = path.join(__dirname, '../data/prompts');
+    // Store prompt data under centralized storage path at backend/storage/ai/prompts
+    // __dirname: backend/src/services/ai -> ../../../storage/ai/prompts => backend/storage/ai/prompts
+    this.dataDir = path.join(__dirname, '../../../storage/ai/prompts');
     this.ensureDataDirExists();
   }
 

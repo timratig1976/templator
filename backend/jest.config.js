@@ -1,3 +1,8 @@
+const path = require('path');
+
+// Output coverage to tests/.artifacts to keep all test-related files together
+const COVERAGE_DIR = path.join(process.cwd(), 'tests', '.artifacts', 'jest', 'coverage');
+
 module.exports = {
   // Multi-project configuration for organized test structure
   projects: [
@@ -8,8 +13,12 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/src'],
-      testMatch: ['<rootDir>/src/__tests__/unit/**/*.test.ts'],
+      roots: ['<rootDir>/tests'],
+      // Support transitional layout: tests/tests/* (after folder rename) and future tests/jest/*
+      testMatch: [
+        '<rootDir>/tests/tests/unit/**/*.test.ts',
+        '<rootDir>/tests/jest/unit/**/*.test.ts'
+      ],
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
@@ -18,9 +27,11 @@ module.exports = {
           tsconfig: '<rootDir>/tsconfig.jest.json'
         }
       },
-      setupFilesAfterEnv: ['<rootDir>/src/__tests__/unit/setup.ts'],
+      // Transitional setup path; later move to tests/jest/unit/setup.ts
+      setupFilesAfterEnv: ['<rootDir>/tests/tests/unit/setup.ts'],
       moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1'
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/runner/$1'
       },
 
       collectCoverageFrom: [
@@ -37,8 +48,11 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/src'],
-      testMatch: ['<rootDir>/src/__tests__/e2e/**/*.test.ts'],
+      roots: ['<rootDir>/tests'],
+      testMatch: [
+        '<rootDir>/tests/tests/e2e/**/*.test.ts',
+        '<rootDir>/tests/jest/e2e/**/*.test.ts'
+      ],
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
@@ -47,9 +61,10 @@ module.exports = {
           tsconfig: '<rootDir>/tsconfig.jest.json'
         }
       },
-      setupFilesAfterEnv: ['<rootDir>/src/__tests__/unit/setup.ts'],
+      setupFilesAfterEnv: ['<rootDir>/tests/tests/unit/setup.ts'],
       moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1'
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/runner/$1'
       },
 
       maxWorkers: 1 // E2E tests should run sequentially
@@ -61,8 +76,11 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/src'],
-      testMatch: ['<rootDir>/src/__tests__/integration/**/*.test.ts'],
+      roots: ['<rootDir>/tests'],
+      testMatch: [
+        '<rootDir>/tests/tests/integration/**/*.test.ts',
+        '<rootDir>/tests/jest/integration/**/*.test.ts'
+      ],
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
@@ -72,14 +90,15 @@ module.exports = {
         }
       },
       moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1'
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/tests/runner/$1'
       },
 
       maxWorkers: 1 // Integration tests may need sequential execution
     }
   ],
   // Global configuration
-  coverageDirectory: 'coverage',
+  coverageDirectory: COVERAGE_DIR,
   coverageReporters: ['text', 'lcov', 'html'],
   verbose: true,
   testTimeout: 30000, // Default timeout for all tests

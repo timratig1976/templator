@@ -40,8 +40,9 @@ export class PromptOptimizationService {
   private dataPath: string;
 
   constructor() {
-    // Set up data directory for storing prompt variations
-    this.dataPath = path.join(__dirname, '../data/prompts');
+    // Set up data directory for storing prompt variations under centralized storage
+    // __dirname: backend/src/services/ai -> ../../../storage/ai/prompts => backend/storage/ai/prompts
+    this.dataPath = path.join(__dirname, '../../../storage/ai/prompts');
     this.ensureDataDirectoryExists();
     this.loadBasePrompts();
     this.loadPromptVariations();
@@ -424,7 +425,8 @@ Focus on practical, concrete changes that would make the prompt generate better 
    */
   private loadBasePrompts(): void {
     try {
-      const basePromptPath = path.join(__dirname, '../prompts');
+      // Use the centralized storage path for base prompts as well
+      const basePromptPath = this.dataPath;
       
       // Create default prompts directory if it doesn't exist
       if (!fs.existsSync(basePromptPath)) {

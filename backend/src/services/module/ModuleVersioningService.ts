@@ -73,7 +73,7 @@ class ModuleVersioningService {
   private versionsIndex: Map<string, ModuleVersion[]>;
 
   constructor() {
-    this.versionsDir = path.join(process.cwd(), 'data', 'versions');
+    this.versionsDir = path.join(process.cwd(), 'storage', 'versions');
     this.versionsIndex = new Map();
     this.initializeStorage();
   }

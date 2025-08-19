@@ -42,6 +42,7 @@ export interface CoverageReport {
 
 export class TestCoverageService {
   private readonly srcPath: string;
+  private readonly testsPath: string;
   private readonly coverageFile: string;
   private cachedReport: CoverageReport | null = null;
   private lastCalculated: number = 0;
@@ -49,6 +50,7 @@ export class TestCoverageService {
 
   constructor() {
     this.srcPath = path.join(process.cwd(), 'src');
+    this.testsPath = path.join(process.cwd(), 'tests', 'tests');
     this.coverageFile = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
   }
 
@@ -90,7 +92,7 @@ export class TestCoverageService {
         'jest',
         '--coverage',
         '--coverageReporters=json-summary',
-        '--testPathPattern=src/__tests__/unit/',
+        '--testPathPattern=tests/tests/unit/',
         '--passWithNoTests',
         '--silent'
       ], {

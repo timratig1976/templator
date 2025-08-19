@@ -8,10 +8,10 @@
     "start": "PORT=3009 node dist/server.js",
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit",
-    "build-test": "node scripts/build-test.js",
-    "build-test:compile": "node scripts/build-test.js compile",
-    "build-test:structure": "node scripts/build-test.js structure",
-    "build-test:discover": "node scripts/build-test.js discover",
+    "build-test": "node tests/runner/build-test.js",
+    "build-test:compile": "node tests/runner/build-test.js compile",
+    "build-test:structure": "node tests/runner/build-test.js structure",
+    "build-test:discover": "node tests/runner/build-test.js discover",
     "build-test:watch": "nodemon --watch src --ext ts --exec \"npm run build-test:compile\"",
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
@@ -21,7 +21,9 @@
     "test:e2e": "jest --config jest.config.js --selectProjects E2E",
     "test:contracts": "jest --config jest.config.js --testPathPattern=contracts",
     "test:pyramid": "npm run test:unit && npm run test:integration && npm run test:e2e",
-    "maintenance": "node scripts/maintenance.js"
+    "maintenance": "node tests/scripts/maintenance.js",
+    "quality:fast": "npm run lint && npm run type-check",
+    "quality:full": "npm run lint && npm run type-check && npm run build-test && npm run test:coverage"
   },
   "dependencies": {
     "@prisma/client": "^6.13.0",

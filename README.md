@@ -217,6 +217,32 @@ PORT=3001
 LOG_LEVEL=info
 ```
 
+### Reports Directory (REPORTS_DIR)
+
+Templator writes test reports, coverage, build reports, and logs under a unified reports directory. Configure the base directory with `REPORTS_DIR`.
+
+- Default (if unset): `<repo_root>/reports`
+- Can be absolute or relative to the repo root
+- Used by backend testing services, coverage, build reports, and `dev-start.sh` logs
+
+Example `.env` configuration:
+
+```ini
+# Base directory for all reports and logs
+REPORTS_DIR=reports
+```
+
+Directory layout:
+
+```
+reports/
+  backend/
+    testing/           # Jest outputs, coverage, test reports
+      coverage/
+    build/             # Auto-build test service outputs
+  logs/                # Dev/startup logs
+```
+
 ### Production Build
 
 ```bash

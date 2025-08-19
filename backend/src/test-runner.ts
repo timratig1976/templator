@@ -5,7 +5,7 @@
  * Now uses modular components for better maintainability
  */
 
-import { TestRunnerCLI, TestRunnerCLIConfig } from './services/testing/TestRunnerCLI';
+import { TestRunnerCLI, TestRunnerCLIConfig } from '@tests/TestRunnerCLI';
 import { createLogger } from './utils/logger';
 
 const logger = createLogger();
@@ -26,7 +26,7 @@ if (require.main === module) {
     console.log('   • Interactive test results');
     console.log('   • HTML report generation');
     console.log('\n🔧 Press Ctrl+C to stop the server');
-  }).catch((error) => {
+  }).catch((error: unknown) => {
     logger.error('Failed to start test runner', { error });
     process.exit(1);
   });

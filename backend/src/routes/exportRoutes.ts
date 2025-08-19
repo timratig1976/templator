@@ -6,6 +6,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import ModulePackagingService from '../services/module/ModulePackagingService';
 import HubSpotDeploymentService from '../services/deployment/HubSpotDeploymentService';
 import packageValidationService from '../services/quality/PackageValidationService';
@@ -17,7 +18,19 @@ const logger = createLogger();
 import { z } from 'zod';
 
 const router = express.Router();
-const upload = multer({ dest: 'temp/uploads/' });
+
+// Centralized storage base
+const STORAGE_BASE = process.env.STORAGE_PATH || path.join(process.cwd(), 'storage');
+const TEMP_UPLOADS_DIR = path.join(STORAGE_BASE, 'temp', 'uploads');
+
+// Ensure temp uploads directory exists
+try {
+  fs.mkdirSync(TEMP_UPLOADS_DIR, { recursive: true });
+} catch (e) {
+  logger.warn('Failed to ensure temp uploads directory exists', { dir: TEMP_UPLOADS_DIR, error: e });
+}
+
+const upload = multer({ dest: TEMP_UPLOADS_DIR });
 
 // Validation schemas
 const packageRequestSchema = z.object({
@@ -206,7 +219,7 @@ router.get('/package/:packageId/download', async (req: Request, res: Response, n
     }
 
     // In a real implementation, would serve the actual file
-    const packagePath = path.join(process.cwd(), 'temp', 'packages', `${packageId}.zip`);
+    const packagePath = path.join(STORAGE_BASE, 'temp', 'packages', `${packageId}.zip`);
     
     res.download(packagePath, `${packageInfo.module_name}-${packageInfo.version}.zip`, (err) => {
       if (err) {
@@ -304,7 +317,7 @@ router.post('/deploy', async (req: Request, res: Response, next: NextFunction) =
     // Create package result object
     const packageResult = {
       package_id: package_id,
-      package_path: path.join(process.cwd(), 'temp', 'packages', `${package_id}.zip`),
+      package_path: path.join(STORAGE_BASE, 'temp', 'packages', `${package_id}.zip`),
       manifest: packageInfo,
       download_url: `/api/export/package/${package_id}/download`,
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -410,7 +423,7 @@ router.post('/deployment/schedule', async (req, res, next) => {
 
     const packageResult = {
       package_id: package_id,
-      package_path: path.join(process.cwd(), 'temp', 'packages', `${package_id}.zip`),
+      package_path: path.join(STORAGE_BASE, 'temp', 'packages', `${package_id}.zip`),
       manifest: packageInfo,
       download_url: `/api/export/package/${package_id}/download`,
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),

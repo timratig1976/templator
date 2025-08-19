@@ -18,9 +18,17 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/shared/*": ["../shared/*"],
-      "@/packages/*": ["../packages/*"]
+      "@/packages/*": ["../packages/*"],
+      "@tests/*": ["./tests/runner/*"]
     }
   },
   "include": ["src/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/__tests__/**"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "src/__tests__/**",
+    "test-suite/**",
+    "tests/.artifacts/**"
+  ]
 }

@@ -82,7 +82,8 @@ class HubSpotDeploymentService {
 
   private constructor() {
     this.packagingService = ModulePackagingService.getInstance();
-    this.deploymentsDir = path.join(process.cwd(), 'temp', 'deployments');
+    const STORAGE_BASE = process.env.STORAGE_PATH || path.join(process.cwd(), 'storage');
+    this.deploymentsDir = path.join(STORAGE_BASE, 'temp', 'deployments');
     this.ensureDeploymentsDirectory();
     
     // Initialize HubSpot API client
