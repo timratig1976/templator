@@ -7,52 +7,52 @@ import request from 'supertest';
 import path from 'path';
 import fs from 'fs';
 
-jest.mock('@/services/core/ai/OpenAIClient', () => ({
+jest.mock('@backend/services/core/ai/OpenAIClient', () => ({
   OpenAIClient: {
     getInstance: jest.fn()
   }
 }));
 
-jest.mock('@/services/pipeline/PipelineExecutor', () => ({
+jest.mock('@backend/services/pipeline/PipelineExecutor', () => ({
   PipelineExecutor: {
     getInstance: jest.fn()
   }
 }));
 
-jest.mock('@/services/ai/generation/HTMLGenerator', () => ({
+jest.mock('@backend/services/ai/generation/HTMLGenerator', () => ({
   HTMLGenerator: {
     getInstance: jest.fn()
   }
 }));
 
-jest.mock('@/services/ai/analysis/IterativeRefinement', () => ({
+jest.mock('@backend/services/ai/analysis/IterativeRefinement', () => ({
   IterativeRefinement: {
     getInstance: jest.fn()
   }
 }));
 
-jest.mock('@/services/quality/validation/HTMLValidator', () => ({
+jest.mock('@backend/services/quality/validation/HTMLValidator', () => ({
   HTMLValidator: {
     getInstance: jest.fn()
   }
 }));
 
-jest.mock('@/services/ai/prompts/PromptManager', () => ({
+jest.mock('@backend/services/ai/prompts/PromptManager', () => ({
   PromptManager: {
     getInstance: jest.fn()
   }
 }));
 
-jest.mock('@/services/ai/splitting/SplittingService', () => ({
+jest.mock('@backend/services/ai/splitting/SplittingService', () => ({
   SplittingService: {
     getInstance: jest.fn()
   }
 }));
 
-import { createApp } from '@/app';
-import { executePipeline as executePipelineFn } from '@/pipeline/api';
+import { createApp } from '@backend/app';
+import { executePipeline as executePipelineFn } from '@backend/pipeline/api';
 import { setupDomainServiceMocks, mockPipelineExecutor } from '../setup/domainServiceMocks';
-jest.mock('@/utils/logger', () => ({
+jest.mock('@backend/utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
     error: jest.fn(),

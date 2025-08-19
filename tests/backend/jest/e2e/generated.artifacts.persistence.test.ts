@@ -8,7 +8,10 @@ import generatedArtifactRepo from '../../services/database/GeneratedArtifactRepo
  * Requires DATABASE_URL configured.
  */
 
-describe('DB Integration: GeneratedArtifact persistence', () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+const maybeDescribe: jest.Describe = HAS_DB ? describe : describe.skip;
+
+maybeDescribe('DB Integration: GeneratedArtifact persistence', () => {
   const created: { uploadId?: string; splitId?: string; artifactId?: string } = {};
 
   it('creates artifact for a split and reads it back', async () => {

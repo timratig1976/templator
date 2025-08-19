@@ -1,8 +1,11 @@
 import request from 'supertest';
-import { createApp } from '../../app';
-import designUploadRepo from '../../services/database/DesignUploadRepository';
+import { createApp } from '@backend/app';
+import designUploadRepo from '@backend/services/database/DesignUploadRepository';
 
-describe('E2E: Design Uploads deletion', () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+const maybeDescribe = HAS_DB ? describe : describe.skip;
+
+maybeDescribe('E2E: Design Uploads deletion', () => {
   const app = createApp();
 
   it('deletes an existing design upload and returns 404 on subsequent read', async () => {

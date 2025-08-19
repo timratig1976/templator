@@ -3,7 +3,10 @@ import TestRunRepository from '../../services/database/TestRunRepository';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-describe('DB Integration: TestRun & TestResult persistence', () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+const maybeDescribe: jest.Describe = HAS_DB ? describe : describe.skip;
+
+maybeDescribe('DB Integration: TestRun & TestResult persistence', () => {
   const repo = new TestRunRepository();
   let designSplitId: string;
 

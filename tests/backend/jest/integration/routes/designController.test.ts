@@ -3,20 +3,20 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { jest } from '@jest/globals';
-import { createApp } from '@/app';
+import { createApp } from '@backend/app';
 import { setupDomainServiceMocks, mockPipelineExecutor } from '../../setup/domainServiceMocks';
 
 // Mock the new domain-driven services
-jest.mock('@/services/core/ai/OpenAIClient');
-jest.mock('@/services/pipeline/PipelineExecutor');
-jest.mock('@/services/ai/generation/HTMLGenerator');
-jest.mock('@/services/ai/analysis/IterativeRefinement');
-jest.mock('@/services/quality/validation/HTMLValidator');
-jest.mock('@/services/ai/prompts/PromptManager');
-jest.mock('@/services/ai/splitting/SplittingService');
+jest.mock('@backend/services/core/ai/OpenAIClient');
+jest.mock('@backend/services/pipeline/PipelineExecutor');
+jest.mock('@backend/services/ai/generation/HTMLGenerator');
+jest.mock('@backend/services/ai/analysis/IterativeRefinement');
+jest.mock('@backend/services/quality/validation/HTMLValidator');
+jest.mock('@backend/services/ai/prompts/PromptManager');
+jest.mock('@backend/services/ai/splitting/SplittingService');
 
 // Mock the logger to avoid console spam
-jest.mock('@/utils/logger', () => ({
+jest.mock('@backend/utils/logger', () => ({
   createLogger: () => ({
     info: jest.fn(),
     error: jest.fn(),
@@ -196,7 +196,7 @@ describe('Design Controller API Tests', () => {
         getSupportedFileTypes: jest.fn().mockReturnValue([])
       };
       
-      const { setPipelineController } = require('@/routes/design');
+      const { setPipelineController } = require('@backend/routes/design');
       setPipelineController(mockController);
 
       const response = await request(app)

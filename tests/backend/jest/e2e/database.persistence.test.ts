@@ -1,12 +1,16 @@
-import prisma from '@/services/database/prismaClient';
-import designUploadRepo from '@/services/database/DesignUploadRepository';
-import designSplitRepo from '@/services/database/DesignSplitRepository';
-import splitAssetRepo from '@/services/database/SplitAssetRepository';
+import prisma from '@backend/services/database/prismaClient';
+import designUploadRepo from '@backend/services/database/DesignUploadRepository';
+import designSplitRepo from '@backend/services/database/DesignSplitRepository';
+import splitAssetRepo from '@backend/services/database/SplitAssetRepository';
 
 // Integration test verifying Prisma-backed repositories against the real DB.
 // Requires DATABASE_URL configured.
 
-describe('DB Integration: DesignUpload → DesignSplit → SplitAsset', () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+
+const maybeDescribe: jest.Describe = HAS_DB ? describe : describe.skip;
+
+maybeDescribe('DB Integration: DesignUpload → DesignSplit → SplitAsset', () => {
   const createdIds: { uploadId?: string; splitId?: string } = {};
 
   it('creates upload, split, and assets; then reads them back', async () => {

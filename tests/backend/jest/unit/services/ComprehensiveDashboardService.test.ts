@@ -1,15 +1,15 @@
-import { ComprehensiveDashboardService } from '@/services/dashboard/ComprehensiveDashboardService';
-import { TestCoverageService } from '@/services/testing/TestCoverageService';
-import { CodeQualityService } from '@/services/quality/CodeQualityService';
-import { SecurityAnalysisService } from '@/services/security/SecurityAnalysisService';
+import { ComprehensiveDashboardService } from '@backend/services/dashboard/ComprehensiveDashboardService';
+import { TestCoverageService } from '@backend/services/testing/TestCoverageService';
+import { CodeQualityService } from '@backend/services/quality/CodeQualityService';
+import { SecurityAnalysisService } from '@backend/services/security/SecurityAnalysisService';
 
 // Mock all dependencies
-jest.mock('@/services/testing/TestCoverageService');
-jest.mock('@/services/quality/CodeQualityService');
-jest.mock('@/services/security/SecurityAnalysisService');
-jest.mock('@/services/logging/QualityMetricsLogger');
-jest.mock('@/services/logging/AIMetricsLogger');
-jest.mock('@/services/logging/ComprehensiveLogger');
+jest.mock('@backend/services/testing/TestCoverageService');
+jest.mock('@backend/services/quality/CodeQualityService');
+jest.mock('@backend/services/security/SecurityAnalysisService');
+jest.mock('@backend/services/logging/QualityMetricsLogger');
+jest.mock('@backend/services/logging/AIMetricsLogger');
+jest.mock('@backend/services/logging/ComprehensiveLogger');
 
 describe('ComprehensiveDashboardService', () => {
   let dashboardService: ComprehensiveDashboardService;

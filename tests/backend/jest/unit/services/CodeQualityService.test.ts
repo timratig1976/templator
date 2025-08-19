@@ -54,7 +54,7 @@ describe('CodeQualityService', () => {
 
   beforeEach(() => {
     // Require the SUT after mocks are set up so that execAsync uses the mocked exec/promisify
-    ({ CodeQualityService: CodeQualityServiceCls } = require('../../../services/quality/CodeQualityService'));
+    ({ CodeQualityService: CodeQualityServiceCls } = require('@backend/services/quality/CodeQualityService'));
     codeQualityService = new CodeQualityServiceCls();
     mockFs = jest.mocked(fs);
     mockExec = jest.mocked(exec);

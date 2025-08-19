@@ -61,6 +61,16 @@ export class SplittingService {
         usingCustomPrompt: !!customPrompt
       }, requestId);
 
+      // Test-only fallback to avoid external AI dependency in E2E
+      if (process.env.E2E_FAKE_AI === '1') {
+        logger.warn(`[${requestId}] E2E_FAKE_AI enabled - returning deterministic test sections (no OpenAI call)`);
+        logToFrontend('info', 'openai', '🧪 Using test fallback sections (E2E_FAKE_AI=1)', {
+          fallbackUsed: true,
+          sectionsCount: 4
+        }, requestId);
+        return this.generateBasicSplittingSuggestions(fileName);
+      }
+
       // Use custom prompt if provided (from AI Maintenance), otherwise use default
       const prompt = customPrompt || this.buildSplittingPrompt();
       

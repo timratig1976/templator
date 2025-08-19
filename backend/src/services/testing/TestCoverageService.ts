@@ -51,7 +51,8 @@ export class TestCoverageService {
   constructor() {
     this.srcPath = path.join(process.cwd(), 'src');
     this.testsPath = path.join(process.cwd(), 'tests', 'tests');
-    this.coverageFile = path.join(process.cwd(), 'coverage', 'coverage-summary.json');
+    // Read Jest coverage from consolidated artifacts under tests/.artifacts
+    this.coverageFile = path.join(process.cwd(), 'tests', '.artifacts', 'jest', 'coverage', 'coverage-summary.json');
   }
 
   /**
@@ -87,12 +88,20 @@ export class TestCoverageService {
    * Run Jest with coverage and parse results
    */
   private async getJestCoverage(): Promise<CoverageReport | null> {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
+      // Ensure coverage directory exists for consolidated artifacts
+      const coverageDir = path.join(process.cwd(), 'tests', '.artifacts', 'jest', 'coverage');
+      try {
+        await fs.mkdir(coverageDir, { recursive: true });
+      } catch {}
+
       const jestProcess = spawn('npx', [
         'jest',
         '--coverage',
         '--coverageReporters=json-summary',
-        '--testPathPattern=tests/tests/unit/',
+        `--coverageDirectory=${coverageDir}`,
+        // Support both legacy (tests/tests/unit) and new (tests/jest/unit) layouts
+        '--testPathPattern=tests/(tests|jest)/unit/',
         '--passWithNoTests',
         '--silent'
       ], {

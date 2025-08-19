@@ -5,9 +5,9 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { AIMetricsLogger, AIInteractionEntry } from '@/services/logging/AIMetricsLogger';
-import { QualityMetricsLogger, QualityMetricEntry } from '@/services/logging/QualityMetricsLogger';
-import { ComprehensiveLogger } from '@/services/logging/ComprehensiveLogger';
+import { AIMetricsLogger, AIInteractionEntry } from '@backend/services/logging/AIMetricsLogger';
+import { QualityMetricsLogger, QualityMetricEntry } from '@backend/services/logging/QualityMetricsLogger';
+import { ComprehensiveLogger } from '@backend/services/logging/ComprehensiveLogger';
 
 describe('Comprehensive Logging System', () => {
   let aiLogger: AIMetricsLogger;

@@ -19,7 +19,8 @@
       "@/*": ["./src/*"],
       "@/shared/*": ["../shared/*"],
       "@/packages/*": ["../packages/*"],
-      "@tests/*": ["./tests/runner/*"]
+      "@tests/*": ["../tests/backend/runner/*"],
+      "@tests-config/*": ["../tests/backend/config/*"]
     }
   },
   "include": ["src/**/*", "../shared/**/*"],
@@ -28,7 +29,6 @@
     "dist",
     "**/*.test.ts",
     "src/__tests__/**",
-    "test-suite/**",
     "tests/.artifacts/**"
   ]
 }

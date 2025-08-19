@@ -6,7 +6,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { createLogger } from '../../utils/logger';
+import { createLogger } from '../../src/utils/logger';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();
@@ -304,8 +304,11 @@ export class TestSuiteManager extends EventEmitter {
       collectCoverage: true,
       coverageDirectory: path.join(this.config.reportOutputDir, `coverage-${context.category}`),
       coverageReporters: ['json', 'html', 'text'],
-      setupFilesAfterEnv: ['<rootDir>/tests/tests/unit/setup.ts'],
-      moduleNameMapping: {
+      setupFilesAfterEnv: [
+        '<rootDir>/tests/jest/unit/setup.ts',
+        '<rootDir>/tests/tests/unit/setup.ts'
+      ],
+      moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1'
       },
       testEnvironment: 'node',

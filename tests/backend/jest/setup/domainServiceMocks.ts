@@ -246,28 +246,28 @@ export function setupDomainServiceMocks() {
 
   // Also ensure the module-level singleton getters return our mocks
   try {
-    const peModule = require('@/services/pipeline/PipelineExecutor');
+    const peModule = require('@backend/services/pipeline/PipelineExecutor');
     if (peModule?.PipelineExecutor?.getInstance?.mockReturnValue) {
       peModule.PipelineExecutor.getInstance.mockReturnValue(mockPipelineExecutor);
     }
   } catch {}
 
   try {
-    const hgModule = require('@/services/ai/generation/HTMLGenerator');
+    const hgModule = require('@backend/services/ai/generation/HTMLGenerator');
     if (hgModule?.HTMLGenerator?.getInstance?.mockReturnValue) {
       hgModule.HTMLGenerator.getInstance.mockReturnValue(mockHTMLGenerator);
     }
   } catch {}
 
   try {
-    const irModule = require('@/services/ai/analysis/IterativeRefinement');
+    const irModule = require('@backend/services/ai/analysis/IterativeRefinement');
     if (irModule?.IterativeRefinement?.getInstance?.mockReturnValue) {
       irModule.IterativeRefinement.getInstance.mockReturnValue(mockIterativeRefinement);
     }
   } catch {}
 
   try {
-    const api = jest.requireActual('@/pipeline/api') as any;
+    const api = jest.requireActual('@backend/pipeline/api') as any;
     const controllerLike = {
       executePipeline: (file: Express.Multer.File, options?: any) => api.executePipeline(file, options, {
         pipelineExecutor: mockPipelineExecutor,
@@ -281,68 +281,68 @@ export function setupDomainServiceMocks() {
       })
     };
 
-    const pipelineRoutes = require('@/routes/pipeline');
+    const pipelineRoutes = require('@backend/routes/pipeline');
     if (pipelineRoutes.setPipelineController) {
       pipelineRoutes.setPipelineController(controllerLike);
     }
 
-    const designRoutes = require('@/routes/design');
+    const designRoutes = require('@backend/routes/design');
     if (designRoutes.setPipelineController) {
       designRoutes.setPipelineController(controllerLike);
     }
   } catch (error) {}
 
-  jest.doMock('@/services/pipeline/PipelineExecutor', () => ({
+  jest.doMock('@backend/services/pipeline/PipelineExecutor', () => ({
     PipelineExecutor: jest.fn().mockImplementation(() => mockPipelineExecutor),
     default: mockPipelineExecutor
   }));
 
-  jest.doMock('@/services/ai/generation/HTMLGenerator', () => ({
+  jest.doMock('@backend/services/ai/generation/HTMLGenerator', () => ({
     HTMLGenerator: jest.fn().mockImplementation(() => mockHTMLGenerator),
     default: mockHTMLGenerator
   }));
 
-  jest.doMock('@/services/ai/analysis/IterativeRefinement', () => ({
+  jest.doMock('@backend/services/ai/analysis/IterativeRefinement', () => ({
     IterativeRefinement: jest.fn().mockImplementation(() => mockIterativeRefinement),
     default: mockIterativeRefinement
   }));
 
-  jest.doMock('@/services/core/ai/OpenAIClient', () => ({
+  jest.doMock('@backend/services/core/ai/OpenAIClient', () => ({
     OpenAIClient: jest.fn().mockImplementation(() => mockOpenAIClient),
     default: mockOpenAIClient
   }));
 
-  jest.doMock('@/services/quality/validation/HTMLValidator', () => ({
+  jest.doMock('@backend/services/quality/validation/HTMLValidator', () => ({
     HTMLValidator: jest.fn().mockImplementation(() => mockHTMLValidator),
     default: mockHTMLValidator
   }));
 
-  jest.doMock('@/services/ai/prompts/PromptManager', () => ({
+  jest.doMock('@backend/services/ai/prompts/PromptManager', () => ({
     PromptManager: jest.fn().mockImplementation(() => mockPromptManager),
     default: mockPromptManager
   }));
 
-  jest.doMock('@/services/pipeline/PipelineProgressTracker', () => ({
+  jest.doMock('@backend/services/pipeline/PipelineProgressTracker', () => ({
     PipelineProgressTracker: jest.fn().mockImplementation(() => mockPipelineProgressTracker),
     default: mockPipelineProgressTracker
   }));
 
-  jest.doMock('@/services/quality/QualityMetricsDashboard', () => ({
+  jest.doMock('@backend/services/quality/QualityMetricsDashboard', () => ({
     QualityMetricsDashboard: jest.fn().mockImplementation(() => mockQualityMetricsDashboard),
     default: mockQualityMetricsDashboard
   }));
 
-  jest.doMock('@/services/recovery/ErrorRecoverySystem', () => ({
+  jest.doMock('@backend/services/recovery/ErrorRecoverySystem', () => ({
     ErrorRecoverySystem: jest.fn().mockImplementation(() => mockErrorRecoverySystem),
     default: mockErrorRecoverySystem
   }));
 
-  jest.doMock('@/services/deployment/HubSpotAPIService', () => ({
+  jest.doMock('@backend/services/deployment/HubSpotAPIService', () => ({
     HubSpotAPIService: jest.fn().mockImplementation(() => mockHubSpotAPIService),
     default: mockHubSpotAPIService
   }));
 
-  jest.doMock('@/services/ai/splitting/SplittingService', () => ({
+  jest.doMock('@backend/services/ai/splitting/SplittingService', () => ({
     SplittingService: mockSplittingService,
     default: mockSplittingService
   }));

@@ -6,11 +6,14 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@tests/*": ["./tests/runner/*"]
+      "@backend/*": ["./src/*"],
+      "@tests/*": ["../tests/backend/runner/*", "./tests/runner/*"],
+      "@tests-config/*": ["../tests/backend/config/*"]
     }
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "../tests/backend/**/*.ts"
   ]
 }

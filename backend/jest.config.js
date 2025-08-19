@@ -1,7 +1,7 @@
 const path = require('path');
 
-// Output coverage to tests/.artifacts to keep all test-related files together
-const COVERAGE_DIR = path.join(process.cwd(), 'tests', '.artifacts', 'jest', 'coverage');
+// Output coverage to app root reports directory for consolidated artifacts
+const COVERAGE_DIR = path.join(__dirname, '..', 'reports', 'tests', 'backend', 'coverage');
 
 module.exports = {
   // Multi-project configuration for organized test structure
@@ -13,11 +13,10 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/tests'],
-      // Support transitional layout: tests/tests/* (after folder rename) and future tests/jest/*
+      // Point to consolidated root tests directory
+      roots: ['<rootDir>/../tests/backend'],
       testMatch: [
-        '<rootDir>/tests/tests/unit/**/*.test.ts',
-        '<rootDir>/tests/jest/unit/**/*.test.ts'
+        '<rootDir>/../tests/backend/jest/unit/**/*.test.ts'
       ],
       transform: {
         '^.+\.ts$': 'ts-jest',
@@ -27,11 +26,20 @@ module.exports = {
           tsconfig: '<rootDir>/tsconfig.jest.json'
         }
       },
-      // Transitional setup path; later move to tests/jest/unit/setup.ts
-      setupFilesAfterEnv: ['<rootDir>/tests/tests/unit/setup.ts'],
+      // Setup file for unit tests (new structure)
+      setupFilesAfterEnv: [
+        '<rootDir>/../tests/backend/jest/unit/setup.ts'
+      ],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
-        '^@tests/(.*)$': '<rootDir>/tests/runner/$1'
+        '^@backend/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/../tests/backend/runner/$1',
+        '^@tests-config/(.*)$': '<rootDir>/../tests/backend/config/$1',
+        // Legacy relative imports from tests → map to src
+        '^(\\.\\./){3}services/(.*)$': '<rootDir>/src/services/$2',
+        '^\\.\\./\\.\\./services/(.*)$': '<rootDir>/src/services/$1',
+        '^\\.\\./\\.\\./utils/logger$': '<rootDir>/src/utils/logger',
+        '^\\.\\./\\.\\./app$': '<rootDir>/src/app'
       },
 
       collectCoverageFrom: [
@@ -48,10 +56,9 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/tests'],
+      roots: ['<rootDir>/../tests/backend'],
       testMatch: [
-        '<rootDir>/tests/tests/e2e/**/*.test.ts',
-        '<rootDir>/tests/jest/e2e/**/*.test.ts'
+        '<rootDir>/../tests/backend/jest/e2e/**/*.test.ts'
       ],
       transform: {
         '^.+\.ts$': 'ts-jest',
@@ -61,10 +68,18 @@ module.exports = {
           tsconfig: '<rootDir>/tsconfig.jest.json'
         }
       },
-      setupFilesAfterEnv: ['<rootDir>/tests/tests/unit/setup.ts'],
+      setupFilesAfterEnv: [
+        '<rootDir>/../tests/backend/jest/unit/setup.ts'
+      ],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
-        '^@tests/(.*)$': '<rootDir>/tests/runner/$1'
+        '^@backend/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/../tests/backend/runner/$1',
+        '^@tests-config/(.*)$': '<rootDir>/../tests/backend/config/$1',
+        '^(\\.\\./){3}services/(.*)$': '<rootDir>/src/services/$2',
+        '^\\.\\./\\.\\./services/(.*)$': '<rootDir>/src/services/$1',
+        '^\\.\\./\\.\\./utils/logger$': '<rootDir>/src/utils/logger',
+        '^\\.\\./\\.\\./app$': '<rootDir>/src/app'
       },
 
       maxWorkers: 1 // E2E tests should run sequentially
@@ -76,10 +91,9 @@ module.exports = {
       },
       preset: 'ts-jest',
       testEnvironment: 'node',
-      roots: ['<rootDir>/tests'],
+      roots: ['<rootDir>/../tests/backend'],
       testMatch: [
-        '<rootDir>/tests/tests/integration/**/*.test.ts',
-        '<rootDir>/tests/jest/integration/**/*.test.ts'
+        '<rootDir>/../tests/backend/jest/integration/**/*.test.ts'
       ],
       transform: {
         '^.+\.ts$': 'ts-jest',
@@ -91,7 +105,12 @@ module.exports = {
       },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
-        '^@tests/(.*)$': '<rootDir>/tests/runner/$1'
+        '^@backend/(.*)$': '<rootDir>/src/$1',
+        '^@tests/(.*)$': '<rootDir>/../tests/backend/runner/$1',
+        '^@tests-config/(.*)$': '<rootDir>/../tests/backend/config/$1',
+        '^\.\./\.\./services/(.*)$': '<rootDir>/src/services/$1',
+        '^\.\./\.\./utils/logger$': '<rootDir>/src/utils/logger',
+        '^\.\./\.\./app$': '<rootDir>/src/app'
       },
 
       maxWorkers: 1 // Integration tests may need sequential execution

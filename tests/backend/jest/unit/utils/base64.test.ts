@@ -1,4 +1,4 @@
-import { isValidBase64Image, extractBase64Part, getImageMimeFromDataUrl } from '@/utils/base64';
+import { isValidBase64Image, extractBase64Part, getImageMimeFromDataUrl } from '@backend/utils/base64';
 
 // Some small, valid base64 payloads (not necessarily real images, but valid base64 strings)
 const VALID_BASE64 = 'AAA='; // length 4, valid padding

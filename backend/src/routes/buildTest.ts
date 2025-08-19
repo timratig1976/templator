@@ -6,7 +6,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { createLogger } from '../utils/logger';
-import { getBuildTestConfig } from '../../tests/config/build-test-config';
+import { getBuildTestConfig } from '@tests-config/build-test-config';
 
 const router = Router();
 const logger = createLogger();
@@ -101,14 +101,16 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  */
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const latestResult = buildTestService.getLatestBuildResult();
-    const serviceHealth = buildTestService.getServiceHealthSummary();
-    const isHealthy = buildTestService.isServiceHealthy();
+    const svc = getBuildTestService();
+    // Defensive: ensure service is initialized before accessing methods
+    const latestResult = svc ? svc.getLatestBuildResult() : null;
+    const serviceHealth = svc ? svc.getServiceHealthSummary() : {};
+    const isHealthy = svc ? svc.isServiceHealthy() : false;
 
     res.json({
       status: 'success',
       data: {
-        isRunning: buildTestService['isRunning'],
+        isRunning: svc ? svc['isRunning'] : false,
         isHealthy,
         lastBuildTime: latestResult?.timestamp || null,
         latestResult,

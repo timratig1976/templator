@@ -4,7 +4,10 @@ import ReviewFeedbackRepository from '../../services/database/ReviewFeedbackRepo
 // Narrow sleep util to allow Neon to settle writes in CI if needed
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-describe('DB Integration: ReviewFeedback persistence', () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+const maybeDescribe: jest.Describe = HAS_DB ? describe : describe.skip;
+
+maybeDescribe('DB Integration: ReviewFeedback persistence', () => {
   const reviewRepo = new ReviewFeedbackRepository();
   let designSplitId: string;
 

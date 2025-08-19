@@ -8,7 +8,10 @@ import prisma from '../../services/database/prismaClient';
  * Requires DATABASE_URL configured.
  */
 
-describe('DB Integration: ValidationResult persistence', () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+const maybeDescribe: jest.Describe = HAS_DB ? describe : describe.skip;
+
+maybeDescribe('DB Integration: ValidationResult persistence', () => {
   const created: { uploadId?: string; splitId?: string; resultIds: string[] } = { resultIds: [] };
 
   it('creates validation results for a split and reads them back', async () => {
