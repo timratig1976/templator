@@ -132,7 +132,11 @@ export class AIMetricsLogger {
   private readonly maxFiles = 6; // Keep 6 months of AI interaction data
 
   constructor() {
-    this.logDir = path.join(process.cwd(), 'storage', 'ai-logs');
+    // Resolve reports base directory: prefer REPORTS_DIR env, fallback to project-root ./reports
+    const reportsBase = process.env.REPORTS_DIR
+      ? path.resolve(process.env.REPORTS_DIR)
+      : path.resolve(process.cwd(), '..', 'reports');
+    this.logDir = path.join(reportsBase, 'ai-logs');
     this.ensureLogDirectory();
   }
 

@@ -46,7 +46,11 @@ export class QualityMetricsLogger {
   private readonly maxFiles = 12; // Keep 12 months of data
 
   constructor() {
-    this.logDir = path.join(process.cwd(), 'storage', 'quality-logs');
+    // Resolve reports base directory: prefer REPORTS_DIR env, fallback to project-root ./reports
+    const reportsBase = process.env.REPORTS_DIR
+      ? path.resolve(process.env.REPORTS_DIR)
+      : path.resolve(process.cwd(), '..', 'reports');
+    this.logDir = path.join(reportsBase, 'quality-logs');
     this.ensureLogDirectory();
   }
 

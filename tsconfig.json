@@ -23,7 +23,8 @@
       "@/*": ["./frontend/src/*"],
       "@backend/*": ["./backend/src/*"],
       "@/shared/*": ["./shared/*"],
-      "@/packages/*": ["./packages/*"]
+      "@/packages/*": ["./packages/*"],
+      "@tests/*": ["./tests/*"]
     }
   },
   "include": [

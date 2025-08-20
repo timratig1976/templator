@@ -6,7 +6,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { createLogger } from '../../src/utils/logger';
+import { createLogger } from '../../shared/logger';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();

@@ -23,10 +23,12 @@
     "test:pyramid": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "maintenance": "node ../tests/backend/scripts/maintenance.js",
     "quality:fast": "npm run lint && npm run type-check",
-    "quality:full": "npm run lint && npm run type-check && npm run build-test && npm run test:coverage"
+    "quality:full": "npm run lint && npm run type-check && npm run build-test && npm run test:coverage",
+    "cleanup:uploads": "ts-node scripts/cleanup-runtime-uploads.ts",
+    "cleanup:uploads:dry": "ts-node scripts/cleanup-runtime-uploads.ts --dry-run"
   },
   "dependencies": {
-    "@prisma/client": "^6.13.0",
+    "@prisma/client": "^6.14.0",
     "@types/cheerio": "^0.22.35",
     "@types/pg": "^8.15.5",
     "@types/socket.io": "^3.0.1",

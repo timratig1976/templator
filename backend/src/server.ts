@@ -1,7 +1,20 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
 // Load environment variables
-dotenv.config();
+// Prefer root .env so the project can be configured centrally; fallback to backend/.env
+const rootEnvPath = path.resolve(__dirname, '../../.env');
+const backendEnvPath = path.resolve(__dirname, '../.env');
+
+if (fs.existsSync(rootEnvPath)) {
+  dotenv.config({ path: rootEnvPath });
+} else if (fs.existsSync(backendEnvPath)) {
+  dotenv.config({ path: backendEnvPath });
+} else {
+  // Default to dotenv default resolution if neither file exists
+  dotenv.config();
+}
 
 import express from 'express';
 import cors from 'cors';

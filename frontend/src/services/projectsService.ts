@@ -1,4 +1,5 @@
 import { PipelineExecutionResult } from './pipelineService';
+import { API_BASE_URL } from '@/config/api';
 
 export interface SavedProject {
   id: string;
@@ -50,7 +51,7 @@ class ProjectsService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3009';
+    this.baseUrl = API_BASE_URL || '';
   }
 
   /**

@@ -664,3 +664,47 @@ chore(deps): update dependencies
 ---
 
 *This project structure blueprint provides a solid foundation for scalable, maintainable applications. The organization supports team collaboration, code reusability, and long-term growth while maintaining clear separation of concerns.*
+
+---
+
+## 🧪 Tests Folder Blueprint (Reusable Runner)
+
+Keep test harnesses portable across projects by colocating runner code and lightweight shared utilities entirely under `tests/`.
+
+### Suggested structure
+```
+tests/
+  shared/
+    BaseService.ts          # Minimal lifecycle + events + handleError()
+    ErrorSystem.ts          # Lightweight AppError/ErrorHandler
+    logger.ts               # Simple console-based logger
+  backend/
+    runner/
+      TestRunnerCLI.ts
+      TestRunnerServer.ts
+      TestReportGenerator.ts
+      TestSuiteManager.ts
+```
+
+### Import pattern
+```ts
+// Example in tests/backend/runner/TestReportGenerator.ts
+import { BaseService, FileOperationMixin } from '../../shared/BaseService';
+import { createLogger } from '../../shared/logger';
+```
+
+### Optional path alias
+Add a root alias to simplify imports from tests:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@tests/*": ["tests/*"]
+    }
+  }
+}
+```
+
+This decouples tests from app internals and makes the runner copy-pastable into other repositories.

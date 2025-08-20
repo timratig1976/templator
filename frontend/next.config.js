@@ -1,3 +1,6 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env'), override: true });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -18,7 +21,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3009/api/:path*',
+        destination: `${process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:3009'}/api/:path*`,
       },
     ];
   },

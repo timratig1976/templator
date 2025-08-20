@@ -33,7 +33,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@backend/(.*)$': '<rootDir>/src/$1',
-        '^@tests/(.*)$': '<rootDir>/../tests/backend/runner/$1',
+        '^@tests/(.*)$': '<rootDir>/../tests/$1',
         '^@tests-config/(.*)$': '<rootDir>/../tests/backend/config/$1',
         // Legacy relative imports from tests → map to src
         '^(\\.\\./){3}services/(.*)$': '<rootDir>/src/services/$2',
@@ -74,7 +74,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@backend/(.*)$': '<rootDir>/src/$1',
-        '^@tests/(.*)$': '<rootDir>/../tests/backend/runner/$1',
+        '^@tests/(.*)$': '<rootDir>/../tests/$1',
         '^@tests-config/(.*)$': '<rootDir>/../tests/backend/config/$1',
         '^(\\.\\./){3}services/(.*)$': '<rootDir>/src/services/$2',
         '^\\.\\./\\.\\./services/(.*)$': '<rootDir>/src/services/$1',
@@ -106,7 +106,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@backend/(.*)$': '<rootDir>/src/$1',
-        '^@tests/(.*)$': '<rootDir>/../tests/backend/runner/$1',
+        '^@tests/(.*)$': '<rootDir>/../tests/$1',
         '^@tests-config/(.*)$': '<rootDir>/../tests/backend/config/$1',
         '^\.\./\.\./services/(.*)$': '<rootDir>/src/services/$1',
         '^\.\./\.\./utils/logger$': '<rootDir>/src/utils/logger',

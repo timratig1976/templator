@@ -24,6 +24,7 @@ import fs from 'fs';
 import AIMetricsService from '../services/ai/metrics/AIMetricsService';
 import { aiPromptRepository } from '../services/ai/AIPromptRepository';
 import axios from 'axios';
+import path from 'path';
 
 // Interface for layout analysis response
 interface LayoutAnalysisResult {
@@ -89,58 +90,6 @@ async function generateAISplittingSuggestions(imageBase64: string, fileName: str
       imageSize: Math.round(imageBase64.length / 1024)
     });
 
-  // List recent splits for quick-load UI
-  // GET /api/ai-enhancement/splits/recent?limit=20
-  router.get('/splits/recent', async (req: Request, res: Response) => {
-    try {
-      const limit = Math.min(Number(req.query.limit || 20), 100);
-      const recent = await designSplitRepo.listRecent(isNaN(limit) ? 20 : limit);
-      // shape items
-      const items = recent.map((s: any) => ({
-        designSplitId: s.id,
-        createdAt: s.createdAt,
-        // sectionCount can be filled lazily on summary; keep optional here
-      }));
-      return res.json({ success: true, data: { items } });
-    } catch (e) {
-      logger.error('Failed to list recent splits', { error: getErrorMessage(e) });
-      return res.status(500).json({ success: false, error: 'Failed to list recent splits' });
-    }
-  });
-
-  // Split summary: sections + optional image reference
-  // GET /api/ai-enhancement/splits/:splitId/summary
-  router.get('/splits/:splitId/summary', async (req: Request, res: Response) => {
-    const { splitId } = req.params;
-    try {
-      const split = await designSplitRepo.findById(splitId);
-      if (!split) return res.status(404).json({ success: false, error: 'DesignSplit not found' });
-
-      // Collect section descriptors from JSON assets (created by detect-sections or analyze-layout)
-      const assets = await designSplitRepo.listAssets(splitId);
-      const sections = assets
-        .filter((a: any) => a.kind === 'json')
-        .map((a: any, i: number) => {
-          const m: any = a.meta || {};
-          return {
-            id: m.id || m.sectionId || `section_${i + 1}`,
-            name: m.name || m.type || `Section ${i + 1}`,
-            type: (m.type || 'content') as string,
-            // bounds may be present from detect-sections path
-            bounds: m.bounds || undefined,
-            description: m.splittingRationale || undefined,
-          };
-        });
-
-      // Reference to uploaded image if available (key stored in designUpload.storageUrl)
-      const imageUrl = split.designUpload?.storageUrl || null;
-
-      return res.json({ success: true, data: { designSplitId: splitId, imageUrl, sections } });
-    } catch (e) {
-      logger.error('Failed to build split summary', { error: getErrorMessage(e), splitId });
-      return res.status(500).json({ success: false, error: 'Failed to load split summary' });
-    }
-  });
     logToFrontend('info', 'openai', '🤖 Analyzing design with AI Vision', {
       fileName,
       model: 'gpt-4o'
@@ -1753,53 +1702,11 @@ router.get('/assets/signed', (req: Request, res: Response) => {
   if (!key) return res.status(400).json({ success: false, error: 'key is required' });
   const exp = Date.now() + (isNaN(ttl) ? 300000 : ttl);
   const sig = signKey(key, exp);
-  const url = `/api/ai-enhancement/assets/download?key=${encodeURIComponent(key)}&exp=${exp}&sig=${sig}`;
+  // Build absolute URL so the browser can fetch directly from the backend origin
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_API_URL || `${req.protocol}://${req.get('host')}`;
+  const pathAndQuery = `/api/ai-enhancement/assets/download?key=${encodeURIComponent(key)}&exp=${exp}&sig=${sig}`;
+  const url = `${backendBase}${pathAndQuery}`;
   res.json({ success: true, data: { url, exp } });
-});
-
-// GET /api/ai-enhancement/assets/download?key=...&exp=...&sig=...
-router.get('/assets/download', async (req: Request, res: Response) => {
-  const key = String(req.query.key || '');
-  const exp = Number(req.query.exp || 0);
-  const sig = String(req.query.sig || '');
-  if (!key || !exp || !sig) return res.status(400).json({ success: false, error: 'missing params' });
-  const allowBypass = process.env.ASSET_SIGNING_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
-  if (!verifySignature(key, exp, sig)) {
-    // Detailed diagnostics for 403s
-    try {
-      const now = Date.now();
-      const expected = signKey(key, exp);
-      logger.warn('Asset signature verification failed', {
-        key,
-        exp,
-        now,
-        skewMs: exp - now,
-        providedSigPrefix: sig.slice(0, 8),
-        expectedSigPrefix: expected.slice(0, 8),
-        sameSig: expected === sig,
-        allowBypass,
-      });
-    } catch {}
-    if (!allowBypass) return res.status(403).json({ success: false, error: 'invalid or expired signature' });
-  }
-  try {
-    const stream = await storage.getStream(key);
-    const lower = key.toLowerCase();
-    const contentType = lower.endsWith('.jpg') || lower.endsWith('.jpeg')
-      ? 'image/jpeg'
-      : lower.endsWith('.webp')
-      ? 'image/webp'
-      : lower.endsWith('.gif')
-      ? 'image/gif'
-      : lower.endsWith('.svg')
-      ? 'image/svg+xml'
-      : 'image/png';
-    res.setHeader('Content-Type', contentType);
-    stream.pipe(res);
-  } catch (e) {
-    logger.error('Failed to stream asset', { key, error: getErrorMessage(e) });
-    res.status(404).json({ success: false, error: 'not found' });
-  }
 });
 
 // GET /api/ai-enhancement/splits/:splitId/summary
@@ -1809,6 +1716,7 @@ router.get('/splits/:splitId/summary', async (req: Request, res: Response) => {
     const split = await designSplitRepo.findById(splitId);
     if (!split) return res.status(404).json({ success: false, error: 'DesignSplit not found' });
 
+    // Collect section descriptors from JSON assets (created by detect-sections or analyze-layout)
     const assets = await designSplitRepo.listAssets(splitId);
     const sections = assets
       .filter((a: any) => a.kind === 'json')
@@ -1828,6 +1736,111 @@ router.get('/splits/:splitId/summary', async (req: Request, res: Response) => {
   } catch (e) {
     logger.error('Failed to get split summary', { splitId, error: getErrorMessage(e) });
     return res.status(500).json({ success: false, error: 'Failed to get split summary' });
+  }
+});
+
+// GET /api/ai-enhancement/assets/download?key=...&exp=...&sig=...
+router.get('/assets/download', async (req: Request, res: Response) => {
+  const key = String(req.query.key || ''); // raw, URL-encoded possibly
+  const exp = Number(req.query.exp || 0);
+  const sig = String(req.query.sig || '');
+  if (!key || !exp || !sig) return res.status(400).json({ success: false, error: 'missing params' });
+  const allowBypass = process.env.ASSET_SIGNING_BYPASS === 'true' && process.env.NODE_ENV !== 'production';
+  if (!verifySignature(key, exp, sig)) {
+    // Detailed diagnostics for 403s
+    try {
+      const now = Date.now();
+      const expected = signKey(key, exp);
+      const decodedKey = (() => {
+        try {
+          return decodeURIComponent(key).replace(/^file:\/\//, '');
+        } catch {
+          return key.replace(/^file:\/\//, '');
+        }
+      })();
+      const uploadsBase = (() => {
+        const fromEnv = process.env.UPLOADS_DIR;
+        const resolved = fromEnv
+          ? (path.isAbsolute(fromEnv) ? fromEnv : path.resolve(process.cwd(), fromEnv))
+          : path.resolve(process.cwd(), 'storage', 'uploads');
+        return resolved;
+      })();
+      const resolvedPath = path.isAbsolute(decodedKey)
+        ? decodedKey
+        : (decodedKey.startsWith(uploadsBase) ? decodedKey : path.join(uploadsBase, decodedKey));
+      logger.warn('Asset signature verification failed', {
+        key,
+        decodedKey,
+        exp,
+        now,
+        ageMs: now - exp,
+        expectedSig: expected,
+        providedSig: sig,
+        uploadsBase,
+        resolvedPath,
+        allowBypass,
+      });
+    } catch {}
+    if (!allowBypass) return res.status(403).json({ success: false, error: 'invalid or expired signature' });
+  }
+  try {
+    // Precompute resolved path for diagnostics (mirrors LocalStorageService logic)
+    const decodedKey = (() => {
+      try {
+        return decodeURIComponent(key).replace(/^file:\/\//, '');
+      } catch {
+        return key.replace(/^file:\/\//, '');
+      }
+    })();
+    const uploadsBase = (() => {
+      const fromEnv = process.env.UPLOADS_DIR;
+      const resolved = fromEnv
+        ? (path.isAbsolute(fromEnv) ? fromEnv : path.resolve(process.cwd(), fromEnv))
+        : path.resolve(process.cwd(), 'storage', 'uploads');
+      return resolved;
+    })();
+    const resolvedPath = path.isAbsolute(decodedKey)
+      ? decodedKey
+      : (decodedKey.startsWith(uploadsBase) ? decodedKey : path.join(uploadsBase, decodedKey));
+    logger.debug('Streaming asset', { key, resolvedPath, uploadsBase, cwd: process.cwd() });
+    const stream = await storage.getStream(decodedKey);
+    const lower = decodedKey.toLowerCase();
+    const contentType = lower.endsWith('.jpg') || lower.endsWith('.jpeg')
+      ? 'image/jpeg'
+      : lower.endsWith('.webp')
+      ? 'image/webp'
+      : lower.endsWith('.gif')
+      ? 'image/gif'
+      : lower.endsWith('.svg')
+      ? 'image/svg+xml'
+      : 'image/png';
+    res.setHeader('Content-Type', contentType);
+    stream.pipe(res);
+  } catch (e) {
+    // Attempt to log resolved path even on failure for easier diagnosis
+    try {
+      const decodedKey = (() => {
+        try {
+          return decodeURIComponent(key).replace(/^file:\/\//, '');
+        } catch {
+          return key.replace(/^file:\/\//, '');
+        }
+      })();
+      const uploadsBase = (() => {
+        const fromEnv = process.env.UPLOADS_DIR;
+        const resolved = fromEnv
+          ? (path.isAbsolute(fromEnv) ? fromEnv : path.resolve(process.cwd(), fromEnv))
+          : path.resolve(process.cwd(), 'storage', 'uploads');
+        return resolved;
+      })();
+      const resolvedPath = path.isAbsolute(decodedKey)
+        ? decodedKey
+        : (decodedKey.startsWith(uploadsBase) ? decodedKey : path.join(uploadsBase, decodedKey));
+      logger.error('Failed to stream asset', { key, resolvedPath, uploadsBase, cwd: process.cwd(), error: getErrorMessage(e) });
+    } catch (diagErr) {
+      logger.error('Failed to stream asset (diagnostics error)', { key, error: getErrorMessage(e), diagError: getErrorMessage(diagErr) });
+    }
+    res.status(404).json({ success: false, error: 'not found' });
   }
 });
 

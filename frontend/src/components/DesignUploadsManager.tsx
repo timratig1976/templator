@@ -610,15 +610,15 @@ export default function DesignUploadsManager() {
             >Split</button>
             <button
               className={`px-2 py-0.5 rounded border ${
-                cropAvailability[it.id] 
-                  ? 'bg-white hover:bg-gray-50' 
+                (cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0)
+                  ? 'bg-white hover:bg-gray-50'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
               aria-label={`Open Plan (HTML) for ${it.filename}`}
-              disabled={!cropAvailability[it.id]}
-              title={cropAvailability[it.id] ? 'Generate HTML' : 'No split parts available. Generate split parts first.'}
+              disabled={!(cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0)}
+              title={(cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0) ? 'Generate HTML' : 'No split parts available. Generate split parts first.'}
               onClick={() => {
-                if (!cropAvailability[it.id]) {
+                if (!(cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0)) {
                   setToast('No split parts found. Please generate split parts first.');
                   return;
                 }
@@ -629,15 +629,15 @@ export default function DesignUploadsManager() {
             >HTML</button>
             <button
               className={`px-2 py-0.5 rounded border ${
-                cropAvailability[it.id] 
-                  ? 'bg-white hover:bg-gray-50' 
+                (cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0)
+                  ? 'bg-white hover:bg-gray-50'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
               aria-label={`Open Generate (Modules) for ${it.filename}`}
-              disabled={!cropAvailability[it.id]}
-              title={cropAvailability[it.id] ? 'Generate Modules' : 'No split parts available. Generate split parts first.'}
+              disabled={!(cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0)}
+              title={(cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0) ? 'Generate Modules' : 'No split parts available. Generate split parts first.'}
               onClick={() => {
-                if (!cropAvailability[it.id]) {
+                if (!(cropAvailability[it.id] || ((it as any)?.partCount ?? 0) > 0)) {
                   setToast('No split parts found. Please generate split parts first.');
                   return;
                 }

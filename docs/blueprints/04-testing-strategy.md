@@ -5,6 +5,63 @@
 
 ---
 
+## ♻️ Reusable Backend Test Runner Blueprint
+
+To enable reusing the backend test approach across projects with different structures, keep the runner self-contained under `tests/` and avoid importing backend internals.
+
+### Structure
+```
+tests/
+  shared/
+    BaseService.ts          # Minimal lifecycle + events + handleError()
+    ErrorSystem.ts          # Lightweight AppError and ErrorHandler
+    logger.ts               # Simple createLogger() using console
+  backend/
+    runner/
+      TestRunnerCLI.ts      # Orchestrates runs; can spawn Jest
+      TestRunnerServer.ts   # Express server for dashboard/API
+      TestReportGenerator.ts# HTML/JSON report generation
+      TestSuiteManager.ts   # Spawns Jest; aggregates results
+```
+
+### Import pattern (test-local)
+```ts
+// tests/backend/runner/TestReportGenerator.ts
+import { BaseService, FileOperationMixin } from '../../shared/BaseService';
+import { createLogger } from '../../shared/logger';
+```
+
+### Configuration
+- Reports directory: `REPORTS_DIR` env var; defaults to `../reports/tests` relative to CWD.
+- Jest spawn: `TestSuiteManager.ts` may need project-specific paths/args (e.g., `--config`, `--runInBand`).
+- Optional tsconfig alias: map `@tests/*` → `tests/*` to shorten imports.
+
+```json
+// tsconfig.json (root)
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@tests/*": ["tests/*"]
+    }
+  }
+}
+```
+
+### Migration from backend-coupled runners
+1. Replace imports of `backend/src/shared/*` and `backend/src/utils/logger` with `tests/shared/*`.
+2. Introduce `tests/shared/BaseService.ts` with `ensureInitialized()`, `cleanup()`, and `handleError()`.
+3. Use `tests/shared/ErrorSystem.ts` to standardize error wrapping without backend dependencies.
+4. Keep runner I/O generic (no backend-specific file paths or services).
+
+### Best practices
+- Keep runner utilities framework-agnostic and side-effect free.
+- Encapsulate filesystem ops via `FileOperationMixin` for safer writes.
+- Use environment variables for adjustable paths/timeouts.
+- Add lightweight logging (no heavy logger deps) for portability.
+- Validate TypeScript with a root build-test script in CI.
+
+
 ## 🎯 **Testing Philosophy**
 
 ### **Testing Pyramid (80% Unit, 15% Integration, 5% E2E)**

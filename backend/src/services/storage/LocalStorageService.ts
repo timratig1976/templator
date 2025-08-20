@@ -5,10 +5,17 @@ import { randomUUID } from 'crypto';
 import type { IStorageService, PutResult } from './IStorage';
 
 export default class LocalStorageService implements IStorageService {
-  constructor(private baseDir = path.resolve(process.cwd(), 'storage', 'uploads')) {
-    if (!fs.existsSync(this.baseDir)) {
-      fs.mkdirSync(this.baseDir, { recursive: true });
+  constructor(private baseDir = (() => {
+    const fromEnv = process.env.UPLOADS_DIR;
+    const resolved = fromEnv
+      ? (path.isAbsolute(fromEnv) ? fromEnv : path.resolve(process.cwd(), fromEnv))
+      : path.resolve(process.cwd(), 'storage', 'uploads');
+    if (!fs.existsSync(resolved)) {
+      fs.mkdirSync(resolved, { recursive: true });
     }
+    return resolved;
+  })()) {
+    // baseDir initialized via IIFE above
   }
 
   async put(buffer: Buffer, options: { mime?: string; extension?: string }): Promise<PutResult> {
@@ -23,18 +30,36 @@ export default class LocalStorageService implements IStorageService {
     // Accept either a plain key (relative filename) or an absolute file path
     // Avoid duplicating baseDir when the key already contains it or is absolute
     const normalized = key.replace(/^file:\/\//, '');
-    const filePath = path.isAbsolute(normalized)
+    const primaryPath = path.isAbsolute(normalized)
       ? normalized
       : (normalized.startsWith(this.baseDir) ? normalized : path.join(this.baseDir, normalized));
-    
-    // Check if file exists before creating read stream
+
+    // If primary path doesn't exist and was absolute, try fallback to basename in baseDir
+    let finalPath = primaryPath;
+    const attempted: string[] = [primaryPath];
     try {
-      await fs.promises.access(filePath);
-    } catch (error) {
-      throw new Error(`File not found: ${filePath}`);
+      await fs.promises.access(primaryPath);
+    } catch {
+      if (path.isAbsolute(normalized)) {
+        const fallback = path.join(this.baseDir, path.basename(normalized));
+        attempted.push(fallback);
+        try {
+          await fs.promises.access(fallback);
+          finalPath = fallback;
+        } catch {
+          // will throw below with detailed message
+        }
+      }
     }
-    
-    return fs.createReadStream(filePath);
+
+    // Final existence check
+    try {
+      await fs.promises.access(finalPath);
+    } catch {
+      throw new Error(`File not found. Attempted paths: ${attempted.join(' | ')}`);
+    }
+
+    return fs.createReadStream(finalPath);
   }
 
   async delete(key: string): Promise<void> {

@@ -187,7 +187,7 @@ Examples:
   }
 
   protected async cleanup(): Promise<void> {
-    await this.server.shutdown();
+    await this.server.stop();
     await super.cleanup();
   }
 }
