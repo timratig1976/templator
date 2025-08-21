@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type PipelineStatus = 'initializing' | 'running' | 'completed' | 'failed' | 'cancelled' | string;
 
@@ -28,6 +29,7 @@ type ApiResponse = {
 };
 
 export default function RecentPipelineRunsPage() {
+  const searchParams = useSearchParams();
   const [runs, setRuns] = useState<PipelineRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,10 @@ export default function RecentPipelineRunsPage() {
     origin: true,
     stepRuns: true,
   });
+
+  // Preselected pipeline version from query
+  const [selectedPvId, setSelectedPvId] = useState<string>("");
+  const [selectedPvLabel, setSelectedPvLabel] = useState<string>("");
 
   function toggle(col: keyof typeof visibleCols) {
     setVisibleCols((v) => ({ ...v, [col]: !v[col] }));
@@ -70,7 +76,10 @@ export default function RecentPipelineRunsPage() {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`Failed to fetch recent runs (${res.status})`);
       const json = await res.json();
-      setRuns((json?.data?.runs || []) as PipelineRun[]);
+      const fetched: PipelineRun[] = (json?.data?.runs || []) as PipelineRun[];
+      // Apply client-side filter if a pipeline version is preselected
+      const filtered = selectedPvId ? fetched.filter(r => r.pipelineVersionId === selectedPvId) : fetched;
+      setRuns(filtered);
       if (typeof json?.data?.total === 'number') setTotal(json.data.total);
       if (typeof json?.data?.limit === 'number') setLimit(json.data.limit);
       if (typeof json?.data?.offset === 'number') setOffset(json.data.offset);
@@ -93,6 +102,15 @@ export default function RecentPipelineRunsPage() {
     }, refreshSec * 1000);
     return () => clearInterval(id);
   }, [autoRefresh, refreshSec]);
+
+  // Initialize from query params once
+  useEffect(() => {
+    const qPvId = (searchParams?.get("pvId") || "").trim();
+    const qPvLabel = (searchParams?.get("pvLabel") || "").trim();
+    if (qPvId) setSelectedPvId(qPvId);
+    if (qPvLabel) setSelectedPvLabel(qPvLabel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // status badge
   function StatusBadge({ status }: { status: PipelineStatus }) {
@@ -134,6 +152,20 @@ export default function RecentPipelineRunsPage() {
             title="Refresh interval (seconds)"
           />
         </div>
+
+      {selectedPvId && (
+        <div className="w-full mt-3 p-2 border rounded bg-indigo-50 text-indigo-800 flex items-center justify-between">
+          <div className="text-sm">
+            <span className="font-medium">Filtered by Pipeline Version</span>
+            {selectedPvLabel ? `: ${selectedPvLabel}` : ""}
+          </div>
+          <button
+            className="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-50"
+            onClick={() => { setSelectedPvId(""); setSelectedPvLabel(""); load(); }}
+            title="Clear version filter"
+          >Clear</button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-gray-600 mr-2">Columns:</span>

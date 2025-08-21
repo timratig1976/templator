@@ -20,11 +20,21 @@ export default function PipelinesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [createErr, setCreateErr] = useState<string | null>(null);
 
   // edit form state
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editErr, setEditErr] = useState<string | null>(null);
+
+  // delete modal state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<PipelineDef | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+
+  // row expand/collapse
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   // toasts
   const [toast, setToast] = useState<string | null>(null);
@@ -54,11 +64,18 @@ export default function PipelinesPage() {
   }
 
   async function createPipeline() {
-    if (!newName.trim()) return;
+    setCreateErr(null);
+    const nm = newName.trim();
+    if (!nm) { setCreateErr("Name is required"); return; }
+    // uniqueness (case-insensitive)
+    if (items.some(i => i.name.toLowerCase() === nm.toLowerCase())) {
+      setCreateErr("A pipeline with this name already exists");
+      return;
+    }
     const res = await fetch(`/api/admin/pipelines/pipelines`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), description: newDesc }),
+      body: JSON.stringify({ name: nm, description: newDesc }),
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
@@ -92,10 +109,17 @@ export default function PipelinesPage() {
 
   async function saveEdit() {
     if (!editId) return;
+    setEditErr(null);
+    const nm = editName.trim();
+    if (!nm) { setEditErr("Name is required"); return; }
+    if (items.some(i => i.id !== editId && i.name.toLowerCase() === nm.toLowerCase())) {
+      setEditErr("A pipeline with this name already exists");
+      return;
+    }
     const res = await fetch(`/api/admin/pipelines/pipelines/${editId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName, description: editDesc }),
+      body: JSON.stringify({ name: nm, description: editDesc }),
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
@@ -117,21 +141,6 @@ export default function PipelinesPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Pipelines</h2>
         <div className="flex items-center gap-2">
-          <input
-            className="border rounded px-2 py-1"
-            placeholder="Search…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <a
-            className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded"
-            href="/maintenance/pipelines/manage-steps"
-            title="Manage steps for a single pipeline"
-          >Manage Steps</a>
-          <a
-            className="px-3 py-1 bg-gray-200 rounded"
-            href="/maintenance/pipelines/runs"
-          >Recent Runs</a>
           <button className="px-3 py-1 bg-blue-600 text-white rounded" onClick={() => setCreateOpen(true)}>New Pipeline</button>
         </div>
       </div>
@@ -141,6 +150,7 @@ export default function PipelinesPage() {
           <div className="font-medium">Create Pipeline</div>
           <input className="w-full border rounded px-2 py-1" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
           <input className="w-full border rounded px-2 py-1" placeholder="Description" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
+          {createErr && <div className="text-sm text-red-600">{createErr}</div>}
           <div className="flex gap-2">
             <button className="px-3 py-1 bg-gray-200 rounded" onClick={() => setCreateOpen(false)}>Cancel</button>
             <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={createPipeline}>Create</button>
@@ -160,6 +170,7 @@ export default function PipelinesPage() {
                   <div className="space-y-2">
                     <input className="border rounded px-2 py-1 w-full" value={editName} onChange={(e) => setEditName(e.target.value)} />
                     <input className="border rounded px-2 py-1 w-full" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+                    {editErr && <div className="text-sm text-red-600">{editErr}</div>}
                     <div className="flex gap-2">
                       <button className="px-3 py-1 bg-gray-200 rounded" onClick={() => setEditId(null)}>Cancel</button>
                       <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={saveEdit}>Save</button>
@@ -173,7 +184,17 @@ export default function PipelinesPage() {
                 )}
               </div>
               <div className="text-sm text-gray-500 flex items-center gap-3">
-                <span>Versions: {p.versionCount}</span>
+                <button
+                  className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-white hover:bg-gray-50"
+                  onClick={() => setExpanded((ex) => ({ ...ex, [p.id]: !ex[p.id] }))}
+                  aria-expanded={!!expanded[p.id]}
+                  title={expanded[p.id] ? 'Hide versions' : 'Show versions'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: expanded[p.id] ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}>
+                    <path d="M8 5l8 7-8 7" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Versions: {p.versionCount}</span>
+                </button>
                 <a
                   className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
                   href={`/maintenance/pipelines/manage-steps?pipelineId=${encodeURIComponent(p.id)}${p.versions?.find(v=>v.isActive) ? `&version=${encodeURIComponent(p.versions.find(v=>v.isActive)!.version)}` : ''}`}
@@ -182,21 +203,18 @@ export default function PipelinesPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8h18M3 16h18M8 3v18" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round"/></svg>
                   Manage Steps
                 </a>
-                {p.versions?.find(v=>v.isActive) ? (
-                  <a
-                    className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
-                    href={`/maintenance/pipelines/${encodeURIComponent(p.id)}/versions/${encodeURIComponent(p.versions.find(v=>v.isActive)!.version)}`}
-                    title="Manage DAG (active)"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3v6h6" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round"/><path d="M6 9l4 4" stroke="#4f46e5" strokeWidth="2" strokeLinecap="round"/><circle cx="18" cy="6" r="3" stroke="#4f46e5" strokeWidth="2"/><circle cx="10" cy="16" r="3" stroke="#4f46e5" strokeWidth="2"/></svg>
-                    Manage DAG
-                  </a>
-                ) : (
-                  <button className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-gray-50 text-gray-400 cursor-not-allowed" title="No active version" disabled>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3v6h6" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round"/></svg>
-                    Manage DAG
-                  </button>
-                )}
+                
+                <a
+                  className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-gray-700"
+                  href={`/maintenance/pipelines/runs${p.versions?.find(v=>v.isActive) ? `?pvId=${encodeURIComponent(p.versions.find(v=>v.isActive)!.id)}&pvLabel=${encodeURIComponent('v'+p.versions.find(v=>v.isActive)!.version)}` : ''}`}
+                  title="Recent Runs"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="9" stroke="#374151" strokeWidth="2"/>
+                    <path d="M12 7v5l3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Recent Runs
+                </a>
                 {editId !== p.id && (
                   <button
                     className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-gray-700"
@@ -207,20 +225,41 @@ export default function PipelinesPage() {
                     Edit
                   </button>
                 )}
+                <button
+                  className={`inline-flex items-center gap-1 px-2 py-1 border rounded ${p.versions?.some(v=>v.isActive) ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-gray-50 text-red-700'}`}
+                  onClick={() => { if (!p.versions?.some(v=>v.isActive)) { setDeleteTarget(p); setDeleteConfirm(''); setDeleteOpen(true); } }}
+                  title={p.versions?.some(v=>v.isActive) ? 'Cannot delete a pipeline with an active version' : 'Delete Pipeline'}
+                  disabled={p.versions?.some(v=>v.isActive)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/><path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="#b91c1c" strokeWidth="2"/><path d="M10 10v8M14 10v8" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round"/></svg>
+                  Delete
+                </button>
               </div>
             </div>
-            {p.versions?.length > 0 && (
-              <div className="mt-3">
-                <div className="text-sm font-medium mb-1">Versions</div>
-                <div className="flex flex-wrap gap-2">
+            {p.versions?.length > 0 && expanded[p.id] && (
+              <div className="mt-3 border rounded bg-gray-50">
+                <div className="px-3 py-2 text-sm font-medium border-b">Versions</div>
+                <div className="p-3 space-y-2">
                   {p.versions.map((v) => (
-                    <span key={v.id} className={`inline-flex items-center gap-2 px-2 py-1 rounded border ${v.isActive ? 'border-green-600 text-green-700' : 'border-gray-300 text-gray-700'}`}>
-                      v{v.version}
-                      {!v.isActive && (
-                        <button className="text-blue-600 text-xs underline" onClick={() => activateVersion(p.id, v.version)}>Activate</button>
-                      )}
-                      {v.isActive && <span className="text-xs">(active)</span>}
-                    </span>
+                    <div key={v.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded border text-sm ${v.isActive ? 'border-green-600 text-green-700' : 'border-gray-300 text-gray-700'}`}>v{v.version}</span>
+                        {v.isActive && <span className="text-xs text-green-700">active</span>}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        {!v.isActive && (
+                          <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => activateVersion(p.id, v.version)}>Activate</button>
+                        )}
+                        <a
+                          className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
+                          href={`/maintenance/pipelines/manage-steps?pipelineId=${encodeURIComponent(p.id)}&version=${encodeURIComponent(v.version)}`}
+                        >Manage Steps</a>
+                        <a
+                          className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-gray-700"
+                          href={`/maintenance/pipelines/runs?pvId=${encodeURIComponent(v.id)}&pvLabel=${encodeURIComponent('v'+v.version)}`}
+                        >Recent Runs</a>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -228,6 +267,35 @@ export default function PipelinesPage() {
           </div>
         ))}
       </div>
+      {deleteOpen && deleteTarget && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded shadow p-4 w-full max-w-md space-y-3">
+            <div className="font-semibold text-red-700">Delete Pipeline</div>
+            <div className="text-sm">This action permanently deletes pipeline <span className="font-medium">{deleteTarget.name}</span>. Type the pipeline name to confirm.</div>
+            <input className="border rounded px-2 py-1 w-full" placeholder={deleteTarget.name} value={deleteConfirm} onChange={(e)=>setDeleteConfirm(e.target.value)} />
+            <div className="flex gap-2 justify-end">
+              <button className="px-3 py-1 bg-gray-200 rounded" onClick={()=>{setDeleteOpen(false); setDeleteTarget(null);}}>Cancel</button>
+              <button
+                className="px-3 py-1 bg-red-600 text-white rounded disabled:opacity-60"
+                disabled={deleteConfirm !== deleteTarget.name}
+                onClick={async ()=>{
+                  if (!deleteTarget) return;
+                  try {
+                    const res = await fetch(`/api/admin/pipelines/pipelines/${encodeURIComponent(deleteTarget.id)}`, { method: 'DELETE' });
+                    const j = await res.json().catch(()=>({}));
+                    if (!res.ok) throw new Error(j?.error || res.statusText);
+                    setDeleteOpen(false); setDeleteTarget(null);
+                    showToast('Pipeline deleted');
+                    load();
+                  } catch (e:any) {
+                    showToast(`Delete failed: ${e?.message || 'Unknown error'}`);
+                  }
+                }}
+              >Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

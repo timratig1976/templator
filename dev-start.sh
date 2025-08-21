@@ -92,7 +92,10 @@ wait_for_server() {
     return 1
 }
 
-# Function to kill background processes on exit
+# NON_BLOCKING mode: if set to 1, do not trap or wait; just start and exit
+NON_BLOCKING=${NON_BLOCKING:-0}
+
+# Function to kill background processes on exit (only used in blocking mode)
 cleanup() {
     print_warning "Shutting down development servers..."
     if [ ! -z "$BACKEND_PID" ]; then
@@ -108,8 +111,10 @@ cleanup() {
     exit 0
 }
 
-# Set up trap to cleanup on script exit
-trap cleanup SIGINT SIGTERM EXIT
+# Set up trap to cleanup on script exit only in blocking mode
+if [ "$NON_BLOCKING" -ne 1 ]; then
+  trap cleanup SIGINT SIGTERM EXIT
+fi
 
 print_info "🚀 Starting Templator Development Environment..."
 print_info "Frontend: http://localhost:3000"
@@ -164,7 +169,12 @@ print_info "🔧 Backend API: http://localhost:3009"
 print_info "📊 Backend Health: http://localhost:3009/health"
 print_info "📝 Logs: $LOG_DIR/backend.dev.log and $LOG_DIR/frontend.dev.log"
 echo ""
-print_warning "Press Ctrl+C to stop both servers"
 
-# Wait for both processes
-wait
+if [ "$NON_BLOCKING" -eq 1 ]; then
+  print_warning "Non-blocking mode: leaving servers running in background (PIDs: backend=$BACKEND_PID, frontend=$FRONTEND_PID)"
+  exit 0
+else
+  print_warning "Press Ctrl+C to stop both servers"
+  # Wait for both processes
+  wait
+fi

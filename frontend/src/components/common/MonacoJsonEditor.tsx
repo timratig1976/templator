@@ -27,7 +27,7 @@ export default function MonacoJsonEditor({ value, onChange, height = 400, valida
 
   const ajv = useMemo(() => {
     const a = new Ajv({ allErrors: true } as any);
-    try { addFormats(a); } catch {}
+    try { (addFormats as any)(a as any); } catch {}
     // Add metaschema
     try { a.addMetaSchema(draft07MetaSchema); } catch {}
     return a;
@@ -40,7 +40,7 @@ export default function MonacoJsonEditor({ value, onChange, height = 400, valida
       const validate = ajv.compile(draft07MetaSchema);
       const valid = validate(data);
       if (!valid) {
-        const errs = (validate.errors || []).map(e => `${e.instancePath || e.schemaPath}: ${e.message}`);
+        const errs = ((validate.errors || []) as any[]).map((e: any) => `${e.instancePath || e.dataPath || e.schemaPath || ''}: ${e.message}`);
         setErrors(errs);
       } else {
         setErrors([]);

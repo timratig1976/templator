@@ -8,6 +8,15 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  webpack: (config, { isServer }) => {
+    // Prevent Next from trying to resolve optional 'canvas' dependency used by konva in Node
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      canvas: false,
+    };
+    return config;
+  },
   async redirects() {
     return [
       {

@@ -4,9 +4,8 @@ import React, { useMemo, useState } from 'react';
 import { useIRSchemaManager } from './useIRSchemaManager';
 import MonacoJsonEditor from '../../common/MonacoJsonEditor';
 import dynamic from 'next/dynamic';
-import type { DiffEditorProps } from '@monaco-editor/react';
 
-const DiffEditor = dynamic<DiffEditorProps>(
+const DiffEditor = dynamic<any>(
   () => import('@monaco-editor/react').then(m => m.DiffEditor as any),
   { ssr: false }
 );
@@ -255,7 +254,18 @@ export default function IRSchemaManager() {
                         automaticLayout: true,
                         minimap: { enabled: false },
                       } as any}
-                      onChange={(v) => setEditJson(v || '')}
+                      onMount={(editor: any) => {
+                        try {
+                          const modified = editor.getModifiedEditor?.() || editor;
+                          // initialize state
+                          const initial = modified.getValue?.() ?? '';
+                          setEditJson(typeof initial === 'string' ? initial : String(initial ?? ''));
+                          modified.onDidChangeModelContent?.(() => {
+                            const v = modified.getValue?.();
+                            setEditJson(typeof v === 'string' ? v : String(v ?? ''));
+                          });
+                        } catch {}
+                      }}
                     />
                   </div>
                 ) : (

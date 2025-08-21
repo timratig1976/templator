@@ -26,22 +26,36 @@ router.get('/pipelines', async (req, res) => {
 router.post('/pipelines', async (req, res) => {
   const { name, description } = req.body || {}
   if (!name) return res.status(400).json({ error: 'name_required' })
+  // uniqueness (case-insensitive)
+  const exists = await (prisma as any).pipelineDefinition.findFirst({ where: { name: { equals: String(name), mode: 'insensitive' } } })
+  if (exists) return res.status(409).json({ error: 'name_exists' })
   const created = await (prisma as any).pipelineDefinition.create({ data: { name, description: description ?? '' } })
   res.status(201).json({ data: created })
 })
 
 router.patch('/pipelines/:pipelineId', async (req, res) => {
   const { description, name } = req.body || {}
-  const updated = await (prisma as any).pipelineDefinition.update({ where: { id: String(req.params.pipelineId) }, data: { description, name } })
+  const id = String(req.params.pipelineId)
+  if (name) {
+    const exists = await (prisma as any).pipelineDefinition.findFirst({
+      where: { id: { not: id }, name: { equals: String(name), mode: 'insensitive' } },
+    })
+    if (exists) return res.status(409).json({ error: 'name_exists' })
+  }
+  const updated = await (prisma as any).pipelineDefinition.update({ where: { id }, data: { description, name } })
   res.json({ data: updated })
 })
 
 router.delete('/pipelines/:pipelineId', async (req, res) => {
   const id = String(req.params.pipelineId)
-  // Guard: disallow delete if versions exist
-  const versions = await (prisma as any).pipelineVersion.count({ where: { pipelineId: id } })
-  if (versions > 0) return res.status(409).json({ error: 'has_versions' })
-  await (prisma as any).pipelineDefinition.delete({ where: { id } })
+  // Fail-safe: block if there is any active version
+  const activeCount = await (prisma as any).pipelineVersion.count({ where: { pipelineId: id, isActive: true } })
+  if (activeCount > 0) return res.status(409).json({ error: 'cannot_delete_active' })
+  // Delete all versions (if any) then the pipeline in a transaction
+  await (prisma as any).$transaction([
+    (prisma as any).pipelineVersion.deleteMany({ where: { pipelineId: id } }),
+    (prisma as any).pipelineDefinition.delete({ where: { id } }),
+  ])
   res.status(204).end()
 })
 
@@ -66,10 +80,20 @@ router.get('/pipelines/:pipelineId/versions/active', async (req, res) => {
 
 // Get a specific version
 router.get('/pipelines/:pipelineId/versions/:version', async (req, res) => {
+  console.log('[AdminPipelines] GET version', { pipelineId: String(req.params.pipelineId), version: String(req.params.version) })
   const item = await (prisma as any).pipelineVersion.findUnique({
     where: { pipelineId_version: { pipelineId: String(req.params.pipelineId), version: String(req.params.version) } },
   })
   if (!item) return res.status(404).json({ error: 'version_not_found' })
+  try {
+    const dag = (item as any).dag
+    const nodesLen = Array.isArray(dag?.nodes)
+      ? dag.nodes.length
+      : dag && dag.nodes && typeof dag.nodes === 'object'
+      ? Object.keys(dag.nodes).length
+      : 0
+    console.log('[AdminPipelines] GET version -> found', { nodes: nodesLen, hasEdges: !!dag?.edges })
+  } catch {}
   res.json({ data: item })
 })
 
@@ -90,6 +114,14 @@ router.patch('/pipelines/:pipelineId/versions/:version', async (req, res) => {
   const pipelineId = String(req.params.pipelineId)
   const version = String(req.params.version)
   const { dag, config, isActive } = req.body || {}
+  try {
+    const nodesLen = Array.isArray(dag?.nodes)
+      ? dag.nodes.length
+      : dag && dag.nodes && typeof dag.nodes === 'object'
+      ? Object.keys(dag.nodes).length
+      : 0
+    console.log('[AdminPipelines] PATCH version', { pipelineId, version, nodes: nodesLen, hasEdges: !!dag?.edges })
+  } catch {}
   if (isActive === true) {
     await (prisma as any).pipelineVersion.updateMany({ where: { pipelineId }, data: { isActive: false } })
   }
@@ -97,6 +129,15 @@ router.patch('/pipelines/:pipelineId/versions/:version', async (req, res) => {
     where: { pipelineId_version: { pipelineId, version } },
     data: { dag, config, isActive: isActive ?? undefined },
   })
+  try {
+    const updDag = (updated as any).dag
+    const nodesLen = Array.isArray(updDag?.nodes)
+      ? updDag.nodes.length
+      : updDag && updDag.nodes && typeof updDag.nodes === 'object'
+      ? Object.keys(updDag.nodes).length
+      : 0
+    console.log('[AdminPipelines] PATCH version -> saved', { nodes: nodesLen, hasEdges: !!updDag?.edges })
+  } catch {}
   res.json({ data: updated })
 })
 
