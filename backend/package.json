@@ -8,6 +8,7 @@
     "start": "PORT=3009 node dist/server.js",
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit",
+    "seed:pipeline": "ts-node scripts/seed-pipeline.ts",
     "build-test": "node ../tests/backend/runner/build-test.js",
     "build-test:compile": "node ../tests/backend/runner/build-test.js compile",
     "build-test:structure": "node ../tests/backend/runner/build-test.js structure",

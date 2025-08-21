@@ -476,6 +476,42 @@ PERFORMANCE_MONITORING_ENABLED=true
 ANALYTICS_RETENTION_DAYS=90
 ```
 
+### Unified Pipeline Telemetry & Legacy Tables Strategy
+
+#### Goal
+Use the existing unified pipeline schema for all AI process telemetry and keep legacy/domain tables (e.g., `DesignSplit`, `ModuleComponent`) as business data. Avoid creating new tables per AI process.
+
+#### Core Decisions
+- All AI processes are represented via `PipelineDefinition` → `PipelineVersion` → `PipelineRun` and `StepDefinition` → `StepVersion` → `StepRun`.
+- Step outputs and intermediates are stored in `IRArtifact.irJson` validated by `IRSchema`.
+- Quality/validation results are stored in `MetricResult`.
+- Links from process outputs to domain entities use `StepOutputLink { targetType, targetId, meta }`.
+- No new per-process tables for telemetry. New tables are only for new domain entities with their own lifecycle.
+
+#### Mapping Examples
+- Layout Splitter process → `StepDefinition.key = 'layout_split'` emits `IRArtifact` with split details; creates domain rows in `DesignSplit` and links via `StepOutputLink('DesignSplit', id)`.
+- Module Generation process → `StepDefinition.key = 'generate_module'` emits module spec `IRArtifact`; writes to `ModuleTemplate`/`GeneratedArtifact` and links via `StepOutputLink`.
+
+#### Migration Plan
+1. Write-through: Update AI services to emit `PipelineRun`/`StepRun`, `IRArtifact`, `MetricResult`, and `StepOutputLink` while continuing to write domain rows.
+2. Backfill (optional): Create backfill scripts to generate synthetic runs/steps for important historical operations.
+3. Read path: Monitoring/UI read exclusively from pipeline tables; domain UIs read domain tables.
+4. Deprecation: Retire any legacy process-logging tables; keep domain tables.
+
+#### Implementation Tasks
+- Define/confirm `StepDefinition` and `StepVersion` entries for key processes (layout split, module generation, validation, export).
+- Add `IRSchema` definitions per `StepVersion` for validation and forward-compatibility.
+- Create a small helper module to standardize writes of `StepRun` + artifacts + metrics + links.
+- Update services to use the helper and link to domain rows via `StepOutputLink`.
+- Add seed/backfill scripts for sample runs to support dev/testing.
+
+#### Checklist Additions
+- [ ] Register step definitions/versions for all existing AI processes
+- [ ] Implement `StepOutputLink` usage for `DesignSplit`, `ModuleComponent`, etc.
+- [ ] Emit `IRArtifact` and `MetricResult` from each process
+- [ ] Add IR schema validation where applicable
+- [ ] Optional: backfill historical runs for analytics
+
 ---
 
 ## 📋 Implementation Checklist

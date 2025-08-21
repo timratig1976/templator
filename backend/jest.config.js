@@ -21,6 +21,10 @@ module.exports = {
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
+      // Load environment variables for tests
+      setupFiles: [
+        '<rootDir>/../tests/backend/config/setupEnv.js'
+      ],
       globals: {
         'ts-jest': {
           tsconfig: '<rootDir>/tsconfig.jest.json'
@@ -63,6 +67,10 @@ module.exports = {
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
+      // Load environment variables for tests
+      setupFiles: [
+        '<rootDir>/../tests/backend/config/setupEnv.js'
+      ],
       globals: {
         'ts-jest': {
           tsconfig: '<rootDir>/tsconfig.jest.json'
@@ -98,6 +106,10 @@ module.exports = {
       transform: {
         '^.+\.ts$': 'ts-jest',
       },
+      // Load environment variables for tests
+      setupFiles: [
+        '<rootDir>/../tests/backend/config/setupEnv.js'
+      ],
       globals: {
         'ts-jest': {
           tsconfig: '<rootDir>/tsconfig.jest.json'

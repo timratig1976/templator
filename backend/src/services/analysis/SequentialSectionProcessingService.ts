@@ -257,8 +257,12 @@ class SequentialSectionProcessingService {
         estimatedFields: section.estimatedFields
       });
 
-      // Generate module data from section
-      const moduleData = await this.generateModuleFromSection(section);
+      // Generate module data from section with per-section timeout protection
+      const moduleData = await this.withTimeout(
+        this.generateModuleFromSection(section),
+        (options.timeoutPerSection || 120) * 1000,
+        `Section ${section.id} generation exceeded ${(options.timeoutPerSection || 120)}s`
+      );
       
       // Simplified validation - just return a basic validation result
       const validationResult = {
@@ -308,9 +312,26 @@ class SequentialSectionProcessingService {
         validationResult: { isValid: false, score: 0, issues: [], fixedIssues: [] },
         processingTime,
         refinementIterations,
-        status: 'failed',
+        status: options.skipFailedSections ? 'skipped' : 'failed',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+    }
+  }
+
+  /**
+   * Utility: wrap a promise with a timeout. If timeout elapses, rejects with Error(message).
+   * Note: underlying async task is not cancelled.
+   */
+  private async withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+    let timeoutHandle: NodeJS.Timeout;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error(message)), ms);
+    });
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      // @ts-ignore - defined above in closure
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     }
   }
 

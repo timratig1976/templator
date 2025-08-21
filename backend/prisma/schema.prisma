@@ -354,3 +354,201 @@ model ValidationResult {
   @@index([artifactId])
   @@map("validation_results")
 }
+
+model PipelineDefinition {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  versions    PipelineVersion[]
+
+  @@map("pipeline_definitions")
+}
+
+model PipelineVersion {
+  id         String             @id @default(cuid())
+  pipelineId String
+  version    String
+  isActive   Boolean            @default(false)
+  dag        Json
+  config     Json?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  runs       PipelineRun[]
+  definition PipelineDefinition @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@unique([pipelineId, version])
+  @@map("pipeline_versions")
+}
+
+model StepDefinition {
+  id          String        @id @default(cuid())
+  key         String        @unique
+  name        String?
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  versions    StepVersion[]
+
+  @@map("step_definitions")
+}
+
+model StepVersion {
+  id            String         @id @default(cuid())
+  stepId        String
+  version       String
+  isActive      Boolean        @default(false)
+  defaultConfig Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  irSchemas     IRSchema[]
+  stepRuns      StepRun[]
+  definition    StepDefinition @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, version])
+  @@map("step_versions")
+}
+
+model IRSchema {
+  id            String      @id @default(cuid())
+  stepVersionId String
+  name          String
+  version       String
+  schema        Json
+  isActive      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  stepVersion   StepVersion @relation(fields: [stepVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([stepVersionId, version])
+  @@map("ir_schemas")
+}
+
+model PipelineRun {
+  id                String          @id @default(cuid())
+  pipelineVersionId String
+  status            String
+  startedAt         DateTime        @default(now())
+  completedAt       DateTime?
+  summary           Json?
+  origin            String          @default("frontend_user")
+  originInfo        Json?
+  PipelineVersion   PipelineVersion @relation(fields: [pipelineVersionId], references: [id], onDelete: Cascade)
+  stepRuns          StepRun[]
+
+  @@index([status])
+  @@index([origin])
+  @@map("pipeline_runs")
+}
+
+model StepRun {
+  id            String           @id @default(cuid())
+  pipelineRunId String
+  stepVersionId String
+  nodeKey       String
+  status        String
+  startedAt     DateTime         @default(now())
+  completedAt   DateTime?
+  params        Json?
+  error         String?
+  origin        String           @default("frontend_user")
+  originInfo    Json?
+  irArtifacts   IRArtifact[]
+  metricResults MetricResult[]
+  outputLinks   StepOutputLink[]
+  PipelineRun   PipelineRun      @relation(fields: [pipelineRunId], references: [id], onDelete: Cascade)
+  StepVersion   StepVersion      @relation(fields: [stepVersionId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineRunId])
+  @@index([stepVersionId])
+  @@index([nodeKey])
+  @@index([origin])
+  @@map("step_runs")
+}
+
+model IRArtifact {
+  id               String   @id @default(cuid())
+  stepRunId        String
+  irJson           Json
+  isValid          Boolean
+  validationErrors Json?
+  createdAt        DateTime @default(now())
+  StepRun          StepRun  @relation(fields: [stepRunId], references: [id], onDelete: Cascade)
+
+  @@index([stepRunId])
+  @@map("ir_artifacts")
+}
+
+model MetricDefinition {
+  id           String              @id @default(cuid())
+  key          String              @unique
+  name         String
+  description  String?
+  unit         String?
+  target       Float?
+  aggregation  String?
+  scope        String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  profileItems MetricProfileItem[]
+
+  @@map("metric_definitions")
+}
+
+model MetricProfile {
+  id          String              @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  items       MetricProfileItem[]
+
+  @@map("metric_profiles")
+}
+
+model MetricProfileItem {
+  id        String           @id @default(cuid())
+  profileId String
+  metricId  String
+  weight    Float?
+  threshold Float?
+  config    Json?
+  metric    MetricDefinition @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  profile   MetricProfile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([metricId])
+  @@map("metric_profile_items")
+}
+
+model MetricResult {
+  id          String   @id @default(cuid())
+  stepRunId   String
+  metricKey   String
+  value       Float?
+  stringValue String?
+  passed      Boolean?
+  details     Json?
+  createdAt   DateTime @default(now())
+  StepRun     StepRun  @relation(fields: [stepRunId], references: [id], onDelete: Cascade)
+
+  @@index([stepRunId])
+  @@index([metricKey])
+  @@map("metric_results")
+}
+
+model StepOutputLink {
+  id         String   @id @default(cuid())
+  stepRunId  String
+  targetType String
+  targetId   String
+  meta       Json?
+  createdAt  DateTime @default(now())
+  StepRun    StepRun  @relation(fields: [stepRunId], references: [id], onDelete: Cascade)
+
+  @@index([stepRunId])
+  @@index([targetType, targetId])
+  @@map("step_output_links")
+}

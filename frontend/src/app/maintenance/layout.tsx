@@ -8,6 +8,9 @@ export default function MaintenanceLayout({ children }: { children: React.ReactN
     { href: '/maintenance/build-tests', label: 'Build Tests', icon: '🧪' },
     { href: '/maintenance/jest-tests', label: 'JEST Tests', icon: '✅' },
     { href: '/maintenance/dead-code', label: 'Dead Code', icon: '🧹' },
+    { href: '/maintenance/pipelines', label: 'Pipelines', icon: '🛠️' },
+    { href: '/maintenance/steps', label: 'Steps', icon: '🧩' },
+    { href: '/maintenance/ir-schemas', label: 'IR Schemas', icon: '📐' },
   ];
 
   return (

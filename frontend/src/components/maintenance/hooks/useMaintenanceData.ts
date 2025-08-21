@@ -59,6 +59,7 @@ export interface UseMaintenanceDataReturn {
   testRunning: boolean;
   testProgress: string;
   runDeadCodeScan: () => Promise<void>;
+  runQuickPipeline: (args: { pipelineName: string; stepKey: string; pipelineVersion?: string; params?: any; summary?: any; origin?: string; originInfo?: any }) => Promise<{ runId?: string; stepRunId?: string; ok: boolean; error?: string }>;
 }
 
 export const useMaintenanceData = (): UseMaintenanceDataReturn => {
@@ -240,6 +241,34 @@ export const useMaintenanceData = (): UseMaintenanceDataReturn => {
     }
   }, [backendUrl, fetchDashboardData]);
 
+  const runQuickPipeline = useCallback(async (args: { pipelineName: string; stepKey: string; pipelineVersion?: string; params?: any; summary?: any; origin?: string; originInfo?: any }) => {
+    try {
+      const body = {
+        pipelineName: args.pipelineName,
+        pipelineVersion: args.pipelineVersion ?? 'v1',
+        stepKey: args.stepKey,
+        params: args.params ?? {},
+        summary: args.summary ?? {},
+        origin: args.origin ?? 'maintenance_test',
+        originInfo: args.originInfo,
+      };
+      const res = await fetchWithTimeout(`${backendUrl}/api/monitoring/pipelines/runs/quick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(body),
+      }, 30000);
+      if (!res.ok) {
+        const t = await res.text();
+        return { ok: false, error: `HTTP ${res.status}: ${t.slice(0,200)}` };
+      }
+      const json = await parseJsonSafely(res, 'monitoring/pipelines/runs/quick');
+      const data = (json?.data || {}) as any;
+      return { ok: true, runId: data.runId, stepRunId: data.stepRunId };
+    } catch (e: any) {
+      return { ok: false, error: e?.message || 'Unknown error' };
+    }
+  }, [backendUrl]);
+
   const runDeadCodeScan = useCallback(async () => {
     try {
       await fetchWithTimeout(`${backendUrl}/api/monitoring/dead-code/scan`, {
@@ -277,6 +306,7 @@ export const useMaintenanceData = (): UseMaintenanceDataReturn => {
     runBuildTest,
     testRunning,
     testProgress,
-    runDeadCodeScan
+    runDeadCodeScan,
+    runQuickPipeline,
   };
 };

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { getFeatureFlags } from '../config/featureFlags';
 import { validateRequest, parseRequestSchema, moduleRequestSchema, previewRequestSchema } from '../middleware/unifiedValidation';
 import { ParserService } from '../services/input/ParserService';
 import { FieldMapperService } from '../services/input/FieldMapperService';
@@ -18,11 +19,14 @@ import layoutSplittingRoutes from './layoutSplittingRoutes';
 import testEndpoints from './testEndpoints';
 import testImagesRoutes from './test-images';
 import pipelineMonitoringRoutes from './pipelineMonitoring';
+import monitoringPipelineRoutes from './monitoring.pipeline';
 import hybridLayoutRoutes from './hybridLayout';
 import aiEnhancementRoutes from './aiEnhancement';
 import generationRoutes from './generation';
 import designUploadsRoutes from './designUploads';
 import aiQualityRoutes from './aiQuality';
+import irSchemasRoutes from './irSchemas';
+import metricsRoutes from './metrics';
 
 const router = Router();
 const logger = createLogger();
@@ -72,6 +76,12 @@ router.use('/test-images', testImagesRoutes);
 // Pipeline monitoring and quality metrics routes
 router.use('/monitoring', pipelineMonitoringRoutes);
 
+// New read-only Pipeline/Step monitoring (additive, behind flag)
+const { PIPELINE_LOGGING_ENABLED } = getFeatureFlags();
+if (PIPELINE_LOGGING_ENABLED) {
+  router.use('/monitoring/pipelines', monitoringPipelineRoutes);
+}
+
 // Hybrid layout analysis routes
 router.use('/hybrid-layout', hybridLayoutRoutes);
 
@@ -86,6 +96,10 @@ router.use('/generation', generationRoutes);
 
 // AI Quality System routes
 router.use('/ai-quality', aiQualityRoutes);
+
+// IR Schemas and Metrics
+router.use('/ir-schemas', irSchemasRoutes);
+router.use('/metrics', metricsRoutes);
 
 // Parse HTML/JSON input
 router.post('/parse', validateRequest(parseRequestSchema), async (req, res, next) => {

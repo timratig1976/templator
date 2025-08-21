@@ -9,7 +9,9 @@ import { Router } from 'express';
 import {
   getActivePipelines,
   getPipelineProgress,
-  cancelPipeline
+  cancelPipeline,
+  getRecentPipelineRuns,
+  getPipelineRunDetails
 } from './controllers/pipelineController';
 
 import {
@@ -63,6 +65,8 @@ const errorRecovery = new ErrorRecoverySystem();
  * Pipeline Management Endpoints
  */
 router.get('/pipelines/active', getActivePipelines);
+router.get('/pipelines/runs/recent', getRecentPipelineRuns);
+router.get('/pipelines/runs/:id', getPipelineRunDetails);
 router.get('/pipelines/:id/progress', getPipelineProgress);
 router.post('/pipelines/:id/cancel', cancelPipeline);
 

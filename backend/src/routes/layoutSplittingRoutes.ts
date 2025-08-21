@@ -10,6 +10,10 @@ import { createLogger } from '../utils/logger';
 import { createError } from '../middleware/errorHandler';
 import { layoutSectionSplittingService } from '../services/analysis/LayoutSectionSplittingService';
 import { sequentialSectionProcessingService } from '../services/analysis/SequentialSectionProcessingService';
+import SplitlineDetectionService from '../services/analysis/SplitlineDetectionService';
+import ImageCropService from '../services/ai/ImageCropService';
+import PipelineRegistry from '../services/pipeline/PipelineRegistry';
+import StepTelemetryRunner from '../services/pipeline/StepTelemetryRunner';
 
 const router = express.Router();
 const logger = createLogger();
@@ -25,6 +29,44 @@ const splitLayoutSchema = z.object({
     splitStrategy: z.enum(['semantic', 'size', 'hybrid']).optional(),
     maxSections: z.number().optional()
   }).optional()
+});
+
+// Split-line detection and cutting schemas
+const detectSplitlinesSchema = z.object({
+  imageBase64: z
+    .string()
+    .min(50, 'imageBase64 is required (data URI or base64)')
+    .refine(
+      (s) => /^(data:image\/(png|jpeg);base64,)?[A-Za-z0-9+/=]+$/.test(s),
+      'Must be base64 or data URI'
+    ),
+  options: z
+    .object({
+      minGapPx: z.number().optional(),
+      threshold: z.number().min(0).max(1).optional(),
+    })
+    .optional(),
+});
+
+const cutSectionsSchema = z.object({
+  imageBase64: z
+    .string()
+    .min(50)
+    .refine(
+      (s) => /^(data:image\/(png|jpeg);base64,)?[A-Za-z0-9+/=]+$/.test(s),
+      'Must be base64 or data URI'
+    ),
+  splitId: z.string().min(1, 'splitId is required'),
+  projectId: z.string().optional(),
+  sections: z
+    .array(
+      z.object({
+        index: z.number(),
+        yStart: z.number().int().nonnegative(),
+        yEnd: z.number().int().nonnegative(),
+      })
+    )
+    .min(1),
 });
 
 const processLayoutSchema = z.object({
@@ -115,6 +157,107 @@ router.post('/split', validateZodRequest(splitLayoutSchema), async (req, res, ne
 });
 
 /**
+ * POST /api/layout/splitlines/detect
+ * Detect horizontal split lines and emit telemetry (unified pipeline)
+ */
+router.post('/splitlines/detect', validateZodRequest(detectSplitlinesSchema), async (req, res, next) => {
+  try {
+    const { imageBase64, options } = req.body;
+    const buf = decodeBase64(imageBase64);
+
+    // Ensure pipeline + step exist (use unified registry)
+    const ensured = await PipelineRegistry.ensure({
+      pipelineName: 'templator-layout',
+      pipelineVersion: 'v1',
+      steps: [{ key: 'detect_splitlines', name: 'Detect Splitlines' }],
+    });
+
+    const stepVersionId = ensured.stepVersionByKey['detect_splitlines'];
+    const t0 = Date.now();
+
+    const run = await StepTelemetryRunner.runStep(
+      {
+        pipelineVersionId: ensured.pipelineVersionId,
+        stepVersionId,
+        nodeKey: 'detect_splitlines',
+        params: options ?? {},
+        summary: { action: 'detect_splitlines' },
+      },
+      async () => {
+        const lines = await SplitlineDetectionService.detectLines(buf, options);
+        const dt = Date.now() - t0;
+        const ir = { lines };
+        const metrics = [
+          { metricKey: 'latency_ms', value: dt, passed: true, details: { phase: 'detect' } },
+          { metricKey: 'lines_detected', value: lines.length, passed: true },
+        ];
+        return { ir, metrics };
+      }
+    );
+
+    res.json({ success: true, data: { runId: run.runId, stepRunId: run.stepRunId } });
+  } catch (error) {
+    logger.error('Splitline detection failed', { error });
+    next(error);
+  }
+});
+
+/**
+ * POST /api/layout/splitlines/cut
+ * Cut sections using existing ImageCropService and emit telemetry
+ */
+router.post('/splitlines/cut', validateZodRequest(cutSectionsSchema), async (req, res, next) => {
+  try {
+    const { imageBase64, sections, splitId, projectId } = req.body;
+    const buf = decodeBase64(imageBase64);
+
+    const ensured = await PipelineRegistry.ensure({
+      pipelineName: 'templator-layout',
+      pipelineVersion: 'v1',
+      steps: [{ key: 'cut_sections', name: 'Cut Sections' }],
+    });
+    const stepVersionId = ensured.stepVersionByKey['cut_sections'];
+
+    const meta = await sharpMeta(buf);
+    const t0 = Date.now();
+
+    const run = await StepTelemetryRunner.runStep(
+      {
+        pipelineVersionId: ensured.pipelineVersionId,
+        stepVersionId,
+        nodeKey: 'cut_sections',
+        params: { count: sections.length },
+        summary: { action: 'cut_sections', splitId },
+      },
+      async () => {
+        const mapped = sections.map((s: any, i: number) => ({
+          index: i,
+          bounds: { x: 0, y: s.yStart, width: meta.width, height: Math.max(1, s.yEnd - s.yStart) },
+          unit: 'px' as const,
+          name: `section_${i}`,
+          type: 'splitline',
+        }));
+
+        const crops = await ImageCropService.createCropsForSplit(splitId, buf, mapped, projectId);
+        const dt = Date.now() - t0;
+        const ir = { crops: crops.map((c) => ({ key: c.key, width: c.width, height: c.height, bounds: c.bounds })) };
+        const metrics = [
+          { metricKey: 'latency_ms', value: dt, passed: true, details: { phase: 'cut' } },
+          { metricKey: 'sections_cut', value: crops.length, passed: true },
+        ];
+        const outputs = crops.map((c) => ({ targetType: 'SplitAsset', targetId: c.asset?.id ?? '', meta: { key: c.key } }));
+        return { ir, metrics, outputs };
+      }
+    );
+
+    res.json({ success: true, data: { runId: run.runId, stepRunId: run.stepRunId } });
+  } catch (error) {
+    logger.error('Splitline cutting failed', { error });
+    next(error);
+  }
+});
+
+/**
  * POST /api/layout/process
  * Split layout and process all sections sequentially
  */
@@ -128,31 +271,85 @@ router.post('/process', validateZodRequest(processLayoutSchema), async (req, res
       processingOptions
     });
 
-    // First, split the layout
-    const splittingResult = await layoutSectionSplittingService.splitLayout(html, splittingOptions);
-
-    logger.info('Layout split completed, starting processing', {
-      totalSections: splittingResult.totalSections
+    // Ensure telemetry pipeline + steps
+    const ensured = await PipelineRegistry.ensure({
+      pipelineName: 'templator-layout',
+      pipelineVersion: 'v1',
+      steps: [
+        { key: 'split_layout', name: 'Split Layout' },
+        { key: 'process_layout', name: 'Process Layout Sections' },
+      ],
     });
 
-    // Then process all sections
-    const processingResult = await sequentialSectionProcessingService.processSections(
-      splittingResult,
-      processingOptions
+    // Split the layout with a telemetry step
+    const tSplit0 = Date.now();
+    const splitRun = await StepTelemetryRunner.runStep(
+      {
+        pipelineVersionId: ensured.pipelineVersionId,
+        stepVersionId: ensured.stepVersionByKey['split_layout'],
+        nodeKey: 'split_layout',
+        params: splittingOptions,
+        summary: { action: 'split_layout' },
+      },
+      async () => {
+        const splittingResult = await layoutSectionSplittingService.splitLayout(html, splittingOptions);
+        const dt = Date.now() - tSplit0;
+        const ir = { totalSections: splittingResult.totalSections, meta: splittingResult.metadata };
+        const metrics = [
+          { metricKey: 'latency_ms', value: dt, passed: true, details: { phase: 'split' } },
+          { metricKey: 'sections_total', value: splittingResult.totalSections, passed: true },
+        ];
+        return { ir, metrics, result: splittingResult };
+      }
     );
+
+    const splittingResult = splitRun.result!;
+
+    logger.info('Layout split completed, starting processing', { totalSections: splittingResult.totalSections });
+
+    // Process sections with a telemetry step
+    const tProc0 = Date.now();
+    const procRun = await StepTelemetryRunner.runStep(
+      {
+        pipelineVersionId: ensured.pipelineVersionId,
+        stepVersionId: ensured.stepVersionByKey['process_layout'],
+        nodeKey: 'process_layout',
+        params: processingOptions,
+        summary: { action: 'process_layout' },
+      },
+      async () => {
+        const processingResult = await sequentialSectionProcessingService.processSections(
+          splittingResult,
+          processingOptions
+        );
+        const dt = Date.now() - tProc0;
+        const ir = { processed: processingResult.processedSections, failed: processingResult.failedSections };
+        const metrics = [
+          { metricKey: 'latency_ms', value: dt, passed: true, details: { phase: 'process' } },
+          { metricKey: 'sections_failed', value: processingResult.failedSections, passed: true },
+          { metricKey: 'sections_processed', value: processingResult.processedSections, passed: true },
+        ];
+        return { ir, metrics, result: processingResult };
+      }
+    );
+
+    const processingResult = procRun.result!;
 
     logger.info('Layout processing completed', {
       totalSections: processingResult.totalSections,
       processed: processingResult.processedSections,
       failed: processingResult.failedSections,
-      overallScore: processingResult.overallQualityScore
+      overallScore: processingResult.overallQualityScore,
+      runId: procRun.runId,
+      stepRunId: procRun.stepRunId,
     });
 
     res.json({
       success: true,
       data: {
         splitting: splittingResult,
-        processing: processingResult
+        processing: processingResult,
+        telemetry: { split: { runId: splitRun.runId }, process: { runId: procRun.runId, stepRunId: procRun.stepRunId } },
       },
       message: `Successfully processed ${processingResult.processedSections}/${processingResult.totalSections} sections`
     });
@@ -176,21 +373,52 @@ router.post('/process-sections', validateZodRequest(processSectionsSchema), asyn
       processingOptions
     });
 
-    const processingResult = await sequentialSectionProcessingService.processSections(
-      splittingResult,
-      processingOptions
+    // Ensure telemetry pipeline + step
+    const ensured = await PipelineRegistry.ensure({
+      pipelineName: 'templator-layout',
+      pipelineVersion: 'v1',
+      steps: [{ key: 'process_sections', name: 'Process Sections (Pre-split)' }],
+    });
+
+    const t0 = Date.now();
+    const run = await StepTelemetryRunner.runStep(
+      {
+        pipelineVersionId: ensured.pipelineVersionId,
+        stepVersionId: ensured.stepVersionByKey['process_sections'],
+        nodeKey: 'process_sections',
+        params: processingOptions,
+        summary: { action: 'process_sections' },
+      },
+      async () => {
+        const processingResult = await sequentialSectionProcessingService.processSections(
+          splittingResult as any,
+          processingOptions
+        );
+        const dt = Date.now() - t0;
+        const ir = { processed: processingResult.processedSections, failed: processingResult.failedSections };
+        const metrics = [
+          { metricKey: 'latency_ms', value: dt, passed: true, details: { phase: 'process' } },
+          { metricKey: 'sections_failed', value: processingResult.failedSections, passed: true },
+          { metricKey: 'sections_processed', value: processingResult.processedSections, passed: true },
+        ];
+        return { ir, metrics, result: processingResult };
+      }
     );
+
+    const processingResult = run.result!;
 
     logger.info('Section processing completed', {
       totalSections: processingResult.totalSections,
       processed: processingResult.processedSections,
       failed: processingResult.failedSections,
-      overallScore: processingResult.overallQualityScore
+      overallScore: processingResult.overallQualityScore,
+      runId: run.runId,
+      stepRunId: run.stepRunId,
     });
 
     res.json({
       success: true,
-      data: processingResult,
+      data: { ...processingResult, telemetry: { runId: run.runId, stepRunId: run.stepRunId } },
       message: `Successfully processed ${processingResult.processedSections}/${processingResult.totalSections} sections`
     });
 
@@ -434,3 +662,17 @@ function formatTime(seconds: number): string {
 }
 
 export default router;
+
+// Helpers (local)
+function decodeBase64(s: string): Buffer {
+  const m = s.match(/^data:image\/(png|jpeg);base64,(.*)$/);
+  const b64 = m ? m[2] : s;
+  return Buffer.from(b64, 'base64');
+}
+
+async function sharpMeta(buf: Buffer): Promise<{ width: number; height: number }> {
+  const sharp = (await import('sharp')).default;
+  const meta = await sharp(buf).metadata();
+  if (!meta.width || !meta.height) throw new Error('Unable to read image dimensions');
+  return { width: meta.width, height: meta.height };
+}

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import LogsSidebar from '@/components/LogsSidebar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -37,8 +36,7 @@ export default function RootLayout({
           <footer className="w-full py-2 px-4 bg-gray-100 text-xs text-gray-500 text-center border-t border-gray-200">
             <a href="/maintenance" className="hover:underline">🧪 Test Suite & Maintenance</a>
           </footer>
-          {/* Global Logs Sidebar */}
-          <LogsSidebar />
+          {/* Global Logs Sidebar removed per request; console panel remains available */}
         </div>
       </body>
     </html>

@@ -26,6 +26,7 @@ import designUploadsRoutes from './routes/designUploads';
 import aiPromptManagementRoutes from './routes/aiPromptManagement';
 import staticFilesRoutes from './routes/staticFiles';
 import testsRoutes from './routes/tests';
+import adminPipelinesRoutes from './routes/admin/pipelines';
 import { TestRunnerService } from './services/TestRunnerService';
 import { TestStateStore } from './services/TestStateStore';
 
@@ -146,6 +147,7 @@ export function createApp(): express.Application {
   app.use('/api/design-uploads', designUploadsRoutes);
   app.use('/api/admin/ai-prompts', aiPromptManagementRoutes);
   app.use('/api/admin/static-files', staticFilesRoutes);
+  app.use('/api/admin/pipelines', adminPipelinesRoutes);
 
   const { errorHandler } = require('./middleware/errorHandler');
   app.use(errorHandler);

@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useMaintenanceData } from './hooks/useMaintenanceData';
 // Removed internal TabNavigation to avoid duplicate tabs; outer layout provides nav
 // import TabNavigation, { Tab } from './ui/TabNavigation';
@@ -25,7 +26,8 @@ export const MaintenanceDashboard: React.FC<{ initialTab?: string }> = ({ initia
     runBuildTest,
     testRunning,
     testProgress,
-    runDeadCodeScan
+    runDeadCodeScan,
+    runQuickPipeline,
   } = useMaintenanceData();
 
   const [activeTab, setActiveTab] = useState(initialTab || 'overview');
@@ -39,6 +41,7 @@ export const MaintenanceDashboard: React.FC<{ initialTab?: string }> = ({ initia
   const [rawDataContent, setRawDataContent] = useState<any>(null);
   const [rawDataTitle, setRawDataTitle] = useState('');
   const [isLoadingRawData, setIsLoadingRawData] = useState(false);
+  const [quickRunBusy, setQuickRunBusy] = useState(false);
 
   // const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3009';
 
@@ -147,6 +150,62 @@ export const MaintenanceDashboard: React.FC<{ initialTab?: string }> = ({ initia
               onRawDataClick={openRawDataModal}
               onRunScan={runDeadCodeScan}
             />
+
+            {/* Quick Links to Management sections */}
+            <div className="p-4 border rounded bg-white flex items-center justify-between">
+              <div>
+                <div className="font-semibold">Manage Pipelines</div>
+                <div className="text-sm text-gray-500">Definitions, versions, and activation</div>
+              </div>
+              <Link href="/maintenance/pipelines" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
+            </div>
+            <div className="p-4 border rounded bg-white flex items-center justify-between">
+              <div>
+                <div className="font-semibold">Manage Steps</div>
+                <div className="text-sm text-gray-500">Step definitions, versions, and activation</div>
+              </div>
+              <Link href="/maintenance/steps" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
+            </div>
+            <div className="p-4 border rounded bg-white flex items-center justify-between">
+              <div>
+                <div className="font-semibold">Manage IR Schemas</div>
+                <div className="text-sm text-gray-500">Schemas per step version with JSON editor</div>
+              </div>
+              <Link href="/maintenance/ir-schemas" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
+            </div>
+
+            {/* Quick Run: maintenance_test origin */}
+            <div className="p-4 border rounded bg-white flex items-center justify-between col-span-1 lg:col-span-2">
+              <div>
+                <div className="font-semibold">Quick-Run: Detect Splitlines</div>
+                <div className="text-sm text-gray-500">Triggers a maintenance-tagged pipeline step (templator-layout/detect_splitlines)</div>
+              </div>
+              <button
+                disabled={quickRunBusy}
+                onClick={async () => {
+                  try {
+                    setQuickRunBusy(true);
+                    const result = await runQuickPipeline({
+                      pipelineName: 'templator-layout',
+                      pipelineVersion: 'v1',
+                      stepKey: 'detect_splitlines',
+                      params: { threshold: 0.5 },
+                      summary: { trigger: 'maintenance_ui' },
+                      origin: 'maintenance_test',
+                      originInfo: { ui: 'MaintenanceDashboard' },
+                    });
+                    setRawDataTitle('Quick Run Result');
+                    setRawDataContent(result);
+                    setShowRawDataModal(true);
+                  } finally {
+                    setQuickRunBusy(false);
+                  }
+                }}
+                className={`px-3 py-1 rounded text-white ${quickRunBusy ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                {quickRunBusy ? 'Running…' : 'Run pipeline'}
+              </button>
+            </div>
           </div>
         )}
 
