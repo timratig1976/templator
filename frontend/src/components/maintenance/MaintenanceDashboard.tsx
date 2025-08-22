@@ -120,7 +120,7 @@ export const MaintenanceDashboard: React.FC<{ initialTab?: string }> = ({ initia
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Main Content (header and tabs provided by outer layout) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="py-6">
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SystemHealthCard
@@ -157,21 +157,21 @@ export const MaintenanceDashboard: React.FC<{ initialTab?: string }> = ({ initia
                 <div className="font-semibold">Manage Pipelines</div>
                 <div className="text-sm text-gray-500">Definitions, versions, and activation</div>
               </div>
-              <Link href="/maintenance/pipelines" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
+              <Link href="/maintenance/ai/settings/pipelines" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
             </div>
             <div className="p-4 border rounded bg-white flex items-center justify-between">
               <div>
                 <div className="font-semibold">Manage Steps</div>
                 <div className="text-sm text-gray-500">Step definitions, versions, and activation</div>
               </div>
-              <Link href="/maintenance/steps" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
+              <Link href="/maintenance/ai/settings/steps" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
             </div>
             <div className="p-4 border rounded bg-white flex items-center justify-between">
               <div>
                 <div className="font-semibold">Manage IR Schemas</div>
                 <div className="text-sm text-gray-500">Schemas per step version with JSON editor</div>
               </div>
-              <Link href="/maintenance/ir-schemas" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
+              <Link href="/maintenance/ai/settings/ir-schemas" className="px-3 py-1 bg-blue-600 text-white rounded">Open</Link>
             </div>
 
             {/* Quick Run: maintenance_test origin */}
@@ -222,7 +222,7 @@ export const MaintenanceDashboard: React.FC<{ initialTab?: string }> = ({ initia
         )}
       </div>
       {activeTab === 'build-tests' && (
-        <div className="w-full px-4 sm:px-6 lg:px-8 pb-8">
+        <div className="w-full pb-8">
           <BuildTestRealtimePanel />
         </div>
       )}

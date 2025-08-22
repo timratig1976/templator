@@ -54,7 +54,20 @@ export const DeadCodeCard: React.FC<DeadCodeCardProps> = ({
     <div className="bg-white shadow rounded-lg p-6 flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-medium text-gray-900">Dead Code</h3>
+          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+            <svg
+              className="w-5 h-5 mr-2 text-gray-700"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 18l6-6-6-6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6l-6 6 6 6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 4l-4 16" />
+            </svg>
+            <span>Dead Code</span>
+          </h3>
           <div className="flex items-center space-x-2">
             <Link
               href="/maintenance/dead-code"
