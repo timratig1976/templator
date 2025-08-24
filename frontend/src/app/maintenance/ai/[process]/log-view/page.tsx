@@ -177,7 +177,7 @@ export default function LogsPage({ params }: { params: { process: string } }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Logs</h1>
+        {/* Duplicate headline removed; layout-level headline is used */}
         <div className="flex items-center gap-2">
           <button className="px-2.5 py-1.5 border rounded-md text-sm">Actions</button>
           <button className="px-2.5 py-1.5 border rounded-md text-sm">View Sessions</button>

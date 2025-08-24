@@ -4,7 +4,7 @@ import React from "react";
 export default function DashboardPage({ params }: { params: { process: string } }) {
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">{params.process} — Dashboard</h1>
+      {/* Duplicate headline removed; layout-level headline is used */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="border rounded-md p-4">
           <div className="text-sm text-gray-500 mb-2">% Positive</div>

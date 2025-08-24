@@ -7,5 +7,5 @@ import { redirect } from 'next/navigation';
 
 export default function Home() {
   // Redirect root to the dashboard entry point
-  redirect('/projects');
+  redirect('/system/projects');
 }

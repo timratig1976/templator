@@ -22,7 +22,26 @@ const nextConfig = {
       // existing redirects
       {
         source: '/uploads',
-        destination: '/projects',
+        destination: '/system/projects',
+        permanent: true,
+      },
+
+      // Clean URL for global optimization logs
+      {
+        source: '/maintenance/ai/optimization/logs',
+        destination: '/maintenance/ai/optimization?view=logs',
+        permanent: false,
+      },
+
+      // Legacy projects paths -> new system namespace
+      {
+        source: '/projects',
+        destination: '/system/projects',
+        permanent: true,
+      },
+      {
+        source: '/projects/:path*',
+        destination: '/system/projects/:path*',
         permanent: true,
       },
 

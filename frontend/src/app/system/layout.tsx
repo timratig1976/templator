@@ -4,12 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { WorkflowProvider } from "@/contexts/WorkflowContext";
+import "./system.css";
 
 export default function WorkflowLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const search = useSearchParams();
   const projectId = pathname?.split("/").find((seg, i, arr) => arr[i - 1] === "projects") || "";
-  const inProject = !!projectId && /\/projects\/[^^/]+/.test(pathname || "");
+  const inProject = !!projectId && /\/projects\/[^\^/]+/.test(pathname || "");
 
   const designUploadId = search.get("designUploadId") || "";
   const splitId = search.get("splitId") || "";

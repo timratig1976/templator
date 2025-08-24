@@ -97,7 +97,7 @@ export default function AIOverviewPage() {
           <p className="text-sm text-gray-600 mb-3">Analyze logs and manage the prompt library.</p>
           <ul className="space-y-2 text-sm">
             <li>
-              <a className="text-blue-700 hover:underline inline-flex items-center gap-2" href="/maintenance/ai/system#logs">
+              <a className="text-blue-700 hover:underline inline-flex items-center gap-2" href="/maintenance/ai/optimization?view=logs">
                 <span>📜</span>
                 <span>Logs</span>
               </a>

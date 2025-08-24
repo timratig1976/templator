@@ -24,13 +24,30 @@ router.get('/pipelines', async (req, res) => {
 })
 
 router.post('/pipelines', async (req, res) => {
-  const { name, description } = req.body || {}
+  const { name, description, createInitialVersion, activateInitial } = req.body || {}
   if (!name) return res.status(400).json({ error: 'name_required' })
   // uniqueness (case-insensitive)
   const exists = await (prisma as any).pipelineDefinition.findFirst({ where: { name: { equals: String(name), mode: 'insensitive' } } })
   if (exists) return res.status(409).json({ error: 'name_exists' })
   const created = await (prisma as any).pipelineDefinition.create({ data: { name, description: description ?? '' } })
-  res.status(201).json({ data: created })
+  let initialVersion: any = null
+  const shouldCreateInitial = createInitialVersion !== false // default true
+  if (shouldCreateInitial) {
+    const makeActive = !!activateInitial
+    if (makeActive) {
+      await (prisma as any).pipelineVersion.updateMany({ where: { pipelineId: created.id }, data: { isActive: false } })
+    }
+    initialVersion = await (prisma as any).pipelineVersion.create({
+      data: {
+        pipelineId: created.id,
+        version: '1',
+        dag: { nodes: [] },
+        config: {},
+        isActive: makeActive,
+      },
+    })
+  }
+  res.status(201).json({ data: { pipeline: created, initialVersion } })
 })
 
 router.patch('/pipelines/:pipelineId', async (req, res) => {
@@ -162,19 +179,43 @@ router.post('/pipelines/:pipelineId/versions/:version/execute', async (req, res)
 
 // Steps
 router.get('/steps', async (req, res) => {
-  const items = await (prisma as any).stepDefinition.findMany({
-    orderBy: { key: 'asc' },
-    include: { _count: { select: { versions: true } }, versions: { select: { id: true, version: true, isActive: true } } },
-  })
-  const data = items.map((s: any) => ({ id: s.id, key: s.key, name: s.name, description: s.description, versionCount: s._count?.versions ?? 0, versions: s.versions }))
-  res.json({ data })
+  try {
+    const items = await (prisma as any).stepDefinition.findMany({
+      orderBy: { key: 'asc' },
+      include: { _count: { select: { versions: true } }, versions: { select: { id: true, version: true, isActive: true } } },
+    })
+    const data = items.map((s: any) => ({ id: s.id, key: s.key, name: s.name, description: s.description, versionCount: s._count?.versions ?? 0, versions: s.versions }))
+    res.json({ data })
+  } catch (err: any) {
+    const message = err?.message || 'Internal Server Error'
+    // Narrow diagnostics for Prisma/DB issues to help debugging without leaking sensitive info
+    const hint = (message.includes('column') || message.includes('relation') || message.includes('does not exist'))
+      ? 'database_schema_mismatch' : undefined
+    res.status(500).json({ error: 'steps_list_failed', message, hint })
+  }
 })
 
 router.post('/steps', async (req, res) => {
-  const { key, name, description } = req.body || {}
+  const { key, name, description, createInitialVersion, activateInitial } = req.body || {}
   if (!key) return res.status(400).json({ error: 'key_required' })
   const created = await (prisma as any).stepDefinition.create({ data: { key, name, description: description ?? '' } })
-  res.status(201).json({ data: created })
+  let initialVersion: any = null
+  const shouldCreateInitial = createInitialVersion !== false // default true
+  if (shouldCreateInitial) {
+    const makeActive = !!activateInitial
+    if (makeActive) {
+      await (prisma as any).stepVersion.updateMany({ where: { stepId: created.id }, data: { isActive: false } })
+    }
+    initialVersion = await (prisma as any).stepVersion.create({
+      data: {
+        stepId: created.id,
+        version: '1',
+        defaultConfig: {},
+        isActive: makeActive,
+      },
+    })
+  }
+  res.status(201).json({ data: { step: created, initialVersion } })
 })
 
 router.patch('/steps/:stepId', async (req, res) => {

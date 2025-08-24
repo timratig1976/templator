@@ -20,6 +20,7 @@ import testEndpoints from './testEndpoints';
 import testImagesRoutes from './test-images';
 import pipelineMonitoringRoutes from './pipelineMonitoring';
 import monitoringPipelineRoutes from './monitoring.pipeline';
+import aiLogsRoutes from './aiLogs';
 import hybridLayoutRoutes from './hybridLayout';
 import aiEnhancementRoutes from './aiEnhancement';
 import generationRoutes from './generation';
@@ -81,6 +82,9 @@ const { PIPELINE_LOGGING_ENABLED } = getFeatureFlags();
 if (PIPELINE_LOGGING_ENABLED) {
   router.use('/monitoring/pipelines', monitoringPipelineRoutes);
 }
+
+// AI Logs (DB-backed)
+router.use('/monitoring/ai-logs', aiLogsRoutes);
 
 // Hybrid layout analysis routes
 router.use('/hybrid-layout', hybridLayoutRoutes);

@@ -3,6 +3,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import MaintenanceNav from '../../components/maintenance/ui/MaintenanceNav';
 import MaintenanceHeadline from '../../components/maintenance/ui/MaintenanceHeadline';
+import './maintenance.css';
 
 export default function MaintenanceLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

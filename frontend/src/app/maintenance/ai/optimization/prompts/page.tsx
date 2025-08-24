@@ -35,7 +35,7 @@ export default function MaintenanceAIOptimizationPrompts() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-6">
-      <h1 className="text-lg font-semibold mb-4">Prompt Monitoring</h1>
+      {/* Duplicate headline removed; layout-level headline is used */}
 
       <div className="flex items-center gap-2 mb-3">
         <input

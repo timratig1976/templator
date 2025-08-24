@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "PORT=3009 nodemon -r ts-node/register -r tsconfig-paths/register src/server.ts",
+    "dev": "PORT=3009 nodemon --exec \"ts-node -r tsconfig-paths/register\" src/server.ts",
     "build": "tsc",
     "start": "PORT=3009 node dist/server.js",
     "lint": "eslint src/**/*.ts",

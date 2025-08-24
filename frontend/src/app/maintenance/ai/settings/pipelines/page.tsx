@@ -29,10 +29,8 @@ export default function AISettingsPipelinesPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Pipelines</h2>
-      <div className="rounded border bg-white">
-        <PipelinesPage />
-      </div>
+      {/* Rely on layout-level headline; render PipelinesPage directly without white wrapper */}
+      <PipelinesPage />
     </div>
   );
 }

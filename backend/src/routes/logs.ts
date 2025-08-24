@@ -1,5 +1,6 @@
 import express from 'express';
 import { createLogger } from '../utils/logger';
+import { AILogService } from '../services/logging/AILogService';
 
 const router = express.Router();
 const logger = createLogger();
@@ -84,6 +85,23 @@ export const logToFrontend = (
   }
 
   broadcastLog(logEntry);
+
+  // Persist to DB asynchronously (best-effort)
+  AILogService.insert({
+    timestamp: new Date(logEntry.timestamp),
+    level: logEntry.level,
+    category: logEntry.category,
+    message: logEntry.message,
+    requestId: logEntry.requestId ?? null,
+    durationMs: logEntry.duration ?? null,
+    input: logEntry.details?.input ?? null,
+    output: logEntry.details?.output ?? null,
+    rag: logEntry.details?.rag ?? null,
+    error: logEntry.details?.error || logEntry.metadata?.error || null,
+    meta: { ...logEntry.metadata, details: logEntry.details },
+  }).catch(() => {
+    // ignore
+  });
 };
 
 // SSE endpoint for real-time log streaming

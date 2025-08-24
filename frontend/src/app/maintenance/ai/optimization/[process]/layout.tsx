@@ -71,8 +71,25 @@ export default function OptimizationProcessLayout({
     <div className="ai-layout">
       <header className="sticky top-0 z-20 bg-white border-b">
         <div className="mx-auto max-w-[1500px] px-4 py-3 flex items-center justify-between gap-4">
-          <div className="font-medium text-gray-700 truncate">
-            <span className="text-gray-400">Optimization Process:</span> <span className="font-semibold">{params.process}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <label htmlFor="process-select" className="text-sm text-gray-500 shrink-0">Optimization Process</label>
+            <select
+              id="process-select"
+              className="max-w-[320px] truncate px-2 py-1.5 border rounded-md bg-white text-sm text-gray-800"
+              value={params.process}
+              onChange={(e) => {
+                const next = e.target.value;
+                const prefix = `/maintenance/ai/optimization/${params.process}`;
+                // keep current tab/suffix if present; default to /editor
+                let suffix = pathname?.startsWith(prefix) ? pathname!.slice(prefix.length) : '';
+                if (!suffix || suffix === '/') suffix = '/editor';
+                router.push(`/maintenance/ai/optimization/${next}${suffix}`);
+              }}
+            >
+              {processes.map((p) => (
+                <option key={p.name} value={p.name}>{p.title || p.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex items-center gap-3">
             <nav className="flex gap-2">
@@ -118,40 +135,9 @@ export default function OptimizationProcessLayout({
         </div>
       </header>
       <main className="mx-auto max-w-[1500px] px-4 py-6">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left quick navigation for AI processes */}
-          <aside className="hidden lg:block col-span-2">
-            <div className="border rounded-md bg-white">
-              <div className="px-3 py-2 border-b text-xs uppercase text-gray-500">AI Processes</div>
-              <nav className="p-2 space-y-1 max-h-[70vh] overflow-auto">
-                {processes.map((p) => {
-                  const isActiveProc = p.name === params.process;
-                  return (
-                    <Link
-                      key={p.name}
-                      href={`/maintenance/ai/optimization/${p.name}/editor`}
-                      className={`block px-2.5 py-1.5 rounded-md text-sm ${
-                        isActiveProc ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                      title={p.title || p.name}
-                    >
-                      <span className="font-medium">{p.title || p.name}</span>
-                      {isActiveProc && <span className="ml-2 text-xs text-gray-500">(current)</span>}
-                    </Link>
-                  );
-                })}
-                {(!processes || processes.length === 0) && (
-                  <div className="px-2.5 py-2 text-sm text-gray-500">{loadingProc ? 'Loading…' : 'No processes'}</div>
-                )}
-              </nav>
-            </div>
-          </aside>
-
-          {/* Right content area */}
-          <section className="col-span-12 lg:col-span-10">
-            {children}
-          </section>
-        </div>
+        <section>
+          {children}
+        </section>
       </main>
     </div>
   );

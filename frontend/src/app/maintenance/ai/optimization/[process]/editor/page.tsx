@@ -13,11 +13,14 @@ interface MessageBlock {
   content: string;
 }
 
-export default function EditorPage({ params }: { params: { process: string } }) {
+type EditorCoreProps = { params: { process: string }; initialPromptId?: string | null; initialRunId?: string | null };
+function EditorCore({ params, initialPromptId, initialRunId }: EditorCoreProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const runId = searchParams.get('runId');
+  const runId = (initialRunId == null ? searchParams.get('runId') : initialRunId) as string | null;
+  const promptIdParam = (initialPromptId == null ? searchParams.get('promptId') : initialPromptId) as string | null;
+  const stepId = searchParams.get('stepId');
   const [unsaved, setUnsaved] = useState(false);
   const [model, setModel] = useState("gpt-4o");
   const [temperature, setTemperature] = useState(0.2);
@@ -28,6 +31,12 @@ export default function EditorPage({ params }: { params: { process: string } }) 
   // Inputs extracted from `{{var}}` placeholders in messages
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  // Step context
+  const [stepLoading, setStepLoading] = useState(false);
+  const [stepError, setStepError] = useState<string | null>(null);
+  const [stepMeta, setStepMeta] = useState<any | null>(null);
+  const [stepVersions, setStepVersions] = useState<any[]>([]);
+  const [stepVersionsOpen, setStepVersionsOpen] = useState<boolean>(false);
   const [addMenuOpenMiddle, setAddMenuOpenMiddle] = useState(false);
   // Left/Middle resizable columns
   const [leftPaneW, setLeftPaneW] = useState<number>(420);
@@ -58,6 +67,8 @@ export default function EditorPage({ params }: { params: { process: string } }) 
   const [readmeError, setReadmeError] = useState<string | null>(null);
   const [loadOpen, setLoadOpen] = useState(false);
   const [loadQuery, setLoadQuery] = useState("");
+  // Step menu (quick access to step versions in toolbar)
+  const [stepMenuOpen, setStepMenuOpen] = useState(false);
   // Parameters UI state
   const [modelOpen, setModelOpen] = useState(false);
   const [modelQuery, setModelQuery] = useState("");
@@ -70,6 +81,29 @@ export default function EditorPage({ params }: { params: { process: string } }) 
   const updateMessage = (id: string, patch: Partial<MessageBlock>) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
     setUnsaved(true);
+  };
+
+  // Activate a step version
+  const activateStepVersion = async (version: string) => {
+    if (!stepId) return;
+    if (!confirm(`Activate step version ${version}?`)) return;
+    try {
+      const res = await fetch(`/api/admin/ai-steps/${encodeURIComponent(stepId)}/versions/${encodeURIComponent(version)}/activate`, { method: 'POST' });
+      if (!res.ok) throw new Error(String(res.status));
+      setToast({ show: true, message: 'Step version activated' });
+      setTimeout(() => setToast({ show: false, message: '' }), 2000);
+      // Refresh versions list
+      try {
+        const vRes = await fetch(`/api/admin/ai-steps/${encodeURIComponent(stepId)}/versions`);
+        if (vRes.ok) {
+          const vJson = await vRes.json();
+          setStepVersions(Array.isArray(vJson?.data) ? vJson.data : Array.isArray(vJson) ? vJson : []);
+        }
+      } catch {}
+    } catch (e) {
+      setToast({ show: true, message: 'Failed to activate step version' });
+      setTimeout(() => setToast({ show: false, message: '' }), 2000);
+    }
   };
 
   // (moved auto-float effect below where extractedVars is declared)
@@ -352,6 +386,57 @@ export default function EditorPage({ params }: { params: { process: string } }) 
     load();
   }, [runId]);
 
+  // Hydrate from promptId if present
+  useEffect(() => {
+    const loadPrompt = async () => {
+      const promptId = promptIdParam?.trim();
+      if (!promptId) return;
+      try {
+        const res = await fetch(`/api/admin/ai-prompts/prompts/${encodeURIComponent(promptId)}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const prompt = json?.data || json;
+        const content = (prompt?.content || prompt?.promptContent || '').trim();
+        if (content) {
+          setMessages([{ id: 'm1', role: 'user', content }]);
+          setUnsaved(true);
+        }
+        if (prompt?.id) setLoadedVersionId(String(prompt.id));
+        setLoadedIsActive(!!prompt?.isActive);
+      } catch {/* ignore */}
+    };
+    loadPrompt();
+  }, [promptIdParam]);
+
+  // Load step context when stepId present
+  useEffect(() => {
+    const loadStep = async () => {
+      if (!stepId) return;
+      try {
+        setStepLoading(true);
+        setStepError(null);
+        const [sRes, vRes] = await Promise.all([
+          fetch(`/api/admin/ai-steps/${encodeURIComponent(stepId)}`),
+          fetch(`/api/admin/ai-steps/${encodeURIComponent(stepId)}/versions`),
+        ]);
+        if (!sRes.ok) throw new Error(`step ${sRes.status}`);
+        const sJson = await sRes.json();
+        setStepMeta(sJson?.data || sJson || null);
+        if (vRes.ok) {
+          const vJson = await vRes.json();
+          setStepVersions(Array.isArray(vJson?.data) ? vJson.data : Array.isArray(vJson) ? vJson : []);
+        } else {
+          setStepVersions([]);
+        }
+      } catch (e: any) {
+        setStepError('Failed to load step context');
+      } finally {
+        setStepLoading(false);
+      }
+    };
+    loadStep();
+  }, [stepId]);
+
   // Fetch versions for this process
   const fetchVersions = async () => {
     setVersionsLoading(true);
@@ -515,6 +600,47 @@ export default function EditorPage({ params }: { params: { process: string } }) 
                   </>
                 )}
               </div>
+              {stepId && (
+                <div className="relative">
+                  <button onClick={() => setStepMenuOpen((v)=>!v)} className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-gray-200 bg-white text-gray-800 text-sm hover:bg-gray-50 shadow-sm">
+                    <span>Step</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {stepMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setStepMenuOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-96 z-50 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <div className="px-3 py-2 text-xs text-gray-500 border-b">Step versions are linked to Prompt versions; content loads from Prompt versions only.</div>
+                        <div className="max-h-80 overflow-auto divide-y divide-gray-100">
+                          {Array.isArray(stepVersions) && stepVersions.length > 0 ? (
+                            stepVersions.map((sv: any) => (
+                              <div key={sv.id || sv.version} className="px-3 py-2 text-sm flex items-center justify-between gap-3">
+                                <span className="flex items-center gap-2 min-w-0">
+                                  {sv.isActive && <span className="inline-block flex-none w-2.5 h-2.5 rounded-full bg-green-500" title="Active" />}
+                                  <span className="font-semibold">v{String(sv.version)}</span>
+                                </span>
+                                <span className="flex items-center gap-2">
+                                  {!sv.isActive && (
+                                    <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => { activateStepVersion(String(sv.version)); setStepMenuOpen(false); }}>Activate</button>
+                                  )}
+                                  <a
+                                    className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
+                                    href={`/maintenance/ai/optimization/step/editor/${encodeURIComponent(stepId)}` + `?stepVersion=${encodeURIComponent(String(sv.version))}`}
+                                  >Open</a>
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No step versions</div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               <button className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-gray-200 bg-white text-gray-800 hover:bg-gray-50 shadow-sm">⋯</button>
             </div>
           </div>
@@ -575,10 +701,103 @@ export default function EditorPage({ params }: { params: { process: string } }) 
                   </>
                 )}
               </div>
+              {stepId && (
+                <div className="relative">
+                  <button onClick={() => setStepMenuOpen((v)=>!v)} className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-md border border-gray-200 bg-white text-gray-800 text-sm hover:bg-gray-50 shadow-sm">
+                    <span>Step</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.29a.75.75 0 01-.02-1.08z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {stepMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setStepMenuOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-96 z-50 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <div className="px-3 py-2 text-xs text-gray-500 border-b">Step versions are linked to Prompt versions; content loads from Prompt versions only.</div>
+                        <div className="max-h-80 overflow-auto divide-y divide-gray-100">
+                          {Array.isArray(stepVersions) && stepVersions.length > 0 ? (
+                            stepVersions.map((sv: any) => (
+                              <div key={sv.id || sv.version} className="px-3 py-2 text-sm flex items-center justify-between gap-3">
+                                <span className="flex items-center gap-2 min-w-0">
+                                  {sv.isActive && <span className="inline-block flex-none w-2.5 h-2.5 rounded-full bg-green-500" title="Active" />}
+                                  <span className="font-semibold">v{String(sv.version)}</span>
+                                </span>
+                                <span className="flex items-center gap-2">
+                                  {!sv.isActive && (
+                                    <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => { activateStepVersion(String(sv.version)); setStepMenuOpen(false); }}>Activate</button>
+                                  )}
+                                  <a
+                                    className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
+                                    href={`/maintenance/ai/optimization/step/editor/${encodeURIComponent(stepId)}` + `?stepVersion=${encodeURIComponent(String(sv.version))}`}
+                                  >Open</a>
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">No step versions</div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
         </div>
+
+        {/* Step context: expandable versions list when stepId is present */}
+        {stepId && (
+          <section className="border rounded-md p-3 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">Step versions{stepMeta?.name ? ` · ${stepMeta.name}` : ''}</div>
+                {stepMeta?.description ? (
+                  <div className="text-xs text-gray-500 truncate">{stepMeta.description}</div>
+                ) : null}
+              </div>
+              <button
+                className="inline-flex items-center gap-1 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-gray-700 text-xs"
+                onClick={() => setStepVersionsOpen((v) => !v)}
+                aria-expanded={stepVersionsOpen}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: stepVersionsOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}>
+                  <path d="M8 5l8 7-8 7" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>Versions ({stepVersions?.length || 0})</span>
+              </button>
+            </div>
+            {stepError && <div className="mt-2 text-xs text-red-600">{stepError}</div>}
+            {stepVersionsOpen && (
+              <div className="mt-3 space-y-2">
+                <div className="text-xs text-gray-500">Note: Step versions do not carry prompt content. They link to Prompt versions; use the Load menu to load a Prompt version.</div>
+                {Array.isArray(stepVersions) && stepVersions.length > 0 ? (
+                  stepVersions.map((v: any) => (
+                    <div key={v.id || v.version} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`px-2 py-0.5 rounded border text-xs ${v.isActive ? 'border-green-600 text-green-700' : 'border-gray-300 text-gray-700'}`}>v{String(v.version)}</span>
+                        {v.isActive && <span className="text-xs text-green-700">active</span>}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {!v.isActive && (
+                          <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => activateStepVersion(String(v.version))}>Activate</button>
+                        )}
+                        <a
+                          className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
+                          href={`/maintenance/ai/optimization/step/editor/${encodeURIComponent(stepId)}?stepVersion=${encodeURIComponent(String(v.version))}`}
+                          title="Open this version in Step Editor"
+                        >Open</a>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-gray-500">No versions yet</div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="border rounded-md p-4">
           <div className="text-sm font-medium mb-3">Parameters</div>
@@ -1147,6 +1366,10 @@ export default function EditorPage({ params }: { params: { process: string } }) 
       )}
     </div>
   );
+}
+
+export default function EditorPage({ params }: { params: { process: string } }) {
+  return <EditorCore params={params} />;
 }
 
 // Very small markdown renderer without external deps

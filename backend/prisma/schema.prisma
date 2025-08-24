@@ -7,6 +7,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model AILog {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now()) @db.Timestamptz(3)
+  level       String
+  category    String?
+  process     String?
+  step        String?
+  requestId   String?
+  model       String?
+  durationMs  Int?
+  tokensTotal Int?
+  tokensInput Int?
+  tokensOutput Int?
+  costUsd     Float?
+  prompt      String?
+  error       String?
+  message     String?
+  initiator   String?   // user, system, pipeline, etc.
+  rag         Json?
+  input       Json?
+  output      Json?
+  quality     Json?
+  meta        Json?
+
+  createdAt   DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([process])
+  @@index([level])
+  @@index([category])
+  @@index([requestId])
+  @@map("ai_logs")
+}
+
 model SplitAsset {
   id         String      @id @default(cuid())
   splitId    String
@@ -267,6 +301,8 @@ model AIPrompt {
   metrics     AIPromptMetrics[]
   testResults AIPromptTestResult[]
   process     AIProcess            @relation(fields: [processId], references: [id], onDelete: Cascade)
+  // Back-relation to step versions that reference this prompt
+  stepVersions StepVersion[]
 
   @@unique([processId, version])
   @@index([processId, isActive])
@@ -387,9 +423,12 @@ model StepDefinition {
   key         String        @unique
   name        String?
   description String?
+  process     String?
+  activeVersionId String?    @unique
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   versions    StepVersion[]
+  activeVersion StepVersion? @relation("ActiveStepVersion", fields: [activeVersionId], references: [id])
 
   @@map("step_definitions")
 }
@@ -400,11 +439,15 @@ model StepVersion {
   version       String
   isActive      Boolean        @default(false)
   defaultConfig Json?
+  aiPromptId    String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   irSchemas     IRSchema[]
   stepRuns      StepRun[]
   definition    StepDefinition @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  aiPrompt      AIPrompt?      @relation(fields: [aiPromptId], references: [id], onDelete: SetNull)
+  // Back-reference for StepDefinition.activeVersion
+  activeForStep StepDefinition? @relation("ActiveStepVersion")
 
   @@unique([stepId, version])
   @@map("step_versions")

@@ -26,11 +26,7 @@ export default function AISettingsPipelineRunsPage() {
     return () => document.removeEventListener("click", handler, true);
   }, []);
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Pipeline Runs</h2>
-      <div className="rounded border bg-white">
-        <PipelineRunsPage />
-      </div>
-    </div>
+    <PipelineRunsPage />
   );
 }
+

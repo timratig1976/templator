@@ -1,0 +1,8 @@
+/* System area styles: user-facing application theme */
+
+/* Body theming for system pages */
+body {
+  background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #e0e7ff 100%);
+  color: #0f172a;
+  min-height: 100vh;
+}

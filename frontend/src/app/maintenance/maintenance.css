@@ -1,0 +1,10 @@
+/* Maintenance area styles: neutral, utilitarian theme */
+
+/* Body theming for maintenance pages */
+body {
+  background: #f7f7fb; /* subtle neutral background */
+  color: #0f172a;
+  min-height: 100vh;
+}
+
+/* Optional: compact cards and headings specific to maintenance UIs can go here */

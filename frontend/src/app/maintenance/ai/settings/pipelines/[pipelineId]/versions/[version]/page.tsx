@@ -26,11 +26,7 @@ export default function AISettingsPipelineVersionDetailPage() {
     return () => document.removeEventListener("click", handler, true);
   }, []);
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Pipeline Version</h2>
-      <div className="rounded border bg-white">
-        <PipelineVersionDetailPage />
-      </div>
-    </div>
+    <PipelineVersionDetailPage />
   );
 }
+

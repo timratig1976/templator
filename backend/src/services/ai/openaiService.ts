@@ -5,16 +5,21 @@ import { logToFrontend } from '../../routes/logs';
 
 const logger = createLogger();
 
-// Validate API key exists (skip in test environment)
-if (!process.env.OPENAI_API_KEY && process.env.NODE_ENV !== 'test') {
-  logger.error('OPENAI_API_KEY environment variable is not set');
-  throw new Error('OpenAI API key is required but not provided');
+// Lazy-initialize OpenAI client so non-AI routes can run without key
+let openai: OpenAI | null = null;
+function getClient(): OpenAI {
+  if (!openai) {
+    const key = process.env.OPENAI_API_KEY;
+    if (!key && process.env.NODE_ENV !== 'test') {
+      // Do not crash app at import time; throw only when AI is invoked
+      const err = new Error('OpenAI API key is required but not provided');
+      logger.error('OPENAI_API_KEY environment variable is not set');
+      throw err;
+    }
+    openai = new OpenAI({ apiKey: key });
+  }
+  return openai;
 }
-
-// Always construct the client so Jest can mock the constructor in tests
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface DesignAnalysis {
   html: string;
@@ -142,7 +147,7 @@ export class OpenAIService {
         startTime: new Date(startTime).toISOString()
       }, requestId);
 
-      const apiPromise = openai.chat.completions.create(requestData);
+      const apiPromise = getClient().chat.completions.create(requestData);
       
       // Step 5: Race between API call and timeout
       logToFrontend('info', 'openai', '⏳ Waiting for OpenAI response...', {

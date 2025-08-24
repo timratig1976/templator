@@ -43,7 +43,7 @@ export default function OptimizationPromptDetailPage() {
       ) : (
         <div className="space-y-4">
           <div>
-            <h1 className="text-lg font-semibold mb-1">Prompt Detail</h1>
+            {/* Duplicate headline removed; layout-level headline is used */}
             <div className="text-sm text-gray-600">ID: {data.id}</div>
             <div className="text-sm text-gray-600">DesignSplit: {data.pipelineId}</div>
             <div className="text-sm text-gray-600">Section: {data.sectionId || '-'}</div>

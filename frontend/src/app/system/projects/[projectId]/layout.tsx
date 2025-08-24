@@ -13,7 +13,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       <div className="text-sm text-gray-600">
         <Link href="/">Home</Link>
         <span className="mx-2">/</span>
-        <Link href="/projects">Projects</Link>
+        <Link href="/system/projects">Projects</Link>
         <span className="mx-2">/</span>
         <span className="font-medium">{projectId}</span>
       </div>
