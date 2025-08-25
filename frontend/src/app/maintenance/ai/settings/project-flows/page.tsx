@@ -44,6 +44,10 @@ export default function ProjectFlowsSettingsPage() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const backend = useMemo(() => API_ENDPOINTS, []);
 
+  // Cache of step counts per phase for quick indicator badges
+  const [phaseStepCounts, setPhaseStepCounts] = useState<Record<string, number | null>>({});
+  const [phaseCountsLoading, setPhaseCountsLoading] = useState<Record<string, boolean>>({});
+
   async function fetchFlows() {
     setLoading(true);
     setError(null);
@@ -121,6 +125,40 @@ export default function ProjectFlowsSettingsPage() {
       }
     })();
   }, []);
+
+  // When a flow is expanded, fetch step counts for its phases (if not already loaded)
+  useEffect(() => {
+    const fetchCountsForExpanded = async () => {
+      const tasks: Promise<void>[] = [];
+      for (const flow of flows) {
+        if (!expanded[flow.id]) continue;
+        for (const p of (flow.phases || [])) {
+          if (phaseStepCounts[p.id] != null || phaseCountsLoading[p.id]) continue;
+          // Mark loading and fetch count
+          setPhaseCountsLoading(prev => ({ ...prev, [p.id]: true }));
+          const task = (async () => {
+            try {
+              const res = await fetch(backend.ADMIN_PHASE_STEPS(p.id), { cache: 'no-store' });
+              const json = await res.json();
+              if (!res.ok) throw new Error(json?.error || 'failed_to_fetch_phase_steps');
+              const items = Array.isArray(json?.data) ? json.data : [];
+              setPhaseStepCounts(prev => ({ ...prev, [p.id]: items.length }));
+            } catch (e) {
+              // On failure, set to 0 to avoid spinner forever; UI still lets user open Manage Steps
+              setPhaseStepCounts(prev => ({ ...prev, [p.id]: 0 }));
+            } finally {
+              setPhaseCountsLoading(prev => ({ ...prev, [p.id]: false }));
+            }
+          })();
+          tasks.push(task);
+        }
+      }
+      if (tasks.length) await Promise.allSettled(tasks);
+    };
+    if (Object.values(expanded).some(Boolean) && flows.length) {
+      void fetchCountsForExpanded();
+    }
+  }, [expanded, flows, backend, phaseStepCounts, phaseCountsLoading]);
 
   async function createFlow() {
     if (!newKey || !newName) return;
@@ -407,28 +445,45 @@ export default function ProjectFlowsSettingsPage() {
                   </div>
                   {/* Empty state hint when no pipelines exist */}
                   {pipelines.length === 0 && (
-                    <div className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                      No pipelines found. Create a pipeline first on the <Link className="underline" href="/maintenance/ai/settings/pipelines">Pipelines</Link> page, then return here to bind it to this flow.
+                    <div className="mt-2 text-xs text-gray-600">
+                      No pipelines found. Create a pipeline first to bind this flow.
                     </div>
                   )}
                 </div>
-                <div className="text-sm font-medium mb-2">Phases</div>
-                <div className="space-y-2">
-                  {(f.phases || []).sort((a,b)=>a.orderIndex-b.orderIndex).map((p, i, arr) => (
-                    <div key={p.id} className="flex items-center justify-between border rounded p-2">
+
+                {/* Phases list */}
+                <div className="mt-3">
+                  <div className="text-sm font-medium mb-2">Phases</div>
+                  {(f.phases || []).sort((a, b) => a.orderIndex - b.orderIndex).map((p) => (
+                    <div key={p.id} className="flex items-start justify-between py-2 border-b last:border-b-0">
                       <div>
-                        <div className="font-medium">{p.name} <span className="text-xs text-gray-500">({p.key})</span></div>
-                        {p.description && <div className="text-xs text-gray-600">{p.description}</div>}
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium">
+                            {p.name} <span className="text-xs text-gray-500">({p.key})</span>
+                          </div>
+                          <span className="inline-flex items-center text-xs px-2 py-0.5 rounded border bg-white text-gray-700">
+                            {phaseCountsLoading[p.id]
+                              ? 'Loading…'
+                              : (phaseStepCounts[p.id] != null
+                                ? `${phaseStepCounts[p.id]} ${phaseStepCounts[p.id] === 1 ? 'step' : 'steps'}`
+                                : '—')}
+                          </span>
+                        </div>
+                        {p.description && (
+                          <div className="text-xs text-gray-600 mt-0.5">{p.description}</div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button className="px-2 py-1 border rounded" onClick={()=>movePhase(f, p.id, -1)} disabled={i===0}>Up</button>
-                        <button className="px-2 py-1 border rounded" onClick={()=>movePhase(f, p.id, +1)} disabled={i===arr.length-1}>Down</button>
+                      <div className="flex gap-2 items-center">
+                        <button className="px-2 py-1 border rounded" onClick={() => movePhase(f, p.id, -1)}>Up</button>
+                        <button className="px-2 py-1 border rounded" onClick={() => movePhase(f, p.id, 1)}>Down</button>
                         <Link className="px-2 py-1 border rounded bg-white hover:bg-gray-50" href={`/maintenance/ai/settings/project-flows/${f.id}/phases/${p.id}/steps`}>Manage Steps</Link>
-                        <button className="px-2 py-1 border rounded text-red-700" onClick={()=>deletePhase(p.id)}>Delete</button>
+                        <button className="px-2 py-1 border rounded text-red-700" onClick={() => deletePhase(p.id)}>Delete</button>
                       </div>
                     </div>
                   ))}
-                  {(!f.phases || f.phases.length===0) && <div className="text-sm text-gray-500">No phases yet</div>}
+                  {(!f.phases || f.phases.length === 0) && (
+                    <div className="text-sm text-gray-500">No phases yet</div>
+                  )}
                 </div>
 
                 {/* Add phase */}
