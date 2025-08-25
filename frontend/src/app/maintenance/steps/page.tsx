@@ -32,6 +32,15 @@ export default function StepsPage() {
   // row expand/collapse
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  // prompt assets UI state
+  type PromptAsset = { id: string; name: string; promptContent: any; irSchema?: any };
+  const [promptOpen, setPromptOpen] = useState<Record<string, boolean>>({}); // by versionId
+  const [assetsByVersion, setAssetsByVersion] = useState<Record<string, PromptAsset[]>>({});
+  const [creatingForVersion, setCreatingForVersion] = useState<string | null>(null);
+  const [newAssetName, setNewAssetName] = useState("");
+  const [newAssetPromptJson, setNewAssetPromptJson] = useState("{\n  \"messages\": []\n}");
+  const [newAssetIRJson, setNewAssetIRJson] = useState("{}");
+
   // edit form state
   const [editId, setEditId] = useState<string | null>(null);
   const [editKey, setEditKey] = useState("");
@@ -43,6 +52,65 @@ export default function StepsPage() {
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
+  }
+
+  async function loadPromptAssets(versionId: string) {
+    try {
+      const res = await fetch(`/api/admin/ai-steps/prompt-assets?stepVersionId=${encodeURIComponent(versionId)}`);
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      setAssetsByVersion((m) => ({ ...m, [versionId]: j.data || [] }));
+    } catch (e: any) {
+      showToast(`Load prompts failed: ${e?.message || 'error'}`);
+    }
+  }
+
+  async function createPromptAsset(stepId: string, versionId: string) {
+    let promptObj: any = {};
+    let irObj: any = undefined;
+    try { promptObj = JSON.parse(newAssetPromptJson || '{}'); } catch { showToast('Prompt JSON invalid'); return; }
+    try { irObj = newAssetIRJson?.trim() ? JSON.parse(newAssetIRJson) : undefined; } catch { showToast('IR Schema JSON invalid'); return; }
+    try {
+      const res = await fetch(`/api/admin/ai-steps/prompt-assets`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newAssetName || 'prompt', promptContent: promptObj, irSchema: irObj, stepId, stepVersionId: versionId })
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      setNewAssetName(""); setNewAssetPromptJson("{\n  \"messages\": []\n}"); setNewAssetIRJson("{}"); setCreatingForVersion(null);
+      await loadPromptAssets(versionId);
+      showToast('Prompt asset created');
+    } catch (e: any) {
+      showToast(`Create prompt failed: ${e?.message || 'error'}`);
+    }
+  }
+
+  async function bindProductionPrompt(versionId: string, assetId: string | null) {
+    try {
+      const res = await fetch(`/api/admin/ai-steps/versions/${encodeURIComponent(versionId)}/production-prompt`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId })
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      await loadPromptAssets(versionId);
+      showToast(assetId ? 'Production prompt set' : 'Production prompt cleared');
+    } catch (e: any) {
+      showToast(`Set production failed: ${e?.message || 'error'}`);
+    }
+  }
+
+  async function bindDefaultPrompt(versionId: string, assetId: string | null) {
+    try {
+      const res = await fetch(`/api/admin/ai-steps/versions/${encodeURIComponent(versionId)}/default-prompt`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId })
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      await loadPromptAssets(versionId);
+      showToast(assetId ? 'Default prompt set' : 'Default prompt cleared');
+    } catch (e: any) {
+      showToast(`Set default failed: ${e?.message || 'error'}`);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -318,16 +386,115 @@ export default function StepsPage() {
                     <div className="p-2 text-sm text-gray-500 bg-white rounded border">No versions yet</div>
                   )}
                   {s.versions?.map((v) => (
-                    <div key={v.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded border text-sm ${v.isActive ? 'border-green-600 text-green-700' : 'border-gray-300 text-gray-700'}`}>v{v.version}</span>
-                        {v.isActive && <span className="text-xs text-green-700">active</span>}
+                    <div key={v.id} className="p-2 bg-white rounded border">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded border text-sm ${v.isActive ? 'border-green-600 text-green-700' : 'border-gray-300 text-gray-700'}`}>v{v.version}</span>
+                          {v.isActive && <span className="text-xs text-green-700">active</span>}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <button
+                            className="px-2 py-1 border rounded bg-white hover:bg-gray-50"
+                            onClick={() => {
+                              setPromptOpen((m) => ({ ...m, [v.id]: !m[v.id] }));
+                              if (!promptOpen[v.id]) loadPromptAssets(v.id);
+                            }}
+                          >Prompts</button>
+                          {!v.isActive && (
+                            <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => activateVersion(s.id, v.version)}>Activate</button>
+                          )}
+                          {v.isActive && (
+                            <button
+                              className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-amber-700"
+                              onClick={async () => {
+                                if (!confirm(`Deactivate active version ${v.version}?`)) return;
+                                const res = await fetch(`/api/admin/pipelines/steps/${s.id}/versions/${encodeURIComponent(v.version)}/deactivate`, { method: 'POST' });
+                                if (!res.ok) {
+                                  const j = await res.json().catch(() => ({}));
+                                  showToast(`Deactivate failed: ${j.error || res.statusText}`);
+                                  return;
+                                }
+                                await load();
+                                setExpanded((ex) => ({ ...ex, [s.id]: true }));
+                                showToast('Version deactivated');
+                              }}
+                              title="Deactivate version"
+                            >
+                              Deactivate
+                            </button>
+                          )}
+                          {!v.isActive && (
+                            <button
+                              className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-red-700"
+                              onClick={async () => {
+                                if (!confirm(`Delete version ${v.version}? This cannot be undone.`)) return;
+                                const res = await fetch(`/api/admin/pipelines/steps/${s.id}/versions/${encodeURIComponent(v.version)}`, { method: 'DELETE' });
+                                if (!res.ok && res.status !== 204) {
+                                  const j = await res.json().catch(() => ({}));
+                                  showToast(`Delete failed: ${j.error || res.statusText}`);
+                                  return;
+                                }
+                                await load();
+                                setExpanded((ex) => ({ ...ex, [s.id]: true }));
+                                showToast('Version deleted');
+                              }}
+                              title="Delete version"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        {!v.isActive && (
-                          <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => activateVersion(s.id, v.version)}>Activate</button>
-                        )}
-                      </div>
+
+                      {promptOpen[v.id] && (
+                        <div className="mt-2 p-2 rounded bg-gray-50 border">
+                          <div className="text-sm font-medium mb-2">Prompt Assets</div>
+                          <div className="space-y-2">
+                            {(assetsByVersion[v.id] || []).map((pa) => (
+                              <div key={pa.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                                <div className="text-sm">
+                                  <div className="font-medium">{pa.name}</div>
+                                  <div className="text-xs text-gray-500">{pa.id}</div>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-green-700" onClick={() => bindProductionPrompt(v.id, pa.id)}>Set Production</button>
+                                  <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50" onClick={() => bindDefaultPrompt(v.id, pa.id)}>Set Default</button>
+                                </div>
+                              </div>
+                            ))}
+                            {(!assetsByVersion[v.id] || assetsByVersion[v.id].length === 0) && (
+                              <div className="p-2 bg-white rounded border text-sm text-gray-500">No prompt assets yet</div>
+                            )}
+                          </div>
+
+                          {creatingForVersion === v.id ? (
+                            <div className="mt-3 p-3 bg-white rounded border space-y-2">
+                              <div className="text-sm font-medium">Create Prompt Asset</div>
+                              <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Name" value={newAssetName} onChange={(e)=>setNewAssetName(e.target.value)} />
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-xs text-gray-600 mb-1">Prompt JSON</div>
+                                  <textarea className="w-full border rounded px-2 py-1 font-mono text-xs" rows={8} value={newAssetPromptJson} onChange={(e)=>setNewAssetPromptJson(e.target.value)} />
+                                </div>
+                                <div>
+                                  <div className="text-xs text-gray-600 mb-1">IR Schema JSON (optional)</div>
+                                  <textarea className="w-full border rounded px-2 py-1 font-mono text-xs" rows={8} value={newAssetIRJson} onChange={(e)=>setNewAssetIRJson(e.target.value)} />
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button className="px-2 py-1 border rounded" onClick={()=>{ setCreatingForVersion(null); }}>Cancel</button>
+                                <button className="px-2 py-1 border rounded bg-green-600 text-white" onClick={()=>createPromptAsset(s.id, v.id)}>Create</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-2">
+                              <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-sm" onClick={()=>{ setCreatingForVersion(v.id); }}>New Prompt Asset</button>
+                              <button className="ml-2 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-sm text-green-700" onClick={()=>bindProductionPrompt(v.id, null)}>Clear Production</button>
+                              <button className="ml-2 px-2 py-1 border rounded bg-white hover:bg-gray-50 text-sm" onClick={()=>bindDefaultPrompt(v.id, null)}>Clear Default</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

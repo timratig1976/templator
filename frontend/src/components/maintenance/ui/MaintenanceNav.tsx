@@ -36,6 +36,7 @@ export default function MaintenanceNav() {
   const pill = inAI
     ? [
         { href: "/maintenance/ai", icon: "🏁", title: "AI Start" },
+        { href: "/maintenance/ai/settings/project-flows", icon: "🧭", title: "Project Flows" },
         { href: "/maintenance/ai/settings/pipelines", icon: "🛠️", title: "Pipelines" },
         { href: "/maintenance/ai/settings/steps", icon: "🧩", title: "Steps" },
         { href: "/maintenance/ai/settings/ir-schemas", icon: "📐", title: "IR Schemas" },

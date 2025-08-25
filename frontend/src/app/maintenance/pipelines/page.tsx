@@ -336,6 +336,46 @@ export default function PipelinesPage() {
                         {!v.isActive && (
                           <button className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-blue-700" onClick={() => activateVersion(p.id, v.version)}>Activate</button>
                         )}
+                        {v.isActive && (
+                          <button
+                            className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-amber-700"
+                            onClick={async () => {
+                              if (!confirm(`Deactivate active version ${v.version}?`)) return;
+                              const res = await fetch(`/api/admin/pipelines/pipelines/${p.id}/versions/${encodeURIComponent(v.version)}/deactivate`, { method: 'POST' });
+                              if (!res.ok) {
+                                const j = await res.json().catch(() => ({}));
+                                showToast(`Deactivate failed: ${j.error || res.statusText}`);
+                                return;
+                              }
+                              await load();
+                              setExpanded((ex) => ({ ...ex, [p.id]: true }));
+                              showToast('Version deactivated');
+                            }}
+                            title="Deactivate version"
+                          >
+                            Deactivate
+                          </button>
+                        )}
+                        {!v.isActive && (
+                          <button
+                            className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-red-700"
+                            onClick={async () => {
+                              if (!confirm(`Delete version ${v.version}? This cannot be undone.`)) return;
+                              const res = await fetch(`/api/admin/pipelines/pipelines/${p.id}/versions/${encodeURIComponent(v.version)}`, { method: 'DELETE' });
+                              if (!res.ok && res.status !== 204) {
+                                const j = await res.json().catch(() => ({}));
+                                showToast(`Delete failed: ${j.error || res.statusText}`);
+                                return;
+                              }
+                              await load();
+                              setExpanded((ex) => ({ ...ex, [p.id]: true }));
+                              showToast('Version deleted');
+                            }}
+                            title="Delete version"
+                          >
+                            Delete
+                          </button>
+                        )}
                         <a
                           className="px-2 py-1 border rounded bg-white hover:bg-gray-50 text-indigo-700"
                           href={`/maintenance/pipelines/manage-steps?pipelineId=${encodeURIComponent(p.id)}&version=${encodeURIComponent(v.version)}`}

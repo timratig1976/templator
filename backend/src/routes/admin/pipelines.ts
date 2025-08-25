@@ -13,6 +13,107 @@ router.get('/pipelines', async (req, res) => {
       _count: { select: { versions: true } },
     },
   })
+
+// Generate a Pipeline (and initial active version DAG) from a Project Flow
+// - Nodes are ordered by `DomainPhase.orderIndex`, then `DomainPhaseStep.orderIndex`
+// - Each node's stepVersionId is chosen as: pinnedStepVersionId if set; otherwise the active StepVersion for the StepDefinition
+// - Edges are linear by default (v1 MVP). Future improvements can infer dependsOn by phase grouping.
+// Body: { dryRun?: boolean, apply?: boolean, bindToFlow?: boolean, pipelineName?: string, description?: string }
+router.post('/pipelines/generate-from-flow/:flowId', async (req, res) => {
+  try {
+    const flowId = String(req.params.flowId)
+    const { dryRun, apply, bindToFlow, pipelineName, description } = (req.body ?? {}) as {
+      dryRun?: boolean
+      apply?: boolean
+      bindToFlow?: boolean
+      pipelineName?: string
+      description?: string
+    }
+
+    const flow = await (prisma as any).projectFlow.findUnique({
+      where: { id: flowId },
+      include: {
+        phases: {
+          orderBy: { orderIndex: 'asc' },
+          include: {
+            steps: { orderBy: { orderIndex: 'asc' }, include: { step: true } },
+          },
+        },
+      },
+    })
+    if (!flow) return res.status(404).json({ error: 'flow_not_found' })
+
+    // Flatten steps in order and resolve stepVersionIds
+    const steps: Array<{ key: string; stepId: string; pinnedStepVersionId?: string | null }> = []
+    for (const phase of flow.phases ?? []) {
+      for (const s of phase.steps ?? []) {
+        const baseKey = `${phase.key || `phase${phase.orderIndex}`}.${s.step?.key || `step${s.orderIndex}`}`
+        steps.push({ key: baseKey, stepId: String(s.stepId), pinnedStepVersionId: s.pinnedStepVersionId })
+      }
+    }
+
+    // Resolve version IDs for each step
+    const nodes: Array<{ key: string; stepVersionId: string; order: number }> = []
+    const issues: Array<{ key: string; reason: string }> = []
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i]
+      if (s.pinnedStepVersionId) {
+        const sv = await (prisma as any).stepVersion.findUnique({ where: { id: String(s.pinnedStepVersionId) }, select: { id: true } })
+        if (!sv) {
+          issues.push({ key: s.key, reason: 'pinned_step_version_not_found' })
+          continue
+        }
+        nodes.push({ key: s.key, stepVersionId: String(s.pinnedStepVersionId), order: i })
+      } else {
+        // Choose active version for this step
+        const sv = await (prisma as any).stepVersion.findFirst({ where: { stepId: s.stepId, isActive: true } })
+        if (!sv) {
+          issues.push({ key: s.key, reason: 'no_active_step_version' })
+          continue
+        }
+        nodes.push({ key: s.key, stepVersionId: String(sv.id), order: i })
+      }
+    }
+
+    // Build a simple linear DAG
+    const dag = { nodes: nodes.map((n) => ({ key: n.key, stepVersionId: n.stepVersionId, order: n.order })) }
+
+    const proposedName = pipelineName || `${flow.name || flow.key || 'Flow'} Pipeline`
+    const summary = { stepCount: nodes.length, issues }
+
+    if (!apply) {
+      // Dry-run (default)
+      return res.json({ data: { dryRun: true, pipeline: { name: proposedName, description: description ?? '', version: '1', dag }, summary } })
+    }
+
+    // Apply: create pipeline and initial active version; optionally bind to flow
+    const createdPipeline = await (prisma as any).pipelineDefinition.create({ data: { name: proposedName, description: description ?? '' } })
+    // Make new version active, deactivate others just in case (none expected)
+    await (prisma as any).pipelineVersion.updateMany({ where: { pipelineId: createdPipeline.id }, data: { isActive: false } })
+    const createdVersion = await (prisma as any).pipelineVersion.create({
+      data: {
+        pipelineId: createdPipeline.id,
+        version: '1',
+        dag,
+        config: {},
+        isActive: true,
+      },
+    })
+
+    let bound: any = null
+    if (bindToFlow) {
+      bound = await (prisma as any).projectFlow.update({
+        where: { id: flowId },
+        data: { pipelineId: createdPipeline.id, pinnedPipelineVersionId: createdVersion.id },
+      })
+    }
+
+    return res.status(201).json({ data: { dryRun: false, pipeline: createdPipeline, version: createdVersion, boundFlow: !!bound && { id: bound.id } }, summary })
+  } catch (err: any) {
+    const message = err?.message || 'Internal Server Error'
+    return res.status(500).json({ error: 'generate_from_flow_failed', message })
+  }
+})
   const data = defs.map((d: any) => ({
     id: d.id,
     name: d.name,
@@ -166,6 +267,28 @@ router.post('/pipelines/:pipelineId/versions/:version/activate', async (req, res
   res.json({ data: updated })
 })
 
+// Deactivate a specific pipeline version (allows pipeline to have no active version)
+router.post('/pipelines/:pipelineId/versions/:version/deactivate', async (req, res) => {
+  const pipelineId = String(req.params.pipelineId)
+  const version = String(req.params.version)
+  const existing = await (prisma as any).pipelineVersion.findUnique({ where: { pipelineId_version: { pipelineId, version } } })
+  if (!existing) return res.status(404).json({ error: 'version_not_found' })
+  if ((existing as any).isActive === false) return res.json({ data: existing })
+  const updated = await (prisma as any).pipelineVersion.update({ where: { pipelineId_version: { pipelineId, version } }, data: { isActive: false } })
+  res.json({ data: updated })
+})
+
+// Delete a non-active pipeline version
+router.delete('/pipelines/:pipelineId/versions/:version', async (req, res) => {
+  const pipelineId = String(req.params.pipelineId)
+  const version = String(req.params.version)
+  const pv = await (prisma as any).pipelineVersion.findUnique({ where: { pipelineId_version: { pipelineId, version } } })
+  if (!pv) return res.status(404).json({ error: 'version_not_found' })
+  if ((pv as any).isActive) return res.status(409).json({ error: 'cannot_delete_active_version' })
+  await (prisma as any).pipelineVersion.delete({ where: { pipelineId_version: { pipelineId, version } } })
+  return res.status(204).end()
+})
+
 // Execute/plan a pipeline version DAG
 router.post('/pipelines/:pipelineId/versions/:version/execute', async (req, res) => {
   const pipelineId = String(req.params.pipelineId)
@@ -250,11 +373,34 @@ router.post('/steps/:stepId/versions', async (req, res) => {
   res.status(201).json({ data: created })
 })
 
+router.delete('/steps/:stepId/versions/:version', async (req, res) => {
+  const stepId = String(req.params.stepId)
+  const version = String(req.params.version)
+  // Ensure it exists and is not active
+  const sv = await (prisma as any).stepVersion.findUnique({ where: { stepId_version: { stepId, version } } })
+  if (!sv) return res.status(404).json({ error: 'version_not_found' })
+  if ((sv as any).isActive) return res.status(409).json({ error: 'cannot_delete_active_version' })
+  // Delete will cascade to related IRSchemas and StepRuns per schema
+  await (prisma as any).stepVersion.delete({ where: { stepId_version: { stepId, version } } })
+  return res.status(204).end()
+})
+
 router.post('/steps/:stepId/versions/:version/activate', async (req, res) => {
   const stepId = String(req.params.stepId)
   const version = String(req.params.version)
   await (prisma as any).stepVersion.updateMany({ where: { stepId }, data: { isActive: false } })
   const updated = await (prisma as any).stepVersion.update({ where: { stepId_version: { stepId, version } }, data: { isActive: true } })
+  res.json({ data: updated })
+})
+
+// Deactivate a specific step version (leaves the step with no active version)
+router.post('/steps/:stepId/versions/:version/deactivate', async (req, res) => {
+  const stepId = String(req.params.stepId)
+  const version = String(req.params.version)
+  const existing = await (prisma as any).stepVersion.findUnique({ where: { stepId_version: { stepId, version } } })
+  if (!existing) return res.status(404).json({ error: 'version_not_found' })
+  if ((existing as any).isActive === false) return res.json({ data: existing })
+  const updated = await (prisma as any).stepVersion.update({ where: { stepId_version: { stepId, version } }, data: { isActive: false } })
   res.json({ data: updated })
 })
 
@@ -301,6 +447,41 @@ router.delete('/ir-schemas/:id', async (req, res) => {
 router.get('/step-runs/:stepRunId/ir-artifacts', async (req, res) => {
   const items = await (prisma as any).iRArtifact.findMany({ where: { stepRunId: String(req.params.stepRunId) }, orderBy: { createdAt: 'desc' } })
   res.json({ data: items })
+})
+
+// DomainPhaseStep params management (manual/uiHints and other per-step UI/behavior flags)
+router.get('/domain-phase-steps/:id/params', async (req, res) => {
+  const id = String(req.params.id)
+  const dps = await (prisma as any).domainPhaseStep.findUnique({ where: { id }, select: { id: true, params: true } })
+  if (!dps) return res.status(404).json({ error: 'not_found' })
+  res.json({ data: { id: dps.id, params: (dps as any).params ?? {} } })
+})
+
+// Merge-safe update of DomainPhaseStep.params
+// Body can be either:
+// - { params: { manual?: boolean, uiHints?: object, ... } }
+// - or a flat object to merge directly into params
+router.patch('/domain-phase-steps/:id/params', async (req, res) => {
+  const id = String(req.params.id)
+  const body = (req.body ?? {}) as any
+  const incoming = typeof body.params === 'object' && body.params !== null ? body.params : body
+  if (incoming === null || typeof incoming !== 'object' || Array.isArray(incoming)) {
+    return res.status(400).json({ error: 'invalid_params_payload', message: 'Expected an object payload or { params: object }' })
+  }
+
+  // Guard against undefined (not serializable in JSON)
+  const sanitized: any = {}
+  for (const [k, v] of Object.entries(incoming)) {
+    if (v !== undefined) sanitized[k] = v
+  }
+
+  const existing = await (prisma as any).domainPhaseStep.findUnique({ where: { id }, select: { params: true } })
+  if (!existing) return res.status(404).json({ error: 'not_found' })
+
+  const merged = { ...((existing as any).params ?? {}), ...sanitized }
+
+  const updated = await (prisma as any).domainPhaseStep.update({ where: { id }, data: { params: merged } })
+  res.json({ data: { id, params: (updated as any).params ?? {} } })
 })
 
 export default router

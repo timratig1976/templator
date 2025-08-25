@@ -55,9 +55,15 @@ export default function AIOverviewPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* AI Settings */}
         <section className="rounded border bg-white p-4">
-          <h3 className="text-base font-semibold mb-2">AI Settings</h3>
+          <h3 className="text;base font-semibold mb-2">AI Settings</h3>
           <p className="text-sm text-gray-600 mb-3">Configure pipelines, steps, and IR schemas.</p>
           <ul className="space-y-2 text-sm">
+            <li>
+              <a className="text-blue-700 hover:underline inline-flex items-center gap-2" href="/maintenance/ai/settings/project-flows">
+                <span>🧭</span>
+                <span>Project Flows</span>
+              </a>
+            </li>
             <li>
               <a className="text-blue-700 hover:underline inline-flex items-center gap-2" href="/maintenance/ai/settings/pipelines">
                 <span>🛠️</span>
@@ -67,7 +73,7 @@ export default function AIOverviewPage() {
             <li>
               <a className="text-blue-700 hover:underline inline-flex items-center gap-2" href="/maintenance/ai/settings/steps">
                 <span>🧩</span>
-                <span>Steps</span>
+                <span>AI Steps</span>
               </a>
             </li>
             <li>

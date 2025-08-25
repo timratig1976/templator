@@ -2,6 +2,34 @@ generator client {
   provider = "prisma-client-js"
 }
 
+/// Prompt library: reusable prompts (optionally categorized by step/stepVersion),
+/// with embedded prompt content and associated IR schema. No active state at library level.
+model PromptAsset {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  tags           String[]
+  owner          String?
+  quality        Json?
+  flags          Json?
+  // Combined payload
+  promptContent  Json         // messages/template/etc.
+  irSchema       Json?        // optional IR schema paired with the prompt
+  // Categorization
+  stepId         String?
+  stepVersionId  String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Reverse relations for StepVersion preferred pointers
+  usedAsProduction StepVersion[] @relation("ProductionPrompt")
+  usedAsDefault    StepVersion[] @relation("DefaultPrompt")
+
+  @@index([stepId])
+  @@index([stepVersionId])
+  @@map("prompt_assets")
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -398,6 +426,8 @@ model PipelineDefinition {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   versions    PipelineVersion[]
+  // Back-relation: project flows bound to this pipeline
+  projectFlows ProjectFlow[]
 
   @@map("pipeline_definitions")
 }
@@ -413,6 +443,8 @@ model PipelineVersion {
   updatedAt  DateTime           @updatedAt
   runs       PipelineRun[]
   definition PipelineDefinition @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  // Back-relation: project flows pinned to this specific pipeline version
+  pinnedForProjectFlows ProjectFlow[]
 
   @@unique([pipelineId, version])
   @@map("pipeline_versions")
@@ -429,6 +461,8 @@ model StepDefinition {
   updatedAt   DateTime      @updatedAt
   versions    StepVersion[]
   activeVersion StepVersion? @relation("ActiveStepVersion", fields: [activeVersionId], references: [id])
+  // Back-relation: phases using this step
+  phaseSteps  DomainPhaseStep[] @relation("PhaseStep_StepDefinition")
 
   @@map("step_definitions")
 }
@@ -439,6 +473,11 @@ model StepVersion {
   version       String
   isActive      Boolean        @default(false)
   defaultConfig Json?
+  // Step-scoped prompt content (temporary while migrating away from process-level prompts)
+  prompt        Json?
+  // Preferred prompt assets for this version
+  productionPromptId String?
+  defaultPromptId    String?
   aiPromptId    String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -446,8 +485,12 @@ model StepVersion {
   stepRuns      StepRun[]
   definition    StepDefinition @relation(fields: [stepId], references: [id], onDelete: Cascade)
   aiPrompt      AIPrompt?      @relation(fields: [aiPromptId], references: [id], onDelete: SetNull)
+  productionPrompt PromptAsset? @relation("ProductionPrompt", fields: [productionPromptId], references: [id])
+  defaultPrompt    PromptAsset? @relation("DefaultPrompt", fields: [defaultPromptId], references: [id])
   // Back-reference for StepDefinition.activeVersion
   activeForStep StepDefinition? @relation("ActiveStepVersion")
+  // Back-relation: phases pinned to this specific version
+  pinnedForPhaseSteps DomainPhaseStep[] @relation("PhaseStep_PinnedVersion")
 
   @@unique([stepId, version])
   @@map("step_versions")
@@ -580,6 +623,63 @@ model MetricResult {
   @@index([stepRunId])
   @@index([metricKey])
   @@map("metric_results")
+}
+
+// Project Flows and Domain Phases
+model ProjectFlow {
+  id          String        @id @default(cuid())
+  key         String        @unique
+  name        String
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  phases      DomainPhase[]
+  // Hybrid binding to a pipeline: default uses active PipelineVersion of the bound PipelineDefinition,
+  // optionally pin to a specific PipelineVersion for reproducibility
+  pipelineId               String?
+  pinnedPipelineVersionId  String?
+  pipeline                 PipelineDefinition? @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  pinnedPipelineVersion    PipelineVersion?    @relation(fields: [pinnedPipelineVersionId], references: [id], onDelete: SetNull)
+ 
+  @@map("project_flows")
+}
+
+model DomainPhase {
+  id          String        @id @default(cuid())
+  flowId      String
+  key         String
+  name        String
+  description String?
+  orderIndex  Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  flow        ProjectFlow   @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  steps       DomainPhaseStep[]
+ 
+  @@unique([flowId, key])
+  @@index([flowId])
+  @@index([orderIndex])
+  @@map("domain_phases")
+}
+
+model DomainPhaseStep {
+  id                   String        @id @default(cuid())
+  phaseId              String
+  stepId               String        // StepDefinition
+  pinnedStepVersionId  String?       // Optional pin to specific StepVersion
+  orderIndex           Int           @default(0)
+  params               Json?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  phase                DomainPhase   @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  step                 StepDefinition @relation("PhaseStep_StepDefinition", fields: [stepId], references: [id], onDelete: Restrict)
+  pinnedVersion        StepVersion?  @relation("PhaseStep_PinnedVersion", fields: [pinnedStepVersionId], references: [id], onDelete: SetNull)
+
+  @@index([phaseId])
+  @@index([stepId])
+  @@index([orderIndex])
+  @@map("domain_phase_steps")
 }
 
 model StepOutputLink {

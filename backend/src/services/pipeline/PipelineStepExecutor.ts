@@ -7,6 +7,7 @@
 
 import { getFeatureFlags } from '../../config/featureFlags';
 import prisma from '../database/prismaClient';
+import { PromptResolver } from '../prompt/PromptResolver';
 import { IRValidationAdapter } from './IRValidationAdapter';
 import { MetricsAdapter } from './MetricsAdapter';
 import { OutputLinker, OutputRef } from './OutputLinker';
@@ -44,11 +45,21 @@ export class PipelineStepExecutor {
       return { skipped: true, reason: 'PIPELINE_LOGGING_DISABLED' };
     }
 
+    // Resolve effective prompt for this step version (production -> default -> inline)
+    let promptMeta: { source: string; assetId?: string } = { source: 'none' };
+    try {
+      const resolver = new PromptResolver();
+      const rp = await resolver.resolveForStepVersion(params.stepVersionId);
+      promptMeta = { source: rp.source, assetId: rp.assetId };
+    } catch (_e) {
+      // ignore prompt resolution errors in executor
+    }
+
     // TODO: Map stepVersionId to the appropriate existing service call.
-    // For now, simulate a step result to keep behavior inert while enabling shadow writes when pipelineRunId is present.
+    // For now, simulate a step result and include prompt meta in the IR stub.
     const result: StepExecutionResult = {
       skipped: false,
-      ir: { _note: 'stub-ir', nodeKey: params.nodeKey },
+      ir: { _note: 'stub-ir', nodeKey: params.nodeKey, _prompt: promptMeta },
       outputs: [],
     };
 

@@ -28,6 +28,8 @@ import staticFilesRoutes from './routes/staticFiles';
 import testsRoutes from './routes/tests';
 import adminPipelinesRoutes from './routes/admin/pipelines';
 import adminAiStepsRoutes from './routes/admin/aiSteps';
+import adminProjectFlowsRoutes from './routes/admin/projectFlows';
+import uiRoutes from './routes/ui';
 import { TestRunnerService } from './services/TestRunnerService';
 import { TestStateStore } from './services/TestStateStore';
 
@@ -150,6 +152,8 @@ export function createApp(): express.Application {
   app.use('/api/admin/static-files', staticFilesRoutes);
   app.use('/api/admin/pipelines', adminPipelinesRoutes);
   app.use('/api/admin/ai-steps', adminAiStepsRoutes);
+  app.use('/api/admin/project-flows', adminProjectFlowsRoutes);
+  app.use('/api/ui', uiRoutes);
 
   const { errorHandler } = require('./middleware/errorHandler');
   app.use(errorHandler);
